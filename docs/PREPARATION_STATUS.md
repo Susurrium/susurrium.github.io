@@ -1,6 +1,6 @@
 # 开发前准备状态
 
-> 更新日期：2026-08-27｜当前阶段：Phase 0 收尾中，目标栈基线可构建｜当前开发分支：`develop`
+> 更新日期：2026-08-27｜当前阶段：Phase 0 已完成，可进入 Phase 1｜当前开发分支：`develop`
 
 ## 1. 仓库
 
@@ -79,6 +79,7 @@ Bun 和 ripgrep 已通过 WinGet 安装。安装后新终端会自动获得 PATH
 - Sitemap：成功。
 - Pagefind：成功索引 164 页。
 - `bun run ci`：完整通过，包括真实 Node 版本、Bun、远端、工作流触发器、frozen lock、lint、构建和资源门禁。
+- GitHub Linux CI：提交 `dc8e6d80c079545a41f9812ea5e5bcc8687d04e2` 已通过，[运行记录](https://github.com/Susurrium/susurrium.github.io/actions/runs/33050923402)。
 
 当前生成的 Arthals 测试站点为 465 个文件、约 42 MiB；后续本地视频和音乐尚未加入。
 
@@ -152,9 +153,9 @@ Pure 1.4.6 要求 quote 配置存在，因此暂时指向本地 `/data/developme
 - [x] 自动发布保持关闭。
 - [x] GitHub Pages 从 legacy 分支发布切换为 workflow 模式。
 - [x] 外部统计、评论和在线一言停用。
-- [ ] 准备提交已推送到 `develop` 并通过 GitHub CI。
+- [x] 准备提交已推送到 `develop` 并通过 GitHub CI。
 
-最后一项将在本轮文件完成并推送后更新。
+Phase 0 至此完成。下一步应从 `develop` 创建 Phase 1 功能分支；本轮没有开始页面或特效开发。
 
 ## 9. 目前不是阻塞项的输入
 
