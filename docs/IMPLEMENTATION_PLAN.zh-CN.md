@@ -535,6 +535,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - GitHub 抓取失败回退。
 - 深层路由和 404。
 - 连续跨 10 个页面后无重复 canvas/监听器（`verify:browser:lifecycle` 以真实 ClientRouter 点击、唯一宿主/iframe/音乐 DOM 计数和运行时异常检查验证）。
+- 已保存暗色主题的直接 Home 访问不会让 PKU/点击效果 iframe 合成为遮挡内容的白色页面（`verify:browser:lifecycle` 以独立暗色目标页截图的暗像素比例验证）。
 
 ### 18.3 Arthals 视觉基线门禁
 
@@ -545,6 +546,8 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - 每个基准页面至少覆盖桌面、移动端、明色和暗色四种组合。
 - 允许差异只包括本文登记的导航、内容结构、目标组件、个人配置以及 Astro/Pure 兼容适配。
 - 未登记的字号、间距、颜色、圆角、布局或交互差异视为视觉回归失败；必要差异必须先写入方案或来源台账。
+
+可重复取证命令为 `bun run capture:visual-baseline`。它以冻结上游的 `/` 对当前 `/home`，并逐一采集上述九个共享页面（含 GitHub 卡片详情页）的桌面/移动、明/暗主题顶部和底部截图（共 144 张）及 DOM 壳层量测，输出到不纳入版本控制的 `artifacts/visual-baseline/manifest.json`。截图由人工依照 `docs/VISUAL_BASELINE.md` 的差异台账复核；由于首版明确包含动态特效、个人内容和目标组件，不能以未经掩码的像素差异替代该台账。
 
 ## 19. 开发阶段
 
@@ -614,7 +617,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 
 验收命令：`bun run ci`（开发期）与 `bun run release:gate`（最终资料替换后）。线上发布还需验证 GitHub Actions 成功、`https://susurrium.github.io/` 可访问，以及 canonical、RSS、sitemap 与 404 均指向最终域名。
 
-状态：本地 CI、生产产物审计、移动端目录浏览器回归和十一次真实 ClientRouter 跨页生命周期回归均已通过；后者验证入口重放、音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion 和无未捕获异常。禁用 Waline 时，页面浏览/评论 UI 与其客户端运行时均不再生成。GitHub Linux CI 将在生产预览上执行两项浏览器回归。严格门禁现在会有意拒绝测试内容、上游身份、热链媒体和上游 GitHub 动态卡片；这些项目必须由最终内容替换完成后再解除。当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
+状态：本地 CI、生产产物审计、移动端目录浏览器回归和十一次真实 ClientRouter 跨页生命周期回归均已通过；后者验证入口重放、音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion、直接暗色 Home 的透明 iframe 合成和无未捕获异常。冻结上游与当前站点的视觉基线已采集 144 张桌面/移动、明/暗、顶部/底部对照截图，其中包括本地静态 GitHub 卡片详情页。禁用 Waline 时，页面浏览/评论 UI 与其客户端运行时均不再生成；上游 GitHub 动态卡片已经替换为本地静态回退卡片，所有 `target=_blank` 链接都有安全 `rel` 属性。GitHub Linux CI 将在生产预览上执行两项浏览器回归。严格门禁现在只会有意拒绝尚未替换的测试内容、上游身份和热链媒体；这些项目必须由最终内容替换完成后再解除。当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
 
 ## 20. 主要风险与处理
 

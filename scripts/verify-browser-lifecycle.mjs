@@ -11,6 +11,8 @@
  *   - `bun run preview -- --host 127.0.0.1 --port 4321`
  */
 
+import sharp from 'sharp'
+
 const cdpEndpoint = (process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224').replace(/\/$/, '')
 const siteUrl = (process.env.PHASE6_SITE_URL ?? 'http://127.0.0.1:4321').replace(/\/$/, '')
 const failures = []
@@ -322,6 +324,57 @@ async function assertRoute(
   return state
 }
 
+async function darkScreenshotStats(cdp) {
+  const { data } = await cdp.call('Page.captureScreenshot', {
+    captureBeyondViewport: false,
+    format: 'png',
+    fromSurface: true
+  })
+  const { data: pixels, info } = await sharp(Buffer.from(data, 'base64'))
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  let darkPixels = 0
+  let luminanceTotal = 0
+  for (let index = 0; index < pixels.length; index += info.channels) {
+    const luminance =
+      0.2126 * pixels[index] + 0.7152 * pixels[index + 1] + 0.0722 * pixels[index + 2]
+    luminanceTotal += luminance
+    if (luminance < 80) darkPixels += 1
+  }
+  const pixelCount = pixels.length / info.channels
+  return {
+    averageLuminance: Number((luminanceTotal / pixelCount).toFixed(2)),
+    darkPixelRatio: Number((darkPixels / pixelCount).toFixed(4))
+  }
+}
+
+async function assertInitialDarkEffectSurface(cdp) {
+  const { identifier } = await cdp.call('Page.addScriptToEvaluateOnNewDocument', {
+    source: "try { localStorage.setItem('theme', 'dark') } catch {}"
+  })
+  try {
+    await navigate(cdp, `${siteUrl}/home`)
+    const settled = await waitForEffects(cdp, ['pku', 'click'])
+    expect(!settled.timedOut, 'a direct dark Home visit initializes its pku + click effects')
+    const darkTheme = await evaluate(cdp, "document.documentElement.classList.contains('dark')")
+    expect(darkTheme, 'a direct dark Home visit applies the saved dark theme before effects mount')
+    await delay(240)
+    const stats = await darkScreenshotStats(cdp)
+    expect(
+      stats.darkPixelRatio >= 0.01,
+      stats.darkPixelRatio >= 0.01
+        ? 'dark effect iframes preserve a nonblank Home surface'
+        : `dark effect iframes preserve a nonblank Home surface (dark ratio ${stats.darkPixelRatio}, luma ${stats.averageLuminance})`
+    )
+  } finally {
+    await cdp
+      .call('Page.removeScriptToEvaluateOnNewDocument', { identifier })
+      .catch(() => undefined)
+    await evaluate(cdp, "localStorage.removeItem('theme')").catch(() => undefined)
+  }
+}
+
 const targetResponse = await fetch(`${cdpEndpoint}/json/new?${encodeURIComponent('about:blank')}`, {
   method: 'PUT'
 })
@@ -371,6 +424,12 @@ try {
       args.map((argument) => argument.value ?? argument.description ?? '').join(' ')
     )
   })
+
+  // The effects are isolated in transparent iframes. Opening a page with dark
+  // mode already saved must keep those subframes transparent rather than
+  // compositing an opaque white surface above the Home content. Run this as
+  // the target's first normal-page visit, then begin the root/entrance flow.
+  await assertInitialDarkEffectSurface(cdp)
 
   await navigate(cdp, `${siteUrl}/`)
   const entrance = await evaluate(

@@ -228,9 +228,18 @@ const serializedSources = JSON.stringify({
       frame.dataset.effectFrame = kind
       frame.dataset.ready = 'false'
       frame.setAttribute('aria-hidden', 'true')
+      // Chromium allocates an opaque subframe surface when an iframe is first
+      // created inside a dark-color-scheme document unless both properties are
+      // present before srcdoc is assigned. That white surface would cover the
+      // page even though the vendor canvases themselves are transparent.
+      // These are compositing compatibility attributes only; the original
+      // PKU/George drawing scripts below remain untouched.
+      frame.setAttribute('allowtransparency', 'true')
       frame.setAttribute('tabindex', '-1')
       frame.setAttribute('title', '')
       frame.referrerPolicy = 'no-referrer'
+      frame.style.backgroundColor = 'transparent'
+      frame.style.colorScheme = 'light'
       frame.srcdoc = this.sourceDocument(kind, this.sources)
       frame.addEventListener(
         'load',
@@ -420,7 +429,7 @@ const serializedSources = JSON.stringify({
         value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
       const script = (source: string, id?: string, attributes = '') =>
         `<script${id ? ` id="${id}"` : ''}${attributes} src="${escapeAttribute(source)}">${closeScript}`
-      const documentStart = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:transparent}canvas{pointer-events:none}</style></head><body>`
+      const documentStart = `<!doctype html><html style="background:transparent;color-scheme:light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>:root{background:transparent!important;color-scheme:light!important}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:transparent!important;color-scheme:light!important}canvas{pointer-events:none}</style></head><body>`
       const documentEnd = '</body></html>'
 
       if (kind === 'pku') {

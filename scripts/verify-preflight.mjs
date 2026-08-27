@@ -61,6 +61,10 @@ expect(pkg.packageManager === 'bun@1.4.0', 'packageManager is bun@1.4.0')
 expect(pkg.dependencies?.astro === '6.1.8', 'Astro is pinned to 6.1.8')
 expect(pkg.dependencies?.['astro-pure'] === '1.4.6', 'astro-pure is pinned to 1.4.6')
 expect(pkg.overrides?.['@types/hast'] === '3.0.5', '@types/hast override is pinned to 3.0.5')
+expect(
+  pkg.scripts?.['capture:visual-baseline'] === 'node scripts/capture-visual-baseline.mjs',
+  'visual baseline capture command is available'
+)
 
 const astroConfig = read('astro.config.ts')
 expect(
@@ -74,6 +78,8 @@ for (const path of [
   'docs/SOURCE_LEDGER.md',
   'docs/PREPARATION_STATUS.md',
   'docs/DEVELOPMENT.md',
+  'docs/VISUAL_BASELINE.md',
+  'scripts/capture-visual-baseline.mjs',
   '.github/workflows/ci.yml',
   '.github/workflows/deploy.yml'
 ]) {
@@ -96,6 +102,12 @@ expect(
   ciWorkflow.includes('bun run verify:phase6:browser') &&
     ciWorkflow.includes('bun run verify:browser:lifecycle'),
   'CI runs both mobile accessibility and ClientRouter lifecycle browser regressions'
+)
+
+const lifecycleRegression = read('scripts/verify-browser-lifecycle.mjs')
+expect(
+  lifecycleRegression.includes('assertInitialDarkEffectSurface'),
+  'ClientRouter lifecycle regression covers a direct saved-dark Home visit'
 )
 
 const deployWorkflow = read('.github/workflows/deploy.yml')
