@@ -2,8 +2,9 @@
 import links from 'public/links.json'
 import config from 'virtual:config'
 
-import { Collapse, Timeline, Signature } from 'astro-pure/user'
+import { Collapse, Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
+import Signature from '@/components/arthals/Signature.astro'
 import FriendList from '@/components/links/FriendList.astro'
 
 const headings = [
@@ -15,7 +16,6 @@ const headings = [
 
 const { friends } = links
 const linksConf = config.integ.links
-const linkEditPage = 'https://github.com/cworld1/astro-theme-pure/blob/main/public/links.json'
 ---
 
 <PageLayout title='Links' {headings} comment>
@@ -71,5 +71,5 @@ const linkEditPage = 'https://github.com/cworld1/astro-theme-pure/blob/main/publ
     })
     fc.load()
   </script>
-  {config.signature && <Signature />}
+  <Signature />
 </PageLayout>

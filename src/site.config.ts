@@ -1,8 +1,4 @@
-import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types';
-
-
-
-
+import type { Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types'
 
 export const theme: ThemeUserConfig = {
   // === Basic configuration ===
@@ -10,7 +6,6 @@ export const theme: ThemeUserConfig = {
   title: "Arthals' ink",
   /** Will be used in index page & copyright declaration */
   author: 'Arthals',
-  since: 2024,
   /** Description metadata for your website. Can be used in page metadata. */
   description: '所见高山远木，阔云流风；所幸岁月盈余，了无拘束',
   /** The default favicon for your site which should be a path to an image in the `public/` directory. */
@@ -80,7 +75,13 @@ export const theme: ThemeUserConfig = {
     /** Enable displaying a “Astro & Pure theme powered” link in your site’s footer. */
     credits: false,
     /** Optional details about the social media accounts for this site. */
-    social: { github: 'https://github.com/zhuozhiyongde', email: 'mailto:zhuozhiyongde@126.com' }
+    social: [
+      {
+        icon: 'github',
+        label: 'GitHub',
+        href: 'https://github.com/Susurrium'
+      }
+    ]
   },
 
   content: {
@@ -113,19 +114,15 @@ export const integ: IntegrationUserConfig = {
       { name: 'Avatar', val: 'https://cdn.arthals.ink/Arthals.png' }
     ],
     // Cache avatars in `public/avatars/` to improve user experience.
-    cacheAvatar: false,
+    cacheAvatar: false
   },
   // Enable page search function
   pagefind: true,
-  // Add a random quote to the footer (default on homepage footer)
-  // See: https://astro-pure.js.org/docs/integrations/advanced#web-content-render
+  // Pure 1.4.6 requires a quote provider. Keep it local until the Sayings
+  // collection replaces this temporary development fallback.
   quote: {
-    // https://developer.hitokoto.cn/sentence/#%E8%AF%B7%E6%B1%82%E5%9C%B0%E5%9D%80
-    server: 'https://v1.hitokoto.cn/?c=i',
-    target: `(data) => data.hitokoto || 'Error'`
-    // https://github.com/lukePeavey/quotable
-    // server: 'https://api.quotable.io/quotes/random?maxLength=60',
-    // target: `(data) => data[0].content || 'Error'`
+    server: '/data/development-quote.json',
+    target: `(data) => data.text || 'Sayings are being prepared.'`
   },
   // UnoCSS typography
   // See: https://unocss.dev/presets/typography
@@ -147,7 +144,7 @@ export const integ: IntegrationUserConfig = {
   },
   // Comment system
   waline: {
-    enable: true,
+    enable: false,
     // Server service link
     server: 'https://waline.arthals.ink',
     // Refer https://waline.js.org/en/guide/features/emoji.html

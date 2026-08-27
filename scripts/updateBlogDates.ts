@@ -299,13 +299,11 @@ async function main(): Promise<void> {
     // 处理每个文件
     for (const filename of markdownFiles) {
       const filePath = path.join(BLOG_DIR, filename)
-      const beforeCount = Object.keys(database).length
       const existingEntry = database[filename]
 
       await processArticle(filePath, filename, database)
 
       // 统计变化
-      const afterCount = Object.keys(database).length
       if (!existingEntry) {
         newCount++
       } else if (

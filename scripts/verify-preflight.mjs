@@ -1,0 +1,134 @@
+import { execFileSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const root = resolve(process.cwd())
+const failures = []
+const warnings = []
+
+function pass(message) {
+  console.log(`PASS ${message}`)
+}
+
+function fail(message) {
+  failures.push(message)
+  console.error(`FAIL ${message}`)
+}
+
+function warn(message) {
+  warnings.push(message)
+  console.warn(`WARN ${message}`)
+}
+
+function expect(condition, message) {
+  condition ? pass(message) : fail(message)
+}
+
+function read(path) {
+  return readFileSync(resolve(root, path), 'utf8')
+}
+
+function command(name, args) {
+  return execFileSync(name, args, {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  }).trim()
+}
+
+function compareVersions(actual, minimum) {
+  const left = actual.split('.').map(Number)
+  const right = minimum.split('.').map(Number)
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const difference = (left[index] ?? 0) - (right[index] ?? 0)
+    if (difference !== 0) return difference
+  }
+  return 0
+}
+
+const pkg = JSON.parse(read('package.json'))
+const configuredNodeVersion = read('.node-version').trim()
+
+expect(
+  compareVersions(configuredNodeVersion, '22.12.0') >= 0,
+  `.node-version ${configuredNodeVersion} satisfies >=22.12.0`
+)
+expect(
+  process.versions.bun === '1.4.0',
+  `Bun is exactly 1.4.0 (actual: ${process.versions.bun ?? 'not Bun'})`
+)
+expect(pkg.packageManager === 'bun@1.4.0', 'packageManager is bun@1.4.0')
+expect(pkg.dependencies?.astro === '6.1.8', 'Astro is pinned to 6.1.8')
+expect(pkg.dependencies?.['astro-pure'] === '1.4.6', 'astro-pure is pinned to 1.4.6')
+expect(pkg.overrides?.['@types/hast'] === '3.0.5', '@types/hast override is pinned to 3.0.5')
+
+const astroConfig = read('astro.config.ts')
+expect(
+  astroConfig.includes("site: 'https://susurrium.github.io'"),
+  'Astro site points to the GitHub user site'
+)
+expect(!/^\s*base\s*:/m.test(astroConfig), 'Astro base is not configured')
+
+for (const path of [
+  'docs/IMPLEMENTATION_PLAN.zh-CN.md',
+  'docs/SOURCE_LEDGER.md',
+  'docs/PREPARATION_STATUS.md',
+  'docs/DEVELOPMENT.md',
+  '.github/workflows/ci.yml',
+  '.github/workflows/deploy.yml'
+]) {
+  expect(existsSync(resolve(root, path)), `${path} exists`)
+}
+
+for (const path of ['.github/workflows/ci.yml', '.github/workflows/deploy.yml']) {
+  if (!existsSync(resolve(root, path))) continue
+  expect(!/^\s*schedule\s*:/m.test(read(path)), `${path} has no schedule trigger`)
+}
+
+const ciWorkflow = read('.github/workflows/ci.yml')
+expect(/^\s*- main\s*$/m.test(ciWorkflow), 'CI validates pushes to main')
+expect(/^\s*- develop\s*$/m.test(ciWorkflow), 'CI validates pushes to develop')
+
+const deployWorkflow = read('.github/workflows/deploy.yml')
+expect(
+  /^\s*workflow_dispatch\s*:/m.test(deployWorkflow),
+  'Pages deployment can be triggered manually'
+)
+expect(
+  !/^\s*push\s*:/m.test(deployWorkflow),
+  'Pages deployment has no push trigger during preparation'
+)
+expect(
+  !/^\s*pull_request\s*:/m.test(deployWorkflow),
+  'Pages deployment has no pull request trigger'
+)
+expect(
+  deployWorkflow.includes('bun install --frozen-lockfile'),
+  'Pages deployment uses the frozen lockfile'
+)
+expect(deployWorkflow.includes('bun run ci'), 'Pages deployment runs the complete validation gate')
+
+try {
+  const origin = command('git', ['remote', 'get-url', 'origin'])
+  expect(
+    /github\.com[/:]Susurrium\/susurrium\.github\.io(?:\.git)?$/i.test(origin),
+    `origin is the Susurrium GitHub Pages repository (${origin})`
+  )
+} catch {
+  warn('Git origin could not be inspected in this environment')
+}
+
+try {
+  const upstream = command('git', ['remote', 'get-url', 'upstream'])
+  expect(
+    /github\.com[/:]zhuozhiyongde\/Arthals-Ink(?:\.git)?$/i.test(upstream),
+    `upstream is Arthals-Ink (${upstream})`
+  )
+  const upstreamPush = command('git', ['remote', 'get-url', '--push', 'upstream'])
+  expect(upstreamPush === 'DISABLED', 'upstream push is disabled')
+} catch {
+  warn('upstream remote is not available (expected in a minimal CI clone)')
+}
+
+console.log(`Preflight complete: ${failures.length} failure(s), ${warnings.length} warning(s).`)
+if (failures.length > 0) process.exit(1)

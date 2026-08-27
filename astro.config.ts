@@ -10,7 +10,6 @@ import { defineConfig } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
-import UnoCSS from 'unocss/astro'
 
 // Others
 // import { visualizer } from 'rollup-plugin-visualizer'
@@ -32,7 +31,7 @@ import config from './src/site.config.ts'
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
-  site: 'https://arthals.ink',
+  site: 'https://susurrium.github.io',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
   trailingSlash: 'never',
@@ -74,10 +73,7 @@ export default defineConfig({
   // Prefetch Options
   prefetch: true,
   // Server Options
-  server: {
-    host: true,
-    allowedHosts: ['arthals.ink']
-  },
+  server: { host: true },
   // Markdown Options
   markdown: {
     remarkPlugins: [remarkMath, remarkAlert],

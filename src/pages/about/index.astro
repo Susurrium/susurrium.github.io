@@ -1,10 +1,9 @@
 ---
-import config from 'virtual:config'
-
-import { Button, Collapse, Signature, Spoiler, Timeline } from 'astro-pure/user'
+import { Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
 import Substats from '@/components/about/Substats.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
+import Signature from '@/components/arthals/Signature.astro'
 import zotero from '@/assets/tools/zotero.png'
 
 const headings = [
@@ -176,8 +175,7 @@ const headings = [
         platform: 'GitHub',
         icon: 'github',
         link: 'https://github.com/zhuozhiyongde',
-        text: 'followers',
-        api: 'github/zhuozhiyongde'
+        text: 'followers'
       },
       {
         platform: 'Zhihu',
@@ -253,5 +251,5 @@ const headings = [
       粉丝数统计：<a href='https://github.com/spencerwooo/substats' target='_blank'>Substats</a>
     </li>
   </ul>
-  {config.signature && <Signature />}
+  <Signature />
 </PageLayout>
