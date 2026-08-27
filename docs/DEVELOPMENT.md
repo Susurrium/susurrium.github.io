@@ -66,7 +66,7 @@ bun run verify:phase6
 
 `test:phase5` 覆盖 HanLife 公开贡献 HTML 的解析、53 周中性骨架，以及 SkyWT 复用的地理计算；`verify:phase5` 复核 SkyWT/TNXG/MapLibre 的本地资源哈希、MapLibre 惰性加载与 ClientRouter 清理契约、热力图的无 Token 回退、About-only 小人和生产产物中无 TNXG 热链。
 
-`verify:phase6` 是开发期的发布就绪审计：它验证 noindex、canonical、RSS、sitemap、静态资源、语言声明、图片替代文本决策、外部资源边界和手动部署保护。为了允许当前测试内容继续用于开发，占位身份、上游测试媒体和未替换的个人资料会显示为警告，而不会让 CI 失败。
+`verify:phase6` 是开发期的发布就绪审计：它验证 noindex、canonical、RSS、sitemap、静态资源、语言声明、图片替代文本决策、外部资源边界、每个每日音乐条目的同源音频契约和手动部署保护。为了允许当前测试内容继续用于开发，占位身份、上游测试媒体、未配置的本地音乐和未替换的个人资料会显示为警告，而不会让 CI 失败。
 
 最终资料替换完成后，必须额外执行严格门禁：
 
@@ -74,7 +74,7 @@ bun run verify:phase6
 bun run release:gate
 ```
 
-严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。
+严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
 
 浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、空白点击过滤、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
 

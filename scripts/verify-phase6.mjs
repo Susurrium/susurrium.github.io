@@ -66,6 +66,24 @@ function absoluteResourceExists(htmlPath, url) {
   return existsSync(file) || existsSync(resolve(file, 'index.html'))
 }
 
+/**
+ * Music sources are assigned by the persistent client player rather than
+ * emitted as static <audio src> markup. Check the declared catalogue against
+ * public/ directly so the final release gate can still prove that every daily
+ * selection has a real, same-origin file to play.
+ */
+function localPublicAssetExists(url) {
+  const cleanUrl = url.split('#')[0]?.split('?')[0] ?? ''
+  if (!cleanUrl.startsWith('/') || cleanUrl.startsWith('//')) return false
+
+  const publicDirectory = resolve(root, 'public')
+  const asset = resolve(publicDirectory, cleanUrl.replace(/^\/+/, ''))
+  const assetRelativePath = relative(publicDirectory, asset)
+  return (
+    !assetRelativePath.startsWith('..') && !assetRelativePath.includes(':') && existsSync(asset)
+  )
+}
+
 function firstPaths(paths) {
   return paths.slice(0, 5).join(', ')
 }
@@ -315,6 +333,22 @@ expect(
   residenceUrls.length > 0 &&
     residenceUrls.every((url) => new URL(url).hostname === 'basemaps.cartocdn.com'),
   'the only declared client map runtime is the allowlisted CARTO style service'
+)
+
+const musicSource = readFileSync(resolve(root, 'src/data/music.ts'), 'utf8')
+const musicCatalogueMatch = musicSource.match(/export const dailyMusic[^=]*=\s*\[([\s\S]*?)\n\]/)
+const musicCatalogue = musicCatalogueMatch?.[1] ?? ''
+const musicTrackIds = [...musicCatalogue.matchAll(/\bid\s*:\s*['"][^'"]+['"]/g)]
+const musicAudioSources = [...musicCatalogue.matchAll(/\baudioSrc\s*:\s*['"]([^'"]+)['"]/g)].map(
+  (match) => match[1]
+)
+const hasMusicFixture = /本地占位曲目|尚未配置可播放音频/.test(musicCatalogue)
+releaseBlocker(
+  musicTrackIds.length > 0 &&
+    musicAudioSources.length === musicTrackIds.length &&
+    musicAudioSources.every((source) => localPublicAssetExists(source)) &&
+    !hasMusicFixture,
+  'every daily music track has a non-placeholder same-origin audio file in public/'
 )
 
 const markerChecks = [

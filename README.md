@@ -16,6 +16,7 @@ Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongd
 ## 文档
 
 - [完整实施方案](./docs/IMPLEMENTATION_PLAN.zh-CN.md)
+- [最终内容替换与发布交接](./docs/FINAL_RELEASE_HANDOFF.zh-CN.md)
 - [开发前准备状态](./docs/PREPARATION_STATUS.md)
 - [来源与复用台账](./docs/SOURCE_LEDGER.md)
 - [开发、验证与 Git 流程](./docs/DEVELOPMENT.md)

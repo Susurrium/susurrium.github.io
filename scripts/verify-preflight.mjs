@@ -78,6 +78,7 @@ for (const path of [
   'docs/SOURCE_LEDGER.md',
   'docs/PREPARATION_STATUS.md',
   'docs/DEVELOPMENT.md',
+  'docs/FINAL_RELEASE_HANDOFF.zh-CN.md',
   'docs/VISUAL_BASELINE.md',
   'scripts/capture-visual-baseline.mjs',
   '.github/workflows/ci.yml',
