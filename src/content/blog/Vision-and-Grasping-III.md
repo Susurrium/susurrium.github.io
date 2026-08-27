@@ -99,7 +99,7 @@ $$
 
 我们将空间中的每个摩擦锥用一定数量（记为 $k$，课中选择为 $k = 6$）的力旋量组成的多面体锥来近似，从而摩擦锥可以表示为这 $k$ 个力旋量的线性组合。
 
-<img src="https://cdn.arthals.ink/bed/2025/04/force_closure-10f441d75b44bba1e40a3c025a2c43d3.png" style="zoom: 33%;" />
+<img src="https://cdn.arthals.ink/bed/2025/04/force_closure-10f441d75b44bba1e40a3c025a2c43d3.png" alt="Force closure friction-cone diagram" style="zoom: 33%;" />
 
 > 接触点决定力，方向决定力矩
 

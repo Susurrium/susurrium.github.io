@@ -2,7 +2,7 @@
 
 Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongde/Arthals-Ink) 的真实 Fork 开发。站点主体延续 Arthals 的视觉与架构，并在独立开发阶段接入已确认的入口动画、三类内容、三类卡片和装饰效果。
 
-当前状态：开发前基线已经建立，功能开发尚未开始，GitHub Pages 自动发布保持关闭。
+当前状态：Phase 0–5 与 Phase 6 的本地实现、审计和浏览器回归已完成。测试内容和人工发布保护仍保留，因此尚未对外正式上线。
 
 ## 锁定基线
 
@@ -28,7 +28,7 @@ bun run dev
 bun run ci
 ```
 
-`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、资源体积检查。
+`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、发布就绪审计和资源体积检查。最终替换个人资料后，再运行 `bun run release:gate`；它会把测试内容、旧身份和外部媒体等发布阻断项视为失败。
 
 ## 分支
 
@@ -36,7 +36,7 @@ bun run ci
 - `develop`：首版集成分支。
 - 功能分支：从 `develop` 创建。
 
-准备阶段只提供手动触发的 Pages workflow，不监听 `main` push，也没有定时任务。
+当前部署工作流只允许手动触发，不监听 `main` push，也没有定时任务；这是为了避免测试内容被意外发布。最终发布清单通过且获得你的上线确认后，才启用自动发布并在 GitHub Pages 中完成实际部署设置。
 
 ## 许可与来源
 

@@ -57,6 +57,7 @@ bun run test:phase4
 bun run verify:phase4
 bun run test:phase5
 bun run verify:phase5
+bun run verify:phase6
 ```
 
 `verify:phase3` 覆盖根路径可重复入口、本地入口媒体哈希、Typed.js 固定版本、全局音乐单例/详情紧凑模式、无远程音乐/图片缩放/二维码运行时、原生 View Transition rejection guard，以及 ClientRouter 生命周期清理。
@@ -64,6 +65,23 @@ bun run verify:phase5
 `test:phase4` 覆盖页面 profile 的纯策略边界；`verify:phase4` 复核 PKU/George 原始 vendor 文件和构建产物的 SHA-256、原始 PKU 参数、宿主的销毁钩子、路由映射，以及生产产物中不存在效果脚本热链。
 
 `test:phase5` 覆盖 HanLife 公开贡献 HTML 的解析、53 周中性骨架，以及 SkyWT 复用的地理计算；`verify:phase5` 复核 SkyWT/TNXG/MapLibre 的本地资源哈希、MapLibre 惰性加载与 ClientRouter 清理契约、热力图的无 Token 回退、About-only 小人和生产产物中无 TNXG 热链。
+
+`verify:phase6` 是开发期的发布就绪审计：它验证 noindex、canonical、RSS、sitemap、静态资源、语言声明、图片替代文本决策、外部资源边界和手动部署保护。为了允许当前测试内容继续用于开发，占位身份、上游测试媒体和未替换的个人资料会显示为警告，而不会让 CI 失败。
+
+最终资料替换完成后，必须额外执行严格门禁：
+
+```powershell
+bun run release:gate
+```
+
+严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。
+
+可选的浏览器回归（不进入 CI，因为它需要本机 Chrome 和已启动的生产预览）验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画。默认连接 `http://127.0.0.1:9224` 的 Chrome DevTools 与 `http://127.0.0.1:4321` 的预览，也可通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
+
+```powershell
+bun run preview -- --host 127.0.0.1 --port 4321
+bun run verify:phase6:browser
+```
 
 资源预算：
 
@@ -144,11 +162,10 @@ git log --oneline --decorate develop..upstream/main
 正式发布前：
 
 1. 替换个人内容和资源。
-2. 运行占位和外部请求扫描。
-3. 运行 `bun run ci`。
-4. 验证深层路由、404、RSS、sitemap。
-5. 将 deploy workflow 增加 `main` push 触发。
-6. 合并到 `main`。
+2. 运行 `bun run ci` 和 `bun run release:gate`，清除所有严格门禁项。
+3. 本地验证深层路由、404、RSS、sitemap 和减少动画。
+4. 获得上线确认后，将 deploy workflow 增加 `main` push 触发（并同步更新 `scripts/verify-preflight.mjs` 的触发器断言）。
+5. 将已验证提交合并、推送到 `main`，在仓库 Settings → Pages 选择 **GitHub Actions**，并验证实际部署 URL。
 
 首版不创建 `schedule`。
 

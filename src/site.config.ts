@@ -146,8 +146,9 @@ export const integ: IntegrationUserConfig = {
   // Comment system
   waline: {
     enable: false,
-    // Server service link
-    server: 'https://waline.arthals.ink',
+    // Keep no remote endpoint in the development build. A future explicit
+    // decision to enable comments must provide a reviewed server separately.
+    server: '',
     // Refer https://waline.js.org/en/guide/features/emoji.html
     emoji: ['bmoji', 'weibo'],
     // Refer https://waline.js.org/en/reference/client/props.html

@@ -70,6 +70,7 @@ const projectIconSet: Record<string, IconsType> = {
                 class='line-clamp-1 font-medium text-foreground no-underline transition-colors'
                 href={project.links[0].href}
                 target='_blank'
+                rel='noopener noreferrer'
               >
                 {project.name}
               </a>
@@ -85,6 +86,7 @@ const projectIconSet: Record<string, IconsType> = {
                       class='rounded-full bg-muted p-1 text-muted-foreground transition-colors sm:p-1.5'
                       aria-label={link.type}
                       target='_blank'
+                      rel='noopener noreferrer'
                     >
                       <Icon class='size-5' name={icon} />
                     </a>

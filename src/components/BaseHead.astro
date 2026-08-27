@@ -3,9 +3,12 @@ import { prod } from 'astro-pure/server'
 import type { SiteMeta } from 'astro-pure/types'
 import config from '@/site-config'
 
-type Props = SiteMeta
+type Props = SiteMeta & {
+  /** Utility/error pages should not become standalone search results. */
+  noindex?: boolean
+}
 
-const { articleDate, description, ogImage, title } = Astro.props
+const { articleDate, description, noindex = false, ogImage, title } = Astro.props
 
 const siteTitle = `${title} ${config.titleDelimiter} ${config.title}`
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
@@ -16,6 +19,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 <meta content='width=device-width, initial-scale=1.0, shrink-to-fit=no' name='viewport' />
 <meta content='IE=edge' http-equiv='X-UA-Compatible' />
 <title>{siteTitle}</title>
+{noindex && <meta name='robots' content='noindex, follow' />}
 
 {/* Icons / Favicon */}
 <link rel='apple-touch-icon' sizes='180x180' href='/favicon/apple-touch-icon.png' />

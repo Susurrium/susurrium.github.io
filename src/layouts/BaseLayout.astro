@@ -2,9 +2,10 @@
 import { ClientRouter } from 'astro:transitions'
 import { effectProfiles, resolveEffectProfile, type EffectProfile } from '@/data/effects'
 
-import { Footer, ThemeProvider } from 'astro-pure/components/basic'
+import { ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
+import Footer from '@/components/arthals/Footer.astro'
 import ScrollCompanion from '@/components/effects/ScrollCompanion.astro'
 import VisualEffectsHost from '@/components/effects/VisualEffectsHost.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
@@ -17,7 +18,10 @@ import config from '@/site-config'
 import '@/assets/styles/app.css'
 
 interface Props {
-  meta: SiteMeta
+  meta: SiteMeta & {
+    /** Forward route-specific indexing policy to the shared document head. */
+    noindex?: boolean
+  }
   highlightColor?: string
   /** Home overlays the initial transparent header on the LargeSkull Hero. */
   pageKind?: 'home'
@@ -28,7 +32,7 @@ interface Props {
 }
 
 const {
-  meta: { articleDate, description = config.description, ogImage, title },
+  meta: { articleDate, description = config.description, noindex = false, ogImage, title },
   highlightColor,
   pageKind,
   effectProfile: effectProfileInput,
@@ -40,7 +44,7 @@ const effectProfile = resolveEffectProfile(effectProfileInput)
 
 <html lang={config.locale.lang}>
   <head>
-    <BaseHead {articleDate} {description} {ogImage} {title} />
+    <BaseHead {articleDate} {description} {noindex} {ogImage} {title} />
     <ThemeProvider />
     <ViewTransitionRejectionGuard />
     <ClientRouter />

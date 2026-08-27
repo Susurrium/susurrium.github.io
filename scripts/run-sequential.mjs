@@ -25,6 +25,7 @@ const sequences = {
     [bun, ['run', 'verify:phase4']],
     [bun, ['run', 'test:phase5']],
     [bun, ['run', 'verify:phase5']],
+    [bun, ['run', 'verify:phase6']],
     [bun, ['run', 'check:assets']]
   ],
   preflight: [

@@ -127,7 +127,7 @@ export class FriendCircle {
     this.statsContainer.innerHTML = `
       <div>${stats.friends_num} links with ${stats.active_num} active | ${stats.article_num} articles in total</div>
       <div>Updated at ${stats.last_updated_time}</div>
-      <div>Powered by <a href="https://github.com/willow-god/Friend-Circle-Lite" target="_blank">FriendCircleLite</a><br></div>
+      <div>Powered by <a href="https://github.com/willow-god/Friend-Circle-Lite" target="_blank" rel="noopener noreferrer">FriendCircleLite</a><br></div>
     `
   }
 
@@ -153,7 +153,7 @@ export class FriendCircle {
       </div>
       <div class="article-container">
         <div class="article-author author-click">${article.author}</div>
-        <a class="article-title" href="${article.link instanceof URL ? article.link.toString() : article.link}" target="_blank">${article.title}</a>
+        <a class="article-title" href="${article.link instanceof URL ? article.link.toString() : article.link}" target="_blank" rel="noopener noreferrer">${article.title}</a>
         <div class="article-date">️${article.created.substring(0, 10)}</div>
       </div>
     `
@@ -171,7 +171,7 @@ export class FriendCircle {
       <div class="random-title">Random Poll</div>
       <div class="article-container">
         <div class="article-author">${randomArticle.author}</div>
-        <a class="article-title" href="${randomArticle.link}" target="_blank">${randomArticle.title}</a>
+        <a class="article-title" href="${randomArticle.link}" target="_blank" rel="noopener noreferrer">${randomArticle.title}</a>
         <div class="article-date">️${randomArticle.created.substring(0, 10)}</div>
       </div>
       <button id="random-refresh">
@@ -194,7 +194,7 @@ export class FriendCircle {
       <div class="modal-content">
         <div class="modal-header">
           <img class="modal-author-avatar" src="${avatar || this.config.error_img}" alt="">
-          <a class="modal-author-name-link" href="${new URL(link.toString()).origin}" target="_blank">${author}</a>
+          <a class="modal-author-name-link" href="${new URL(link.toString()).origin}" target="_blank" rel="noopener noreferrer">${author}</a>
         </div>
         <div id="modal-articles-container"></div>
       </div>
@@ -209,7 +209,7 @@ export class FriendCircle {
     authorArticles.slice(0, 4).forEach((article) => {
       const articleTemplate = `
         <div class="modal-article">
-          <a class="modal-article-title" href="${article.link instanceof URL ? article.link.toString() : article.link}" target="_blank">${article.title}</a>
+          <a class="modal-article-title" href="${article.link instanceof URL ? article.link.toString() : article.link}" target="_blank" rel="noopener noreferrer">${article.title}</a>
           <div class="modal-article-date">${article.created.substring(0, 10)}</div>
         </div>`
       modalArticlesContainer.insertAdjacentHTML('beforeend', articleTemplate)

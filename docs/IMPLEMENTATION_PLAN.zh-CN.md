@@ -1,6 +1,6 @@
 # Susurrium 博客重构实施方案
 
-> 状态：已确认、可实施｜方案版本：1.0｜冻结日期：2026-08-27｜适用仓库：`Susurrium/susurrium.github.io`
+> 状态：Phase 0–5 已完成；Phase 6 的本地审计实现已完成，正式上线待最终资料与确认｜方案版本：1.1｜冻结日期：2026-08-27｜适用仓库：`Susurrium/susurrium.github.io`
 > 上游基线：`zhuozhiyongde/Arthals-Ink@15f5ad110af8ed8f38a1e506dd890d2d921f118f`
 
 ## 1. 文档作用
@@ -604,6 +604,17 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 ### Phase 6：发布审计
 
 交付 SEO、RSS、sitemap、404、性能、无障碍、占位扫描、网络扫描和正式 Pages 自动部署。
+
+当前实施边界：
+
+- 已建立生产产物审计与严格发布门禁；开发期测试内容会产生警告，严格门禁会将它们升级为失败。
+- 入口页、404 和搜索工具页必须 `noindex`；sitemap 只收录可索引公开路由，不收录 `/` 入口页或 draft。
+- RSS 只输出 Blog；无题图的文章不生成空的图片或 enclosure URL。
+- 当前部署仍只有手动触发，防止测试内容被误发。替换最终资料并通过严格门禁后，再经用户确认启用 `main` 自动部署和 GitHub Pages 的真实设置。
+
+验收命令：`bun run ci`（开发期）与 `bun run release:gate`（最终资料替换后）。线上发布还需验证 GitHub Actions 成功、`https://susurrium.github.io/` 可访问，以及 canonical、RSS、sitemap 与 404 均指向最终域名。
+
+状态：本地 CI、生产产物审计和移动端浏览器回归均已通过。严格门禁现在会有意拒绝测试内容、上游身份、热链媒体和上游 GitHub 动态卡片；这些项目必须由最终内容替换完成后再解除。当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
 
 ## 20. 主要风险与处理
 

@@ -1,6 +1,7 @@
 // @ts-check
 
 import { rehypeHeadingIds } from '@astrojs/markdown-remark'
+import sitemap from '@astrojs/sitemap'
 // Adapter
 // import vercel from '@astrojs/vercel'
 // import node from '@astrojs/node'
@@ -56,8 +57,11 @@ export default defineConfig({
   },
 
   integrations: [
-    // astro-pure will automatically add sitemap, mdx & unocss
-    // sitemap(),
+    // Register sitemap explicitly so the replayable, noindex entrance is not
+    // submitted to crawlers. AstroPure detects this integration and will not
+    // register a second default sitemap instance.
+    sitemap({ filter: (page) => new URL(page).pathname !== '/' }),
+    // astro-pure will automatically add mdx & unocss
     // mdx(),
     AstroPureIntegration(config)
     // (await import('@playform/compress')).default({

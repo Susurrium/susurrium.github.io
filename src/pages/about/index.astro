@@ -213,11 +213,13 @@ const headings = [
     events={[
       {
         date: '2021-09-01',
-        content: '<a href="https://www.pku.edu.cn"target="_blank">北京大学</a>'
+        content:
+          '<a href="https://www.pku.edu.cn" target="_blank" rel="noopener noreferrer">北京大学</a>'
       },
       {
         date: '2014-09-01',
-        content: '<a href="https://www.rdfz.cn/"target="_blank">中国人民大学附属中学</a>'
+        content:
+          '<a href="https://www.rdfz.cn/" target="_blank" rel="noopener noreferrer">中国人民大学附属中学</a>'
       }
     ]}
   />
@@ -228,7 +230,7 @@ const headings = [
       {
         date: '2024-09-11',
         content:
-          '<a href="https://slide.huh.moe/"target="_blank">北京大学 · 《计算机系统导论》课程助教</a>'
+          '<a href="https://slide.huh.moe/" target="_blank" rel="noopener noreferrer">北京大学 · 《计算机系统导论》课程助教</a>'
       }
     ]}
   />
@@ -237,22 +239,30 @@ const headings = [
   <h2 id='about-blog'>About Blog</h2>
   <p>本站基于以下项目/服务提供商的资源和技术支持：</p>
   <ul>
-    <li>域名: <a href='https://cloud.tencent.com/' target='_blank'>Tencent Cloud</a></li>
     <li>
-      框架 & 主题: <a href='https://astro.build/' target='_blank'>Astro</a> + <a
+      域名: <a href='https://cloud.tencent.com/' target='_blank' rel='noopener noreferrer'>Tencent Cloud</a>
+    </li>
+    <li>
+      框架 & 主题: <a href='https://astro.build/' target='_blank' rel='noopener noreferrer'>Astro</a> + <a
         href='https://github.com/cworld1/astro-theme-pure'
-        target='_blank'>Astro Theme Pure</a
+        target='_blank'
+        rel='noopener noreferrer'>Astro Theme Pure</a
       >
     </li>
-    <li>评论系统：<a href='https://waline.js.org' target='_blank'>Waline</a></li>
+    <li>评论系统：<a href='https://waline.js.org' target='_blank' rel='noopener noreferrer'>Waline</a></li>
     <li>
-      访问量统计：<a href='https://waline.js.org/' target='_blank'>Waline</a> + <a
+      访问量统计：<a href='https://waline.js.org/' target='_blank' rel='noopener noreferrer'>Waline</a> + <a
         href='https://umami.is/'
-        target='_blank'>Umami</a
+        target='_blank'
+        rel='noopener noreferrer'>Umami</a
       >
     </li>
     <li>
-      粉丝数统计：<a href='https://github.com/spencerwooo/substats' target='_blank'>Substats</a>
+      粉丝数统计：<a
+        href='https://github.com/spencerwooo/substats'
+        target='_blank'
+        rel='noopener noreferrer'>Substats</a
+      >
     </li>
   </ul>
   <Signature />

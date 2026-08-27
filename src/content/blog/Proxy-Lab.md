@@ -1172,7 +1172,7 @@ Content-type: text/html
 <html>
 <head><title>test</title></head>
 <body>
-<img align="middle" src="godzilla.gif">
+<img align="middle" src="godzilla.gif" alt="">
 Dave O'Hallaron
 </body>
 </html>

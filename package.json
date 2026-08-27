@@ -25,6 +25,9 @@
     "verify:phase3": "bun scripts/verify-phase3.mjs",
     "verify:phase4": "bun scripts/verify-phase4.mjs",
     "verify:phase5": "bun scripts/verify-phase5.mjs",
+    "verify:phase6": "bun scripts/verify-phase6.mjs",
+    "verify:phase6:browser": "node scripts/verify-phase6-browser.mjs",
+    "release:gate": "bun scripts/verify-phase6.mjs --strict",
     "test:phase2": "bun test test/phase2-strategies.test.ts",
     "test:phase4": "bun test test/phase4-effects.test.ts",
     "test:phase5": "bun test test/phase5-specialty.test.ts",
@@ -44,6 +47,7 @@
   "dependencies": {
     "@astrojs/check": "^0.9.4",
     "@astrojs/rss": "4.0.19",
+    "@astrojs/sitemap": "3.7.2",
     "@waline/client": "^3.6.0",
     "astro": "6.1.8",
     "astro-pure": "1.4.6",

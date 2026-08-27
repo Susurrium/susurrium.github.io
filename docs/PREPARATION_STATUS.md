@@ -13,7 +13,7 @@
 | 禁止 upstream push |     完成 | push URL 为 `DISABLED`                                     |
 | 上游基线标签       |     完成 | `arthals-upstream-2026-03-22`                              |
 | 集成分支           |     完成 | `develop`                                                  |
-| 自动部署           | 保持关闭 | Pages 为 `build_type: workflow`；只准备手动 workflow       |
+| 自动部署           | 保持关闭 | 仅准备本地手动 workflow；真实 Pages 设置留待最终上线确认   |
 
 上游基线：
 
@@ -151,11 +151,11 @@ Pure 1.4.6 要求 quote 配置存在，因此暂时指向本地 `/data/developme
 - [x] 方案文档落盘。
 - [x] 来源方式矩阵落盘。
 - [x] 自动发布保持关闭。
-- [x] GitHub Pages 从 legacy 分支发布切换为 workflow 模式。
+- [ ] GitHub Pages 真实发布模式切换与线上部署验证（留待最终上线）。
 - [x] 外部统计、评论和在线一言停用。
 - [x] 准备提交已推送到 `develop` 并通过 GitHub CI。
 
-Phase 0 至此完成。下一步应从 `develop` 创建 Phase 1 功能分支；本轮没有开始页面或特效开发。
+Phase 0 至此完成。后续功能阶段以此冻结基线为准；当前实际进度请始终以实施方案为准。
 
 ## 9. 目前不是阻塞项的输入
 
@@ -165,3 +165,9 @@ Phase 0 至此完成。下一步应从 `develop` 创建 Phase 1 功能分支；�
 - 自定义域名尚未决定，首版默认不用。
 
 这些事项不阻塞占位开发。
+
+## 10. 当前发布状态（Phase 6）
+
+Phase 0 的记录只证明了本地准备完成，不等同于站点已上线。当前仓库保留测试文章、上游身份与开发期媒体，因此部署工作流仍仅可手动触发；远端 Pages 尚未作为最终站点验收。
+
+最终资料替换后，应依次运行 `bun run ci` 与 `bun run release:gate`，经用户确认后再启用 `main` 推送部署、在 GitHub Pages 设置中选择 **GitHub Actions**，并对实际 `https://susurrium.github.io/` 进行上线回归。
