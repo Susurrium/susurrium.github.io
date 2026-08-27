@@ -334,6 +334,10 @@ expect(
     residenceUrls.every((url) => new URL(url).hostname === 'basemaps.cartocdn.com'),
   'the only declared client map runtime is the allowlisted CARTO style service'
 )
+releaseBlocker(
+  !/位置占位/i.test(residenceSource),
+  'residence configuration no longer contains a temporary location label'
+)
 
 const musicSource = readFileSync(resolve(root, 'src/data/music.ts'), 'utf8')
 const musicCatalogueMatch = musicSource.match(/export const dailyMusic[^=]*=\s*\[([\s\S]*?)\n\]/)
@@ -354,7 +358,10 @@ releaseBlocker(
 const markerChecks = [
   { label: 'temporary LargeSkull image descriptions', pattern: /LargeSkull temporary image/i },
   { label: 'temporary Saying fixture text', pattern: /Temporary development saying/i },
-  { label: 'temporary residence location label', pattern: /位置占位/i },
+  {
+    label: 'Friend Circle local snapshot placeholder',
+    pattern: /Friend Circle is being prepared\./i
+  },
   { label: 'Arthals identity/configuration', pattern: /Arthals(?:&#39;|')? ink|\bArthals\b/i },
   { label: 'upstream author/profile references', pattern: /zhuozhiyongde/i },
   { label: 'upstream Arthals domain references', pattern: /(?:cdn\.)?arthals\.ink/i }
@@ -374,13 +381,10 @@ const deployWorkflow = readFileSync(resolve(root, '.github/workflows/deploy.yml'
 const hasManualPagesTrigger = /^[ \t]*workflow_dispatch:[ \t]*$/m.test(deployWorkflow)
 const hasPushTrigger = /^[ \t]*push:[ \t]*$/m.test(deployWorkflow)
 const hasMainOnlyPushTrigger =
-  /^[ \t]*push:[ \t]*\r?\n[ \t]+branches:[ \t]*\[[ \t]*main[ \t]*\][ \t]*$/m.test(
-    deployWorkflow
-  )
+  /^[ \t]*push:[ \t]*\r?\n[ \t]+branches:[ \t]*\[[ \t]*main[ \t]*\][ \t]*$/m.test(deployWorkflow)
 const releaseAuditIsClean = failures.length === 0 && warnings.length === 0
 expect(
-  hasManualPagesTrigger &&
-    (!hasPushTrigger || (hasMainOnlyPushTrigger && releaseAuditIsClean)),
+  hasManualPagesTrigger && (!hasPushTrigger || (hasMainOnlyPushTrigger && releaseAuditIsClean)),
   releaseAuditIsClean
     ? 'Pages deployment is manual or restricted to main after a clean release audit'
     : 'Pages deployment remains manual while release gate findings exist'

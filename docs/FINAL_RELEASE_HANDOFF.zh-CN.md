@@ -46,11 +46,11 @@
 
 ### 居住地
 
-`src/data/residence.ts` 是唯一配置源。请只放入愿意公开的地点精度；更新 `city`、`region`、`displayName`、`caption`、`latitude`、`longitude`、`mapImage`、`ownerAvatar` 与 `visitorAvatar` 后，保留 CARTO 的明/暗地图样式作为现有惰性加载地图的底图。不要把精确住址或不适合公开的坐标提交进 Git 历史。
+`src/data/residence.ts` 是唯一配置源。请只放入愿意公开的地点精度；更新 `label`、`city`、`region`、`displayName`、`caption`、`latitude`、`longitude`、`mapImage`、`ownerAvatar` 与 `visitorAvatar` 后，保留 CARTO 的明/暗地图样式作为现有惰性加载地图的底图。不要把精确住址或不适合公开的坐标提交进 Git 历史。
 
 ## 4. 逐项替换顺序
 
-1. 先在新分支替换站点身份、静态页面和测试内容；删除不需要保留的上游文章、链接、作者资料和域名引用。
+1. 先在新分支替换站点身份、静态页面和测试内容；删除不需要保留的上游文章、链接、作者资料和域名引用。Links 的 Friend Circle 要么换成已审核的本地快照，要么连同标题一起移除，不能保留“准备中”状态。
 2. 本地化所有最终媒体，并同时替换 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使暂时使用同一批图，也要保持独立，避免以后一次替换误伤另一种卡片策略。
 3. 填写居住地和所有每日音乐；确认音频不自动播放，只在用户点击后播放。
 4. 运行下方的完整验证。严格门禁的零失败不是可选项；不要把最终资料写入白名单，也不要删除检查来“通过”。
