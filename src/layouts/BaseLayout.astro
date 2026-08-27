@@ -1,8 +1,12 @@
 ---
+import { ClientRouter } from 'astro:transitions'
+
 import { Footer, ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
+import MusicPlayer from '@/components/MusicPlayer.astro'
+import ViewTransitionRejectionGuard from '@/components/ViewTransitionRejectionGuard.astro'
 import config from '@/site-config'
 
 // Import the global.css file here so that it is included on
@@ -14,12 +18,15 @@ interface Props {
   highlightColor?: string
   /** Home overlays the initial transparent header on the LargeSkull Hero. */
   pageKind?: 'home'
+  /** Article detail views use the compact persistent music treatment. */
+  musicMode?: 'full' | 'compact'
 }
 
 const {
   meta: { articleDate, description = config.description, ogImage, title },
   highlightColor,
   pageKind,
+  musicMode = 'full',
   ...props
 } = Astro.props
 ---
@@ -28,9 +35,16 @@ const {
   <head>
     <BaseHead {articleDate} {description} {ogImage} {title} />
     <ThemeProvider />
+    <ViewTransitionRejectionGuard />
+    <ClientRouter />
   </head>
 
-  <body class='flex justify-center bg-background text-foreground' data-page-kind={pageKind} {...props}>
+  <body
+    class='flex justify-center bg-background text-foreground'
+    data-page-kind={pageKind}
+    data-music-mode={musicMode}
+    {...props}
+  >
     {
       highlightColor && (
         <div
@@ -47,10 +61,16 @@ const {
       ]}
     >
       <SiteHeader />
-      <div class="flex-1 w-full">
+      <div class='flex-1 w-full'>
         <slot />
       </div>
-      <Footer/>
+      <Footer />
+    </div>
+    <!-- The persistence directive must live on a native DOM element. Passing
+         it to an Astro component does not emit the runtime marker that
+         ClientRouter uses while swapping page bodies. -->
+    <div transition:persist='susurrium-music-player'>
+      <MusicPlayer />
     </div>
 
     {/* Set highlight color */}

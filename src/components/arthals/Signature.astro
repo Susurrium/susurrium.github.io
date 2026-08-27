@@ -29,156 +29,189 @@ const {
     'signature-wrapper w-40 float-right mt-4 [&_path]:stroke-black dark:[&_path]:stroke-gray-2 [&_path]:opacity-0',
     className
   ]}
+  data-default-duration={defaultDuration}
+  data-draw-delay={drawDelay}
+  data-loop-pause={loopPause}
   data-mode={mode}
+  data-rollback-delay={rollbackDelay}
+  data-signature-wrapper
+  data-threshold={threshold}
   {...rest}
 >
+  <!-- This controller is deliberately scoped to its wrapper. Its custom-element
+       lifecycle clears timers/observers when ClientRouter removes this page. -->
+  <signature-drawing data-signature-controller></signature-drawing>
   <Fragment set:html={SignatureSVG} />
 </div>
 
-<script define:vars={{ mode, drawDelay, rollbackDelay, loopPause, threshold, defaultDuration }}>
-  function setupSignature(wrapper) {
-    const initialPaths = Array.from(wrapper.querySelectorAll('path[stroke]'))
-    if (initialPaths.length === 0) return
+<script>
+  type SignatureMode = 'loop' | 'once-on-view'
 
-    initialPaths.sort((a, b) => {
-      const seqA = a.getAttribute('seq')
-      const seqB = b.getAttribute('seq')
-      const numA = parseInt(seqA, 10)
-      const numB = parseInt(seqB, 10)
-      const hasSeqA = !isNaN(numA)
-      const hasSeqB = !isNaN(numB)
+  class SignatureDrawing extends HTMLElement {
+    #observer?: IntersectionObserver
+    #timers = new Set<number>()
+    #active = false
 
-      if (hasSeqA && hasSeqB) return numA - numB
-      if (hasSeqA) return -1
-      if (hasSeqB) return 1
-      return 0
-    })
-    const paths = initialPaths
+    connectedCallback() {
+      this.#destroy()
+      this.#setup()
+    }
 
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (motionQuery.matches) {
+    disconnectedCallback() {
+      this.#destroy()
+    }
+
+    #destroy() {
+      this.#active = false
+      this.#observer?.disconnect()
+      this.#observer = undefined
+      this.#timers.forEach((timer) => window.clearTimeout(timer))
+      this.#timers.clear()
+    }
+
+    #schedule(callback: () => void, delay: number) {
+      const timer = window.setTimeout(() => {
+        this.#timers.delete(timer)
+        if (this.#active && this.isConnected) callback()
+      }, delay)
+      this.#timers.add(timer)
+    }
+
+    #setup() {
+      const wrapper = this.parentElement
+      if (!(wrapper instanceof HTMLElement) || !wrapper.matches('[data-signature-wrapper]')) return
+
+      const paths = Array.from(wrapper.querySelectorAll<SVGPathElement>('path[stroke]'))
+      if (paths.length === 0) return
+
+      paths.sort((a, b) => {
+        const sequenceA = Number.parseInt(a.getAttribute('seq') ?? '', 10)
+        const sequenceB = Number.parseInt(b.getAttribute('seq') ?? '', 10)
+        const hasSequenceA = Number.isFinite(sequenceA)
+        const hasSequenceB = Number.isFinite(sequenceB)
+
+        if (hasSequenceA && hasSequenceB) return sequenceA - sequenceB
+        if (hasSequenceA) return -1
+        if (hasSequenceB) return 1
+        return 0
+      })
+
+      const getNumber = (attribute: string, fallback: number) => {
+        const value = Number.parseFloat(wrapper.dataset[attribute] ?? '')
+        return Number.isFinite(value) ? value : fallback
+      }
+      const mode: SignatureMode = wrapper.dataset.mode === 'once-on-view' ? 'once-on-view' : 'loop'
+      const drawDelay = getNumber('drawDelay', 200)
+      const rollbackDelay = getNumber('rollbackDelay', 80)
+      const loopPause = getNumber('loopPause', 2000)
+      const threshold = getNumber('threshold', 1)
+      const defaultDuration = getNumber('defaultDuration', 600)
+
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        paths.forEach((path) => {
+          path.style.opacity = '1'
+        })
+        return
+      }
+
+      const pathLengths = new Map<SVGPathElement, number>()
+      const pathDurations = new Map<SVGPathElement, number>()
+
       paths.forEach((path) => {
+        const length = path.getTotalLength()
+        const customDuration = Number.parseInt(path.getAttribute('data-duration') ?? '', 10)
+        const duration = Number.isFinite(customDuration) ? customDuration : defaultDuration
+
+        pathLengths.set(path, length)
+        pathDurations.set(path, duration)
+        path.style.strokeDasharray = `${length} ${length}`
+        path.style.strokeDashoffset = String(length)
+        path.style.transition = 'none'
         path.style.opacity = '1'
       })
-      return
-    }
 
-    // 计算路径长度和动画时长
-    const pathLengths = new Map()
-    const pathDurations = new Map()
+      this.#active = true
 
-    paths.forEach((path) => {
-      const length = path.getTotalLength()
-      pathLengths.set(path, length)
+      const drawSequentially = (index: number, callback?: () => void) => {
+        if (!this.#active || !wrapper.isConnected) return
+        if (index >= paths.length) {
+          callback?.()
+          return
+        }
 
-      const customDuration = path.getAttribute('data-duration')
-      const duration = customDuration ? parseInt(customDuration, 10) : defaultDuration
-      pathDurations.set(path, duration)
+        const path = paths[index]
+        const duration = pathDurations.get(path) ?? defaultDuration
+        path.getBoundingClientRect()
+        path.style.transition = `stroke-dashoffset ${duration}ms ease-in-out`
+        path.style.strokeDashoffset = '0'
 
-      path.style.strokeDasharray = `${length} ${length}`
-      path.style.strokeDashoffset = length
-      path.style.transition = 'none'
-      path.style.opacity = '1'
-    })
-
-    // 使用递归方式实现顺序动画
-    const drawSequentially = (index, callback) => {
-      if (index >= paths.length) {
-        if (callback) callback()
-        return
+        this.#schedule(() => {
+          const nextDelay = index < paths.length - 1 ? drawDelay : 0
+          this.#schedule(() => drawSequentially(index + 1, callback), nextDelay)
+        }, duration)
       }
 
-      const path = paths[index]
-      const duration = pathDurations.get(path)
+      const rollbackSequentially = (index: number, callback?: () => void) => {
+        if (!this.#active || !wrapper.isConnected) return
+        if (index < 0) {
+          callback?.()
+          return
+        }
 
-      // 强制重排以确保初始状态被应用
-      path.getBoundingClientRect()
+        const path = paths[index]
+        const duration = pathDurations.get(path) ?? defaultDuration
+        const rollbackDuration = duration * 0.8
+        path.getBoundingClientRect()
+        path.style.transition = `stroke-dashoffset ${rollbackDuration}ms ease-in-out`
+        path.style.strokeDashoffset = String(pathLengths.get(path) ?? 0)
 
-      // 设置动画
-      path.style.transition = `stroke-dashoffset ${duration}ms ease-in-out`
-      path.style.strokeDashoffset = '0'
-
-      // 等待动画完成
-      setTimeout(() => {
-        // 如果不是最后一笔，添加延迟
-        const nextDelay = index < paths.length - 1 ? drawDelay : 0
-        setTimeout(() => {
-          drawSequentially(index + 1, callback)
-        }, nextDelay)
-      }, duration)
-    }
-
-    const rollbackSequentially = (index, callback) => {
-      if (index < 0) {
-        if (callback) callback()
-        return
+        this.#schedule(() => {
+          const nextDelay = index > 0 ? rollbackDelay : 0
+          this.#schedule(() => rollbackSequentially(index - 1, callback), nextDelay)
+        }, rollbackDuration)
       }
 
-      const path = paths[index]
-      const duration = pathDurations.get(path)
-      const currentRollbackDuration = duration * 0.8
-
-      // 强制重排
-      path.getBoundingClientRect()
-
-      // 设置回滚动画
-      path.style.transition = `stroke-dashoffset ${currentRollbackDuration}ms ease-in-out`
-      path.style.strokeDashoffset = pathLengths.get(path)
-
-      // 等待动画完成
-      setTimeout(() => {
-        // 如果不是最后一笔，添加延迟
-        const nextDelay = index > 0 ? rollbackDelay : 0
-        setTimeout(() => {
-          rollbackSequentially(index - 1, callback)
-        }, nextDelay)
-      }, currentRollbackDuration)
-    }
-
-    // 执行动画
-    if (mode === 'loop') {
-      const runLoop = () => {
-        // 绘制所有笔画
-        drawSequentially(0, () => {
-          // 绘制完成后暂停
-          setTimeout(() => {
-            // 回滚所有笔画
-            rollbackSequentially(paths.length - 1, () => {
-              // 回滚完成后暂停
-              setTimeout(() => {
-                // 重新开始循环
-                runLoop()
-              }, loopPause / 2)
-            })
-          }, loopPause)
-        })
-      }
-
-      // 初始延迟后开始
-      setTimeout(runLoop, 500)
-    } else if (mode === 'once-on-view') {
-      const observer = new IntersectionObserver(
-        (entries, obs) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              // 再等500ms后移除观察器
-              setTimeout(() => {
-                drawSequentially(0)
-                obs.unobserve(entry.target)
-              }, 500)
-            }
+      if (mode === 'loop') {
+        const runLoop = () => {
+          drawSequentially(0, () => {
+            this.#schedule(() => {
+              rollbackSequentially(paths.length - 1, () => {
+                this.#schedule(runLoop, loopPause / 2)
+              })
+            }, loopPause)
           })
+        }
+        this.#schedule(runLoop, 500)
+        return
+      }
+
+      let hasStarted = false
+      this.#observer = new IntersectionObserver(
+        (entries) => {
+          if (hasStarted || !this.#active) return
+          if (!entries.some((entry) => entry.isIntersecting)) return
+
+          hasStarted = true
+          this.#observer?.disconnect()
+          this.#observer = undefined
+          this.#schedule(() => drawSequentially(0), 500)
         },
-        { threshold: threshold }
+        { threshold }
       )
-      observer.observe(wrapper)
+      this.#observer.observe(wrapper)
     }
   }
 
-  document.querySelectorAll('.signature-wrapper').forEach(setupSignature)
+  if (!customElements.get('signature-drawing')) {
+    customElements.define('signature-drawing', SignatureDrawing)
+  }
 </script>
 
 <style is:global>
+  signature-drawing[data-signature-controller] {
+    display: none;
+  }
+
   .signature-wrapper svg {
     width: 100%;
     height: auto;

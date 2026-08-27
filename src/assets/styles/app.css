@@ -17,6 +17,12 @@ html {
 
 /* Theme */
 :root {
+  /* Shared layer budget for ClientRouter-persistent UI and future visual
+     effects. Effects must stay beneath content; overlays remain above them. */
+  --z-page-effects: 10;
+  --z-header: 50;
+  --z-music: 55;
+  --z-overlay: 1000;
   --background: 210 33% 99%;
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;

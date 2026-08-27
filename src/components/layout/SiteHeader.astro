@@ -110,25 +110,55 @@ const menu = config.header.menu ?? []
   }
 
   class SiteHeaderComponent extends HTMLElement {
+    #listenerAbortController?: AbortController
+
     connectedCallback() {
+      // ClientRouter replaces this element on every internal navigation.  Keep
+      // the listeners tied to the current element instance so a detached
+      // header can never keep reacting to scroll or button events.
+      this.#listenerAbortController?.abort()
+      const listenerAbortController = new AbortController()
+      this.#listenerAbortController = listenerAbortController
+      const { signal } = listenerAbortController
+
       let previousScrollY = window.scrollY
       this.classList.toggle('not-top', previousScrollY > 20)
-      window.addEventListener('scroll', () => {
-        this.classList.toggle('not-top', window.scrollY > 20)
-        this.dataset.show = (window.scrollY < 350 || window.scrollY < previousScrollY).toString()
-        previousScrollY = window.scrollY
-      })
+      window.addEventListener(
+        'scroll',
+        () => {
+          this.classList.toggle('not-top', window.scrollY > 20)
+          this.dataset.show = (window.scrollY < 350 || window.scrollY < previousScrollY).toString()
+          previousScrollY = window.scrollY
+        },
+        { passive: true, signal }
+      )
 
       const darkModeButton = this.querySelector('#toggleDarkMode') as HTMLElement | null
-      darkModeButton?.addEventListener('click', () => {
-        const newTheme = setTheme(undefined, true)
-        darkModeButton.dataset.theme = newTheme
-        showToast(`Set theme to ${newTheme}`)
-      })
+      if (darkModeButton) {
+        darkModeButton.dataset.theme ||= localStorage.getItem('theme') || 'system'
+        darkModeButton.addEventListener(
+          'click',
+          () => {
+            const newTheme = setTheme(undefined, true)
+            darkModeButton.dataset.theme = newTheme
+            showToast(`Set theme to ${newTheme}`)
+          },
+          { signal }
+        )
+      }
 
-      this.querySelector('#toggleMenu')?.addEventListener('click', () => {
-        this.classList.toggle('expanded')
-      })
+      this.querySelector('#toggleMenu')?.addEventListener(
+        'click',
+        () => {
+          this.classList.toggle('expanded')
+        },
+        { signal }
+      )
+    }
+
+    disconnectedCallback() {
+      this.#listenerAbortController?.abort()
+      this.#listenerAbortController = undefined
     }
   }
 

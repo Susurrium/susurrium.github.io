@@ -1,0 +1,198 @@
+---
+interface Props {
+  selector?: string
+  background?: string
+}
+
+const { selector = '.prose .zoomable', background = 'hsl(var(--background) / 0.8)' } = Astro.props
+---
+
+<!--
+  Source: BASE-PURE's MediumZoom contract in astro-pure@1.4.6 and the pinned
+  MIT package medium-zoom@1.1.0. The package is bundled locally rather than
+  using Pure's runtime CDN. This controller is the necessary ClientRouter
+  adaptation: one document-wide instance attaches only the current article's
+  images and releases them before a route swap.
+-->
+<article-image-zoom data-article-image-zoom data-background={background} data-selector={selector}
+></article-image-zoom>
+
+<script>
+  import mediumZoom, { type Zoom } from 'medium-zoom/dist/pure'
+
+  type ZoomWindow = Window & {
+    __susurriumArticleImageZoom?: ArticleImageZoom
+    __susurriumMediumZoom?: Zoom
+  }
+
+  /**
+   * medium-zoom intentionally installs document-level event handlers when an
+   * instance is created, but it has no destroy API. Keep one instance for the
+   * lifetime of this browser document, and only attach the images belonging to
+   * the active article. This prevents a new global listener set per route.
+   */
+  const getSharedZoom = (background: string) => {
+    const ownerWindow = window as ZoomWindow
+    const zoom =
+      ownerWindow.__susurriumMediumZoom ??
+      (ownerWindow.__susurriumMediumZoom = mediumZoom({ background }))
+
+    zoom.update({ background })
+    return zoom
+  }
+
+  class ArticleImageZoom extends HTMLElement {
+    #listenerAbortController?: AbortController
+    #images: HTMLImageElement[] = []
+    #zoom?: Zoom
+
+    connectedCallback() {
+      this.#release()
+
+      const ownerWindow = window as ZoomWindow
+      const activeOwner = ownerWindow.__susurriumArticleImageZoom
+      if (activeOwner && activeOwner !== this) activeOwner.#release()
+      ownerWindow.__susurriumArticleImageZoom = this
+
+      const article = this.closest('article')
+      const selector = this.dataset.selector
+      if (!article || !selector) return
+
+      this.#images = Array.from(article.querySelectorAll<HTMLImageElement>(selector))
+      this.#zoom = getSharedZoom(this.dataset.background ?? 'hsl(var(--background) / 0.8)')
+
+      // Defensive cleanup for a previously detached article. `detach()` also
+      // removes the library's image classes, while the singleton keeps just
+      // one global set of Medium Zoom document listeners for the whole visit.
+      this.#zoom.detach()
+      this.#zoom.attach(this.#images)
+
+      const listenerAbortController = new AbortController()
+      this.#listenerAbortController = listenerAbortController
+      const { signal } = listenerAbortController
+
+      // The loader can be delayed safely. Closing while the current image is
+      // still in the document avoids a stranded overlay if a link is followed
+      // during the opening animation.
+      document.addEventListener(
+        'astro:before-preparation',
+        (event) => {
+          const loader = event.loader
+          event.loader = async () => {
+            await this.#closeForNavigation()
+            return loader()
+          }
+        },
+        { signal }
+      )
+
+      // A route may also be swapped by history navigation or a custom loader.
+      // Releasing here and from disconnectedCallback is deliberately
+      // idempotent; only the active owner can detach the shared instance.
+      document.addEventListener('astro:before-swap', () => this.#release(), { signal })
+    }
+
+    disconnectedCallback() {
+      this.#release()
+    }
+
+    async #closeForNavigation() {
+      const zoom = this.#zoom
+      const activeImage = zoom?.getZoomedImage()
+      if (!zoom || !activeImage) return
+
+      await new Promise<void>((resolve) => {
+        let settled = false
+
+        const finish = () => {
+          if (settled) return
+          settled = true
+          window.clearTimeout(timeoutId)
+          activeImage.removeEventListener('medium-zoom:opened', requestClose)
+          activeImage.removeEventListener('medium-zoom:closed', finish)
+          resolve()
+        }
+
+        const requestClose = () => {
+          void zoom.close().then(() => {
+            if (!zoom.getZoomedImage()) finish()
+          })
+        }
+
+        // If navigation happens in the short opening transition, the first
+        // close call is intentionally ignored by Medium Zoom. Retry as soon
+        // as it reports opened, then wait for its normal closed event.
+        activeImage.addEventListener('medium-zoom:opened', requestClose, { once: true })
+        activeImage.addEventListener('medium-zoom:closed', finish, { once: true })
+        requestClose()
+
+        // CSS transition events can be suppressed by a browser extension or
+        // a user style sheet. Do not block route loading indefinitely; a
+        // second close attempt covers that degraded path.
+        const timeoutId = window.setTimeout(() => {
+          requestClose()
+          window.setTimeout(finish, 350)
+        }, 500)
+      })
+    }
+
+    #release() {
+      this.#listenerAbortController?.abort()
+      this.#listenerAbortController = undefined
+
+      const ownerWindow = window as ZoomWindow
+      if (ownerWindow.__susurriumArticleImageZoom === this) {
+        this.#zoom?.detach(this.#images)
+        delete ownerWindow.__susurriumArticleImageZoom
+      }
+
+      this.#zoom = undefined
+      this.#images = []
+    }
+  }
+
+  if (!customElements.get('article-image-zoom')) {
+    customElements.define('article-image-zoom', ArticleImageZoom)
+  }
+</script>
+
+<!-- Source-compatible styles from astro-pure's MediumZoom component. The
+     library is bundled locally above instead of its runtime CDN script. -->
+<style is:global>
+  article-image-zoom[data-article-image-zoom] {
+    display: none;
+  }
+
+  .medium-zoom-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+    will-change: opacity;
+  }
+
+  .medium-zoom--opened .medium-zoom-overlay {
+    cursor: zoom-out;
+    z-index: calc(var(--z-overlay) - 1);
+    opacity: 1;
+  }
+
+  .medium-zoom-image {
+    cursor: zoom-in;
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1);
+  }
+
+  .medium-zoom-image--hidden {
+    visibility: hidden;
+  }
+
+  .medium-zoom-image--opened {
+    position: relative;
+    z-index: var(--z-overlay);
+    cursor: zoom-out;
+    will-change: transform;
+  }
+</style>

@@ -1,6 +1,6 @@
 # 来源与复用台账
 
-> 台账版本：1.0｜冻结日期：2026-08-27｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；组件代码将在对应开发阶段按本台账提取
+> 台账版本：1.1｜冻结日期：2026-08-27｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–3 已按本台账落地并完成静态/浏览器回归
 
 ## 1. 作用与边界
 
@@ -24,13 +24,15 @@
 
 ## 3. 基础仓库与工具链真源
 
-| ID               | 对象                | 精确来源                                                                                                       | 锁定证据                                                                                                                                                                        | 实施方式                                                               |
-| ---------------- | ------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `BASE-ARTHALS`   | 站点骨架和测试内容  | [`zhuozhiyongde/Arthals-Ink`](https://github.com/zhuozhiyongde/Arthals-Ink)                                    | commit `15f5ad110af8ed8f38a1e506dd890d2d921f118f`；本地/远端标签 `arthals-upstream-2026-03-22`                                                                                  | 直接复用；只做已登记的 Astro 6、导航、配置和新模块适配                 |
-| `BASE-PURE`      | Pure 主题运行时     | npm `astro-pure@1.4.6` / [`cworld1/astro-theme-pure`](https://github.com/cworld1/astro-theme-pure)             | npm gitHead `c2bb1155b6c0b9b339d62b8289c4c95e38528075`；integrity `sha512-m6mFcLfk69LjAOaCZX7qvwgH/ROA6xP6JzpbCT6Ns09CuKnN/vHa7Q+6az4Fd4vNi7A4WmzyfYPU7HDnb6SV+A==`；Apache-2.0 | 直接使用发布包；Astro 精确对齐 6.1.8                                   |
-| `BASE-ASTRO`     | Astro               | npm `astro@6.1.8`                                                                                              | lock integrity `sha512-6fT9M12U3fpi13DiPavNKDIoBflASTSxmKTEe+zXhWtlebQuOqfOnIrMWyRmlXp+mgDsojmw+fVFG9LUTzKSog==`                                                                | 直接使用；首版不漂移版本                                               |
-| `BASE-SIGNATURE` | Arthals 签名组件    | `BASE-ARTHALS` 的 `packages/pure/components/user/Signature.astro`                                              | Git blob `45b373ea652808539004d528b86378a2acf48071`；本地落点 `src/components/arthals/Signature.astro`                                                                          | 直接复制到本地维护，因为 npm Pure 1.4.6 未导出它                       |
-| `BASE-PAGES`     | GitHub Pages 工作流 | [Astro 官方 GitHub Pages 指南](https://docs.astro.build/en/guides/deploy/github/) 和 GitHub 官方 Pages Actions | `actions/checkout@v7`、`actions/setup-node@v6`、`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`                                     | 官方方案配置；准备阶段仅 `workflow_dispatch`，无 `push`、无 `schedule` |
+| ID                 | 对象                | 精确来源                                                                                                       | 锁定证据                                                                                                                                                                        | 实施方式                                                                 |
+| ------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `BASE-ARTHALS`     | 站点骨架和测试内容  | [`zhuozhiyongde/Arthals-Ink`](https://github.com/zhuozhiyongde/Arthals-Ink)                                    | commit `15f5ad110af8ed8f38a1e506dd890d2d921f118f`；本地/远端标签 `arthals-upstream-2026-03-22`                                                                                  | 直接复用；只做已登记的 Astro 6、导航、配置和新模块适配                   |
+| `BASE-PURE`        | Pure 主题运行时     | npm `astro-pure@1.4.6` / [`cworld1/astro-theme-pure`](https://github.com/cworld1/astro-theme-pure)             | npm gitHead `c2bb1155b6c0b9b339d62b8289c4c95e38528075`；integrity `sha512-m6mFcLfk69LjAOaCZX7qvwgH/ROA6xP6JzpbCT6Ns09CuKnN/vHa7Q+6az4Fd4vNi7A4WmzyfYPU7HDnb6SV+A==`；Apache-2.0 | 直接使用发布包；Astro 精确对齐 6.1.8                                     |
+| `BASE-ASTRO`       | Astro               | npm `astro@6.1.8`                                                                                              | lock integrity `sha512-6fT9M12U3fpi13DiPavNKDIoBflASTSxmKTEe+zXhWtlebQuOqfOnIrMWyRmlXp+mgDsojmw+fVFG9LUTzKSog==`                                                                | 直接使用；首版不漂移版本                                                 |
+| `BASE-SIGNATURE`   | Arthals 签名组件    | `BASE-ARTHALS` 的 `packages/pure/components/user/Signature.astro`                                              | Git blob `45b373ea652808539004d528b86378a2acf48071`；本地落点 `src/components/arthals/Signature.astro`                                                                          | 直接复制到本地维护，因为 npm Pure 1.4.6 未导出它                         |
+| `BASE-MEDIUM-ZOOM` | 文章图片放大运行时  | npm `medium-zoom@1.1.0` / [`francoischalifour/medium-zoom`](https://github.com/francoischalifour/medium-zoom)  | lock integrity `sha512-ewyDsp7k4InCUp3jRmwHBRFGyjBimKps/AJLjRSox+2q/2H4p/PNpQf+pwONWlJiOudkBXtbdmVbFjqyybfTmQ==`；MIT                                                           | 保留 Pure 的交互/样式契约，固定为本地 `dist/pure` 入口，不使用运行时 CDN |
+| `BASE-QRCODEJS`    | 文章二维码运行时    | npm `qrcodejs@1.0.0` / [`davidshimjs/qrcodejs`](https://github.com/davidshimjs/qrcodejs)                       | lock integrity `sha512-67rj3mMBhSBepaD57qENnltO+r8rSYlqM7HGThks/BiyDAkc86sLvkKqjkqPS5v13f7tvnt6dbEf3qt7zq+BCg==`；MIT                                                           | 本地 Vite 资源加载；保留 Pure 版权区 UI，不使用其运行时 CDN              |
+| `BASE-PAGES`       | GitHub Pages 工作流 | [Astro 官方 GitHub Pages 指南](https://docs.astro.build/en/guides/deploy/github/) 和 GitHub 官方 Pages Actions | `actions/checkout@v7`、`actions/setup-node@v6`、`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`                                     | 官方方案配置；准备阶段仅 `workflow_dispatch`，无 `push`、无 `schedule`   |
 
 仓库关系：
 
@@ -206,39 +208,61 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 2026-08-27 已下载并逐项复核原始 SHA-256；生产页面只引用下列本地路径，不再热链 `loli.net`。两张大 JPEG 仍低于 2 MiB 硬门槛，保留原图是为了首版与来源视觉一致，资源门禁会提示推荐尺寸警告。
 
-| 顺序 | 本地路径                                    | 字节数 | SHA-256                                                            |
-| ---: | ------------------------------------------- | -----: | ------------------------------------------------------------------ |
-|    1 | `public/images/largeskull/hero-01.jpg`      | 1,915,733 | `e77260690388904ca6f0ca2b19f5f3206468f97b6d7272a06c920df1d9cb0e6d` |
-|    2 | `public/images/largeskull/hero-02.webp`     |   190,834 | `319f2a38009f13e8ae5f1c6cbea9013b74e5408f29b6958fa1ac1571e991b8ca` |
-|    3 | `public/images/largeskull/hero-03.jpg`      | 1,845,471 | `010664a398386fa5f387764e9c41c28f2bc729151915229dc172fbe11abb9909` |
-|    4 | `public/images/largeskull/hero-04.webp`     |    57,512 | `235f105fcc5bbf6ea9acb69f2b75def95fb8f79867be0beafc27fa153da35dc4` |
-|    5 | `public/images/largeskull/hero-05.webp`     |   110,742 | `d7f20af3e09c32dd6a1494af6a02383599218131a2796a71c33e4f796bd615c6` |
-|    6 | `public/images/largeskull/hero-06.png`      |   735,786 | `277c5db8d016a8993467481d88ad840926adc8d54f8b49de5213e047476f6c0f` |
+| 顺序 | 本地路径                                |    字节数 | SHA-256                                                            |
+| ---: | --------------------------------------- | --------: | ------------------------------------------------------------------ |
+|    1 | `public/images/largeskull/hero-01.jpg`  | 1,915,733 | `e77260690388904ca6f0ca2b19f5f3206468f97b6d7272a06c920df1d9cb0e6d` |
+|    2 | `public/images/largeskull/hero-02.webp` |   190,834 | `319f2a38009f13e8ae5f1c6cbea9013b74e5408f29b6958fa1ac1571e991b8ca` |
+|    3 | `public/images/largeskull/hero-03.jpg`  | 1,845,471 | `010664a398386fa5f387764e9c41c28f2bc729151915229dc172fbe11abb9909` |
+|    4 | `public/images/largeskull/hero-04.webp` |    57,512 | `235f105fcc5bbf6ea9acb69f2b75def95fb8f79867be0beafc27fa153da35dc4` |
+|    5 | `public/images/largeskull/hero-05.webp` |   110,742 | `d7f20af3e09c32dd6a1494af6a02383599218131a2796a71c33e4f796bd615c6` |
+|    6 | `public/images/largeskull/hero-06.png`  |   735,786 | `277c5db8d016a8993467481d88ad840926adc8d54f8b49de5213e047476f6c0f` |
 
 实现文件：`src/data/home-media.ts`（三个独立资源池与稳定分配策略）、`src/components/cards/ContentCard.astro`（页面覆盖 → 类型默认 → 安全回退的唯一策略宿主）、`src/components/home/LargeSkullHero.astro`（原 Hero / wave DOM 与时序）、`src/components/cards/LargeSkullCard.astro`（原 `.segments` 斜边卡片）。必要适配仅包括 Astro 局部样式、当前主题变量、无障碍的单一链接语义、原站 767px/容器响应式和 `prefers-reduced-motion`；同日 Saying 以内容 ID 作为固定次级归档键。
 
+### 6.2 Phase 3 根路径入口媒体本地化核验
+
+入口媒体来自 `HIST-ENTRANCE` 的固定历史快照（`E:\code\homepage-snapshots\2026-08-27-pre-blog-migration`），在 2026-08-27 复制至 `public/media/` 后逐项复核。生产根路径仅引用下列本地资源；不保留视频、海报或 Typed.js 的运行时热链。
+
+| 本地路径                                 |  字节数 | SHA-256                                                            |
+| ---------------------------------------- | ------: | ------------------------------------------------------------------ |
+| `public/media/entrance-loop.webm`        |  84,542 | `62e20114b0f068c2e377a16d6f673697c16a2917880e979c893044cf21e5e76c` |
+| `public/media/entrance-loop.mp4`         | 347,558 | `23cd4d3a0c314e728674d7fb8f7f171eaa7332f07ed7ebfb77b9b8b48baf113f` |
+| `public/media/entrance-loop-mobile.webm` |  75,845 | `3699a27675e04c0a4c3c292e3de7834c8751e7e447749f7a340d9a32040f47b4` |
+| `public/media/entrance-loop-mobile.mp4`  | 306,356 | `e29903028da61f379a0beb320a9ae2727bcbe73cc34cc9642466aed8656ec539` |
+| `public/media/entrance-poster.webp`      |  14,464 | `8f8e5695d882653c58f4884bacb384be35448bbe19cabc1af16668376f0e9c02` |
+
+实现文件为 `src/data/entrance.ts`、`src/components/entrance/EntranceScene.astro`、`src/components/entrance/EntranceTypedText.astro` 和 `src/layouts/EntranceLayout.astro`。`HIST-ENTRANCE` 的场景、视频降级、页面可见性与键盘进入逻辑直接复用；必要差异为删除 `sessionStorage` 跳过、用 `location.replace()` 进入 `/home`、补充 `AbortController` 清理与缓存视频 `play()` 成功后的就绪状态。`XYX-TYPING` 的锁定文字参数以本地 `typed.js@2.1.0` 实现，版本和完整性见 §5.2。
+
+当前没有最终授权的本地音乐或封面文件。`src/data/music.ts` 只含自编元数据占位项，明确不设置 `audioSrc` 或 `coverSrc`；`MusicPlayer` 仅接受同源静态路径，故不会发起第三方音频或图片请求。
+
+`src/components/arthals/ArticleImageZoom.astro` 保留 `BASE-PURE` 的图片放大契约和样式，但以锁定的 `BASE-MEDIUM-ZOOM` 本地 `dist/pure` 入口替换其运行时 CDN。该库本身不提供 `destroy()`，所以本项目只在每个浏览器文档建立一个共享实例；当前文章在进入时 `attach()`，在 `astro:before-preparation`、`astro:before-swap` 与元素断开时关闭并 `detach()`，避免 ClientRouter 跨页留下遮罩或累积全局监听器。
+
+`src/components/arthals/Copyright.astro` 为 `BASE-PURE` 版权区的本地适配：保留其 DOM/UI，二维码改由锁定的 `BASE-QRCODEJS` 经 Vite 同源资源加载，并以 custom element 管理复制、展开、加载和断连。`src/components/ViewTransitionRejectionGuard.astro` 位于 `ClientRouter` 前，仅消费 Chromium 对已完成 DOM 交换的原生 View Transition 所产生的三类已知、可恢复 `ready` 拒绝（`AbortError`、`InvalidStateError`、`TimeoutError`）；其他 Promise 拒绝仍正常冒泡。
+
 ## 7. 完整模块分配闭环
 
-| 最终模块                                      | 原网站/上游直接部分                   | 历史项目直接部分                      | 本项目自行开发或略调                                          |
-| --------------------------------------------- | ------------------------------------- | ------------------------------------- | ------------------------------------------------------------- |
-| Header、Footer、主题、文章阅读、TOC、搜索外壳 | `BASE-ARTHALS` / `BASE-PURE`          | 无                                    | Astro 6 类型、目标配置、导航顺序和个人信息略调                |
-| Blog 列表/详情/无图卡片                       | `BASE-ARTHALS`                        | 无                                    | schema 兼容、测试内容保留；视觉不重做                         |
-| Trace 列表/详情                               | `LS-CARD` 视觉                        | `HIST-TRACES` 数据和页面              | Trace collection、内容图/稳定回退策略、路由适配               |
-| Saying 归档/详情/Home 卡片                    | `LS-CARD` 视觉；`INNEI-IDEA` 只供思路 | `HIST-SAYINGS` 查询、随机、归档和详情 | Saying collection、两个入口、空状态和装饰图分配               |
-| Home Hero/波浪                                | `LS-HERO` DOM/CSS/参数                | `HIST-SHOKA-HERO` 生命周期            | 数据配置、主题/reduced-motion 适配                            |
-| 最近 Blog/Traces 双栏                         | 无                                    | 历史 Home 查询和布局                  | 各取 3 条、Blog 左/Trace 右及响应式略调                       |
-| Blog Timeline                                 | `INNEI-IDEA` 只供思路                 | `HIST-TIMELINE`                       | 改为 Blog-only，无独立路由                                    |
-| `/` 视频入口                                  | `XYX-TYPING` 动画参数                 | `HIST-ENTRANCE`                       | 每次访问播放、replace 导航、noindex/canonical、文案和本地媒体 |
-| 全局音乐                                      | `XYX-MUSIC-UI` 可分离视觉             | `HIST-MUSIC` 引擎/状态                | 持久 DOM、详情折叠、本地资源和路由适配                        |
-| Links 花瓣                                    | `GEORGE-SAKURA` 算法                  | `HIST-GEORGE-HOST` 生命周期           | Links-only、DPR/reduced-motion 适配                           |
-| 点击粒子                                      | `GEORGE-CLICK` 算法与依赖             | `HIST-GEORGE-HOST` 过滤/生命周期      | 空白区域过滤、页面 profile 和销毁                             |
-| PKU 全局背景                                  | `PKU-*` 三层算法                      | `HIST-BACKDROP` 已有封装              | `VisualEffectsHost`、补第一层、默认/阅读/Links profile        |
-| SkyWT 居住地                                  | 原站只供视觉校准                      | `HIST-RESIDENCE` 几乎全部实现         | 个人坐标/文案、细节校准、CARTO/定位失败回退                   |
-| GitHub 热力图                                 | `HAN-HEATMAP` 组件、解析、CSS         | 历史实现不采用                        | 用户名、缓存、构建失败回退；无 schedule                       |
-| About 小人                                    | `TNXG-COMPANION` 素材和滚动公式       | `HIST-COMPANION` 生命周期             | About-only、≥1440px、层级和清理                               |
-| 卡片 presentation 解析器                      | 无                                    | 无                                    | 自行开发纯策略；页面覆盖 > 内容默认 > 安全回退                |
-| 图片顺序/随机/哈希回退                        | 无                                    | Saying 随机逻辑可复用                 | 自行开发可测试纯函数                                          |
-| CI、资源门禁和 Pages                          | `BASE-PAGES` 官方方案                 | 无                                    | 固定 Node/Bun、frozen lock、手动部署和无 schedule             |
+| 最终模块                                      | 原网站/上游直接部分                                             | 历史项目直接部分                      | 本项目自行开发或略调                                          |
+| --------------------------------------------- | --------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------- |
+| Header、Footer、主题、文章阅读、TOC、搜索外壳 | `BASE-ARTHALS` / `BASE-PURE`                                    | 无                                    | Astro 6 类型、目标配置、导航顺序和个人信息略调                |
+| Blog 列表/详情/无图卡片                       | `BASE-ARTHALS`                                                  | 无                                    | schema 兼容、测试内容保留；视觉不重做                         |
+| Blog 文章图片放大                             | `BASE-PURE` 交互/样式契约，`BASE-MEDIUM-ZOOM` 本地 pure runtime | 无                                    | 每文 attach/detach、导航前关闭、无 CDN                        |
+| Blog 版权区与二维码                           | `BASE-PURE` 版权区 UI，`BASE-QRCODEJS` 本地 runtime             | 无                                    | custom element 生命周期、同源延迟加载、无 CDN                 |
+| Trace 列表/详情                               | `LS-CARD` 视觉                                                  | `HIST-TRACES` 数据和页面              | Trace collection、内容图/稳定回退策略、路由适配               |
+| Saying 归档/详情/Home 卡片                    | `LS-CARD` 视觉；`INNEI-IDEA` 只供思路                           | `HIST-SAYINGS` 查询、随机、归档和详情 | Saying collection、两个入口、空状态和装饰图分配               |
+| Home Hero/波浪                                | `LS-HERO` DOM/CSS/参数                                          | `HIST-SHOKA-HERO` 生命周期            | 数据配置、主题/reduced-motion 适配                            |
+| 最近 Blog/Traces 双栏                         | 无                                                              | 历史 Home 查询和布局                  | 各取 3 条、Blog 左/Trace 右及响应式略调                       |
+| Blog Timeline                                 | `INNEI-IDEA` 只供思路                                           | `HIST-TIMELINE`                       | 改为 Blog-only，无独立路由                                    |
+| `/` 视频入口                                  | `XYX-TYPING` 动画参数                                           | `HIST-ENTRANCE`                       | 每次访问播放、replace 导航、noindex/canonical、文案和本地媒体 |
+| 全局音乐                                      | `XYX-MUSIC-UI` 可分离视觉                                       | `HIST-MUSIC` 引擎/状态                | `#nav-music` 视觉壳、本地单例、详情紧凑控制、无远程运行时     |
+| Links 花瓣                                    | `GEORGE-SAKURA` 算法                                            | `HIST-GEORGE-HOST` 生命周期           | Links-only、DPR/reduced-motion 适配                           |
+| 点击粒子                                      | `GEORGE-CLICK` 算法与依赖                                       | `HIST-GEORGE-HOST` 过滤/生命周期      | 空白区域过滤、页面 profile 和销毁                             |
+| PKU 全局背景                                  | `PKU-*` 三层算法                                                | `HIST-BACKDROP` 已有封装              | `VisualEffectsHost`、补第一层、默认/阅读/Links profile        |
+| SkyWT 居住地                                  | 原站只供视觉校准                                                | `HIST-RESIDENCE` 几乎全部实现         | 个人坐标/文案、细节校准、CARTO/定位失败回退                   |
+| GitHub 热力图                                 | `HAN-HEATMAP` 组件、解析、CSS                                   | 历史实现不采用                        | 用户名、缓存、构建失败回退；无 schedule                       |
+| About 小人                                    | `TNXG-COMPANION` 素材和滚动公式                                 | `HIST-COMPANION` 生命周期             | About-only、≥1440px、层级和清理                               |
+| 卡片 presentation 解析器                      | 无                                                              | 无                                    | 自行开发纯策略；页面覆盖 > 内容默认 > 安全回退                |
+| 图片顺序/随机/哈希回退                        | 无                                                              | Saying 随机逻辑可复用                 | 自行开发可测试纯函数                                          |
+| CI、资源门禁和 Pages                          | `BASE-PAGES` 官方方案                                           | 无                                    | 固定 Node/Bun、frozen lock、手动部署和无 schedule             |
 
 ## 8. 实现阶段提取门禁
 
@@ -256,7 +280,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ## 9. 当前已落地与尚未提取
 
-准备阶段已经实际落地：
+已经实际落地：
 
 - `BASE-ARTHALS` Fork、远端和冻结标签。
 - `BASE-PURE` / `BASE-ASTRO` 目标依赖和 lockfile。
@@ -264,5 +288,9 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 - `BASE-PAGES` CI 与手动部署工作流。
 - 历史项目的只读恢复快照。
 - 所有外部来源的版本、URL 或视觉校准边界。
+- Phase 1 的三类内容模型、静态路由、锁定五项主导航和测试内容。
+- Phase 2 的 LargeSkull 锁定图、Hero/波浪、统一卡片策略、随机 Saying、双栏与 Blog Timeline。
+- Phase 3 的可重复根入口、本地视频/Typed.js、持久本地音乐壳、详情紧凑模式、局部生命周期清理、本地二维码与图片放大运行时。
+- Phase 3 的生产构建、三套静态契约检查、实际 Chrome 点击回归和同源网络扫描。
 
-尚未落地的 Hero、卡片、动画、粒子、地图、热力图和小人均属于 Phase 1 至 Phase 5 功能开发，不是准备阶段遗漏。它们必须按本台账实施，不能临时换成自行重做的近似效果。
+尚未落地的全局特效、居住地、热力图和 About 小人属于 Phase 4 至 Phase 5 功能开发，不是来源或准备阶段遗漏。它们必须按本台账实施，不能临时换成自行重做的近似效果。

@@ -12,6 +12,7 @@ interface Props {
   back?: string
   pagefindBody?: boolean
   contentType?: string
+  musicMode?: 'full' | 'compact'
 }
 
 const {
@@ -20,11 +21,12 @@ const {
   back = '/home',
   pagefindBody = false,
   contentType,
+  musicMode,
   ...props
 } = Astro.props
 ---
 
-<PageLayout {meta} {highlightColor} {...props}>
+<PageLayout {meta} {highlightColor} {musicMode} {...props}>
   <Button title='Back' href={back} variant='back' />
   <main class='mt-6 items-start gap-x-10 md:flex'>
     {/* Sidebar */}
@@ -87,31 +89,32 @@ const {
   </BackToTop>
 </PageLayout>
 
-<script>
-  // Toggle sidebar visibility on button click
-  const sidebarButton = document.getElementById('sidebar-btn')
-  const sidebar = document.getElementById('sidebar')
-  const sidebarShade = document.getElementById('sidebar-shade') as HTMLElement
+<script is:inline data-astro-rerun>
+  // Detail pages are replaced by ClientRouter. Re-run this tiny binding for
+  // the new sidebar nodes after every navigation; the old nodes leave with
+  // their listeners during the body swap. The IIFE is essential: Astro runs
+  // a data-astro-rerun inline script in the same global realm after each swap,
+  // so top-level `const` declarations would otherwise collide.
+  ;(() => {
+    const sidebarButton = document.getElementById('sidebar-btn')
+    const sidebar = document.getElementById('sidebar')
+    const sidebarShade = document.getElementById('sidebar-shade')
 
-  if (sidebarShade) {
-    sidebarShade.addEventListener('click', () => {
-      toggleSidebar()
-    })
-  }
+    const toggleSidebar = () => {
+      if (!sidebar || !sidebarShade) return
 
-  function toggleSidebar() {
-    if (sidebar && sidebar.classList.contains('show')) {
-      sidebar.classList.remove('show')
-      sidebarShade.style.display = 'none'
-    } else if (sidebar) {
-      sidebar.classList.add('show')
-      sidebarShade.style.display = 'block'
+      if (sidebar.classList.contains('show')) {
+        sidebar.classList.remove('show')
+        sidebarShade.style.display = 'none'
+      } else {
+        sidebar.classList.add('show')
+        sidebarShade.style.display = 'block'
+      }
     }
-  }
 
-  sidebarButton?.addEventListener('click', () => {
-    toggleSidebar()
-  })
+    sidebarShade?.addEventListener('click', toggleSidebar)
+    sidebarButton?.addEventListener('click', toggleSidebar)
+  })()
 </script>
 <style>
   @media (min-width: 769px) {

@@ -1,10 +1,11 @@
 ---
 import type { MarkdownHeading } from 'astro'
 import type { CollectionEntry } from 'astro:content'
+import { formatContentDate } from '@/lib/content'
+
 import { TOC } from 'astro-pure/components/pages'
 import { Icon } from 'astro-pure/user'
 import PageLayout from '@/layouts/ContentLayout.astro'
-import { formatContentDate } from '@/lib/content'
 
 interface Props {
   saying: CollectionEntry<'saying'>
@@ -27,6 +28,7 @@ const pageTitle = data.text.length > 60 ? `${data.text.slice(0, 57)}…` : data.
   back='/sayings'
   pagefindBody
   contentType='Saying'
+  musicMode='compact'
 >
   {!!headings.length && <TOC {headings} slot='sidebar' />}
 

@@ -6,10 +6,11 @@
  * Astro frontmatter: Home is statically generated.
  */
 import type { CollectionEntry } from 'astro:content'
-import ContentCard from '@/components/cards/ContentCard.astro'
-import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
 import { getSayingDecorativeImage } from '@/data/home-media'
 import { formatContentDate } from '@/lib/content'
+
+import ContentCard from '@/components/cards/ContentCard.astro'
+import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
 
 interface Props {
   sayings: readonly CollectionEntry<'saying'>[]
@@ -41,7 +42,11 @@ const fallbackEntry = sayings[0]
 const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
 ---
 
-<section class='home-random-saying' aria-labelledby='home-random-saying-heading' data-home-random-saying>
+<section
+  class='home-random-saying'
+  aria-labelledby='home-random-saying-heading'
+  data-home-random-saying
+>
   <div class='home-section-heading'>
     <div>
       <p class='home-section-heading__eyebrow'>A line to keep</p>
@@ -50,6 +55,8 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
     <a href='/sayings' data-astro-prefetch>View archive →</a>
   </div>
 
+  <!-- The custom element owns this page visit's selection. It is not
+       persisted, so returning to /home through ClientRouter selects again. -->
   {
     fallbackEntry ? (
       <saying-random-card data-random-saying data-saying-id={fallbackEntry.id}>
@@ -59,7 +66,12 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
           entry={fallbackEntry}
           index={0}
         />
-        <script is:inline type='application/json' data-random-saying-catalog set:html={serializedCatalog}></script>
+        <script
+          is:inline
+          type='application/json'
+          data-random-saying-catalog
+          set:html={serializedCatalog}
+        />
       </saying-random-card>
     ) : (
       <LargeSkullCard
@@ -100,7 +112,32 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
   }
 
   class SayingRandomCard extends HTMLElement {
+    #listenerAbortController?: AbortController
+    #lastVisitKey?: string
+
     connectedCallback() {
+      this.#listenerAbortController?.abort()
+      const listenerAbortController = new AbortController()
+      this.#listenerAbortController = listenerAbortController
+
+      // ClientRouter inserts a fresh Home subtree and emits this event after
+      // the swap. The visit key prevents the initial connection plus that
+      // event from selecting twice for one arrival.
+      document.addEventListener('astro:page-load', () => this.#selectForCurrentVisit(), {
+        signal: listenerAbortController.signal
+      })
+      this.#selectForCurrentVisit()
+    }
+
+    disconnectedCallback() {
+      this.#listenerAbortController?.abort()
+      this.#listenerAbortController = undefined
+      this.#lastVisitKey = undefined
+    }
+
+    #selectForCurrentVisit() {
+      if (!this.isConnected || window.location.pathname !== '/home') return
+
       const catalogElement = this.querySelector<HTMLScriptElement>('[data-random-saying-catalog]')
       if (!catalogElement?.textContent) return
 
@@ -112,10 +149,17 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
         return
       }
 
+      const visitKey = window.location.href
+      if (this.#lastVisitKey === visitKey) return
+
       const suppliedRandom = (window as RandomWindow).__susurriumRandom
-      const selected = selectRandom(catalog, typeof suppliedRandom === 'function' ? suppliedRandom : Math.random)
+      const selected = selectRandom(
+        catalog,
+        typeof suppliedRandom === 'function' ? suppliedRandom : Math.random
+      )
       if (!selected) return
 
+      this.#lastVisitKey = visitKey
       this.dataset.sayingId = selected.id
 
       const card = this.querySelector<HTMLElement>('[data-largeskull-card]')

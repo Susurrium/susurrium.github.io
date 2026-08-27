@@ -557,7 +557,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - 历史项目状态和安全快照。
 - 目标工具链验证。
 
-状态：已完成。仓库、来源台账、历史快照、目标构建、准备提交和 GitHub Linux CI 均已闭环；功能开发尚未开始。
+状态：已完成。仓库、来源台账、历史快照、目标构建、准备提交和 GitHub Linux CI 均已闭环；后续功能阶段均以该冻结基线为准。
 
 ### Phase 1：信息架构与内容模型
 
@@ -569,6 +569,8 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - 测试占位内容。
 
 验收：所有路由静态生成，无重复 slug，生产构建排除 draft。
+
+状态：已完成。根入口与 Home 已分离；Blog、Trace、Saying 三个 collection、归档/详情静态路由、主导航边界和测试内容均已建立。`verify:phase1` 已覆盖 draft 排除、路由、导航和 Blog-only 聚合边界。
 
 ### Phase 2：卡片与 Home 主体
 
@@ -584,6 +586,8 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 ### Phase 3：入口与音乐
 
 交付入口视频、Typed.js、手动进入、持久音乐和详情页折叠。
+
+状态：已完成。`/` 独立为每次直达都播放的本地视频入口，保留键盘进入并以 `location.replace('/home')` 进入 Home；Typed.js 固定在本地 `2.1.0`。正常页面配置唯一、持久化、仅同源的音乐实例，详情页使用紧凑控制；最终音乐媒体仍以本地路径占位，绝不热链。ClientRouter 下的 Header、随机 Saying、签名、图片放大和版权二维码均具备明确的挂载/断连清理；图片放大和二维码运行时已从 Pure 的 CDN 改为固定的本地依赖。针对 Chromium 原生 View Transition `ready` 的可恢复中止，已加入窄范围 rejection guard，不掩盖其他错误。生产构建、`verify:phase1`、Phase 2 策略/静态验证、`verify:phase3`、资源预算以及入口到 Blog/Trace/Saying 的实际 Chrome 连续点击回归均已通过。
 
 ### Phase 4：全局效果
 

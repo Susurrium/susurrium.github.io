@@ -1,0 +1,356 @@
+---
+import { entrance } from '@/data/entrance'
+
+import EntranceTypedText from './EntranceTypedText.astro'
+---
+
+<!--
+  Source: HIST-ENTRANCE from the fixed 2026-08-27 historical snapshot.
+  The session skip was deliberately removed: the root path is always a
+  replayable entrance, and navigation uses history replacement.
+-->
+<section
+  data-entrance-scene
+  data-reduced-motion='false'
+  data-video-ready='false'
+  data-leaving='false'
+  tabindex='0'
+  role='group'
+  aria-label='Click anywhere or press Enter to enter Home'
+>
+  <picture data-entrance-poster aria-hidden='true'>
+    <img
+      src={entrance.media.poster}
+      alt=''
+      width='1920'
+      height='1080'
+      fetchpriority='high'
+      decoding='async'
+    />
+  </picture>
+  <video
+    data-entrance-video
+    muted
+    autoplay
+    loop
+    playsinline
+    preload='metadata'
+    poster={entrance.media.poster}
+    aria-hidden='true'
+  >
+    <source media='(max-width: 720px)' src={entrance.media.mobileWebm} type='video/webm' />
+    <source media='(max-width: 720px)' src={entrance.media.mobileMp4} type='video/mp4' />
+    <source src={entrance.media.webm} type='video/webm' />
+    <source src={entrance.media.mp4} type='video/mp4' />
+  </video>
+  <div class='entrance-scene__veil' aria-hidden='true'></div>
+  <div class='entrance-scene__content'>
+    <p class='entrance-scene__greeting'>{entrance.greeting}</p>
+    <h1>{entrance.title}</h1>
+    <p class='entrance-scene__subtitle'>
+      {entrance.subtitle}
+      <span class='entrance-scene__typewriter' aria-hidden='true'>
+        <EntranceTypedText
+          words={entrance.dynamicWords}
+          startDelay={entrance.typed.startDelay}
+          typeSpeed={entrance.typed.typeSpeed}
+          backSpeed={entrance.typed.backSpeed}
+          loop={entrance.typed.loop}
+        />
+      </span>
+    </p>
+    <a href={entrance.homeHref} data-enter-home>Enter Home</a>
+  </div>
+</section>
+
+<script>
+  const scene = document.querySelector<HTMLElement>('[data-entrance-scene]')
+  const video = scene?.querySelector<HTMLVideoElement>('[data-entrance-video]')
+  const enterLink = scene?.querySelector<HTMLAnchorElement>('[data-enter-home]')
+
+  if (scene && video && enterLink) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const controller = new AbortController()
+    const { signal } = controller
+    let navigationTimer = 0
+
+    const showPoster = () => {
+      scene.dataset.videoReady = 'false'
+    }
+
+    const showVideo = () => {
+      if (canPlay()) scene.dataset.videoReady = 'true'
+    }
+
+    const pauseVideo = () => {
+      video.pause()
+    }
+
+    const canPlay = () =>
+      !reducedMotion.matches &&
+      document.visibilityState === 'visible' &&
+      scene.dataset.leaving !== 'true'
+
+    const resumeVideo = () => {
+      if (!canPlay()) {
+        pauseVideo()
+        return
+      }
+
+      // A cached local video can already be playing before this script has
+      // registered its `playing` listener. The resolved promise is therefore
+      // also an authoritative readiness signal.
+      video.play().then(showVideo).catch(showPoster)
+    }
+
+    const syncMotion = () => {
+      scene.dataset.reducedMotion = String(reducedMotion.matches)
+      if (reducedMotion.matches) {
+        pauseVideo()
+        showPoster()
+      } else {
+        resumeVideo()
+      }
+    }
+
+    const resetLeavingState = () => {
+      if (navigationTimer) window.clearTimeout(navigationTimer)
+      navigationTimer = 0
+      scene.dataset.leaving = 'false'
+      syncMotion()
+    }
+
+    const leave = (event?: Event) => {
+      if (event instanceof MouseEvent) {
+        const isPrimaryUnmodifiedClick =
+          event.button === 0 &&
+          !event.defaultPrevented &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.shiftKey &&
+          !event.altKey
+        if (!isPrimaryUnmodifiedClick) return
+      }
+      if (scene.dataset.leaving === 'true') return
+      event?.preventDefault()
+      scene.dataset.leaving = 'true'
+      pauseVideo()
+
+      const navigate = () => window.location.replace(enterLink.href)
+      if (reducedMotion.matches) {
+        navigate()
+        return
+      }
+      navigationTimer = window.setTimeout(navigate, 420)
+    }
+
+    video.addEventListener('playing', showVideo, { signal })
+    video.addEventListener('error', showPoster, { signal })
+    video.addEventListener('abort', showPoster, { signal })
+    reducedMotion.addEventListener('change', syncMotion, { signal })
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (document.visibilityState === 'hidden') pauseVideo()
+        else resumeVideo()
+      },
+      { signal }
+    )
+    window.addEventListener('pagehide', pauseVideo, { signal })
+    window.addEventListener('pageshow', resetLeavingState, { signal })
+    document.addEventListener(
+      'astro:before-swap',
+      () => {
+        if (navigationTimer) window.clearTimeout(navigationTimer)
+        pauseVideo()
+        controller.abort()
+      },
+      { signal }
+    )
+    scene.addEventListener('click', leave, { signal })
+    scene.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        leave(event)
+      },
+      { signal }
+    )
+    syncMotion()
+  }
+</script>
+
+<style>
+  [data-entrance-scene] {
+    position: relative;
+    display: grid;
+    min-height: 100svh;
+    overflow: hidden;
+    place-items: center;
+    isolation: isolate;
+    background: #071124;
+  }
+
+  [data-entrance-poster],
+  [data-entrance-video],
+  .entrance-scene__veil {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  [data-entrance-poster] {
+    z-index: -3;
+    margin: 0;
+    opacity: 1;
+    transition: opacity 500ms ease;
+  }
+
+  [data-entrance-poster] img,
+  [data-entrance-video] {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  [data-entrance-video] {
+    z-index: -2;
+    opacity: 0;
+    transition: opacity 500ms ease;
+  }
+
+  [data-video-ready='true'] [data-entrance-poster] {
+    opacity: 0;
+  }
+
+  [data-video-ready='true'] [data-entrance-video] {
+    opacity: 1;
+  }
+
+  .entrance-scene__veil {
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgb(5 10 24 / 0.1), rgb(5 10 24 / 0.52)),
+      radial-gradient(circle at 50% 42%, transparent 0 22%, rgb(3 8 20 / 0.25) 76%);
+  }
+
+  .entrance-scene__content {
+    width: min(100% - 2rem, 50rem);
+    text-align: center;
+    text-shadow: 0 2px 32px rgb(0 0 0 / 0.28);
+    transition:
+      opacity 360ms ease,
+      transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1);
+  }
+
+  [data-entrance-scene]:focus-visible {
+    outline: 3px solid #87e3d5;
+    outline-offset: -0.65rem;
+  }
+
+  .entrance-scene__content > .entrance-scene__greeting {
+    margin: 0 0 0.85rem;
+    color: rgb(248 245 239 / 0.94);
+    font-size: clamp(1.05rem, 2.4vw, 1.45rem);
+    letter-spacing: 0.01em;
+    text-transform: none;
+  }
+
+  .entrance-scene__content p {
+    margin: 0 0 0.85rem;
+    color: rgb(238 246 250 / 0.8);
+    font-size: clamp(0.78rem, 1.7vw, 0.98rem);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .entrance-scene__content h1 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(3.4rem, 13vw, 9.5rem);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 0.92;
+  }
+
+  .entrance-scene__subtitle {
+    margin: 1.4rem 0 0;
+    color: rgb(238 246 250 / 0.8);
+    font-size: clamp(0.78rem, 1.7vw, 0.98rem);
+    letter-spacing: 0.06em;
+    text-transform: none;
+  }
+
+  .entrance-scene__typewriter {
+    display: block;
+    margin-top: 0.7rem;
+    color: #87e3d5;
+    letter-spacing: 0.02em;
+  }
+
+  [data-enter-home] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  [data-enter-home]:focus-visible {
+    outline: 3px solid #87e3d5;
+    outline-offset: 4px;
+    clip: auto;
+    clip-path: none;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    padding: 0.65rem 0.9rem;
+    border-radius: 999px;
+    background: rgb(5 12 28 / 0.72);
+    color: #fffdf7;
+  }
+
+  [data-leaving='true'] .entrance-scene__content {
+    opacity: 0;
+    transform: translateY(-1rem) scale(0.985);
+  }
+
+  [data-leaving='true'] [data-entrance-video],
+  [data-leaving='true'] [data-entrance-poster] {
+    opacity: 0;
+    transition-duration: 420ms;
+  }
+
+  [data-reduced-motion='true'] [data-entrance-poster] {
+    opacity: 1;
+  }
+
+  [data-reduced-motion='true'] [data-entrance-video] {
+    display: none;
+  }
+
+  @media (max-width: 720px) {
+    .entrance-scene__content {
+      width: min(100% - 2.5rem, 34rem);
+    }
+
+    .entrance-scene__content h1 {
+      font-size: clamp(3.3rem, 20vw, 6.5rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-entrance-poster],
+    [data-entrance-video],
+    .entrance-scene__content,
+    [data-enter-home] {
+      transition: none;
+    }
+  }
+</style>

@@ -46,6 +46,17 @@ bun run lint:check
 bun run build
 ```
 
+已完成阶段的静态契约回归：
+
+```powershell
+bun run verify:phase1
+bun run test:phase2
+bun run verify:phase2
+bun run verify:phase3
+```
+
+`verify:phase3` 覆盖根路径可重复入口、本地入口媒体哈希、Typed.js 固定版本、全局音乐单例/详情紧凑模式、无远程音乐/图片缩放/二维码运行时、原生 View Transition rejection guard，以及 ClientRouter 生命周期清理。
+
 资源预算：
 
 ```powershell

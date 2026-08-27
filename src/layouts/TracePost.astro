@@ -1,10 +1,11 @@
 ---
 import type { MarkdownHeading } from 'astro'
 import type { CollectionEntry } from 'astro:content'
+import { formatContentDate } from '@/lib/content'
+
 import { TOC } from 'astro-pure/components/pages'
 import { Icon } from 'astro-pure/user'
 import PageLayout from '@/layouts/ContentLayout.astro'
-import { formatContentDate } from '@/lib/content'
 
 interface Props {
   trace: CollectionEntry<'trace'>
@@ -27,20 +28,28 @@ const articleDate = data.updatedDate ?? data.publishDate
   back='/traces'
   pagefindBody
   contentType='Trace'
+  musicMode='compact'
 >
   {!!headings.length && <TOC {headings} slot='sidebar' />}
 
   <Fragment slot='header'>
     <div data-pagefind-body>
-      <div class='flex flex-wrap items-center gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'>
+      <div
+        class='flex flex-wrap items-center gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'
+      >
         <span class='flex items-center gap-1'>
           <Icon name='calendar' class='size-5' />
-          <time datetime={data.publishDate.toISOString()}>{formatContentDate(data.publishDate)}</time>
+          <time datetime={data.publishDate.toISOString()}
+            >{formatContentDate(data.publishDate)}</time
+          >
           {
             data.updatedDate && (
               <span>
-                {' '}/ Updated{' '}
-                <time datetime={data.updatedDate.toISOString()}>{formatContentDate(data.updatedDate)}</time>
+                {' '}
+                / Updated{' '}
+                <time datetime={data.updatedDate.toISOString()}>
+                  {formatContentDate(data.updatedDate)}
+                </time>
               </span>
             )
           }

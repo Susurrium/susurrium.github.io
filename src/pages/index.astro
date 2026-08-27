@@ -1,21 +1,10 @@
 ---
 import EntranceLayout from '@/layouts/EntranceLayout.astro'
+import EntranceScene from '@/components/entrance/EntranceScene.astro'
 ---
 
 <EntranceLayout>
-  <main class='flex min-h-[100dvh] items-center justify-center p-6 text-center' data-pagefind-ignore>
-    <div class='max-w-md'>
-      <p class='text-sm text-muted-foreground'>Entrance</p>
-      <h1 class='mt-3 text-3xl font-medium'>Susurrium</h1>
-      <p class='mt-4 leading-7 text-muted-foreground'>
-        The replayable video entrance will be installed here in the next visual phase.
-      </p>
-      <a
-        class='mt-8 inline-flex rounded-full border px-5 py-2.5 font-medium transition-colors hover:bg-muted'
-        href='/home'
-      >
-        Enter home
-      </a>
-    </div>
+  <main data-pagefind-ignore>
+    <EntranceScene />
   </main>
 </EntranceLayout>

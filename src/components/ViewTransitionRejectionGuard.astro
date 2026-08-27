@@ -1,0 +1,23 @@
+<!--
+  Astro ClientRouter observes updateCallbackDone and finished, but native
+  ViewTransition.ready may reject when Chromium skips an otherwise-complete
+  visual transition. Observe only those documented, benign browser outcomes so
+  they do not surface as unhandled rejections; all other errors still bubble.
+-->
+<script is:inline>
+  ;(() => {
+    const guardKey = '__susurriumViewTransitionRejectionGuard'
+    if (window[guardKey]) return
+    window[guardKey] = true
+
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason
+      if (!(reason instanceof DOMException)) return
+      if (!['AbortError', 'InvalidStateError', 'TimeoutError'].includes(reason.name)) return
+      if (!/\b(?:view\s*)?transition\b/i.test(reason.message)) return
+      if (!/\b(?:aborted|skipped|timeout)\b/i.test(reason.message)) return
+
+      event.preventDefault()
+    })
+  })()
+</script>

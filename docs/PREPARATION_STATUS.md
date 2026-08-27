@@ -1,6 +1,6 @@
 # 开发前准备状态
 
-> 更新日期：2026-08-27｜当前阶段：Phase 0 已完成，可进入 Phase 1｜当前开发分支：`develop`
+> 记录范围：Phase 0 准备阶段（已完成）｜当前实施进度请查看：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)
 
 ## 1. 仓库
 
