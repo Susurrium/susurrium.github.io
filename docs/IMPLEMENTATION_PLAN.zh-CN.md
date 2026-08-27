@@ -517,7 +517,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - `astro check`。
 - `astro build`。
 - 关键策略单元测试。
-- Playwright 关键路径。
+- 浏览器自动化关键路径（可用 Playwright 或等价的 Chrome CDP 验证）。
 - 桌面和移动端视觉回归。
 - 外部请求白名单扫描。
 - 资源体积扫描。
@@ -534,7 +534,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - 音乐单例和跨导航。
 - GitHub 抓取失败回退。
 - 深层路由和 404。
-- 连续跨 10 个页面后无重复 canvas/监听器。
+- 连续跨 10 个页面后无重复 canvas/监听器（`verify:browser:lifecycle` 以真实 ClientRouter 点击、唯一宿主/iframe/音乐 DOM 计数和运行时异常检查验证）。
 
 ### 18.3 Arthals 视觉基线门禁
 
@@ -614,7 +614,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 
 验收命令：`bun run ci`（开发期）与 `bun run release:gate`（最终资料替换后）。线上发布还需验证 GitHub Actions 成功、`https://susurrium.github.io/` 可访问，以及 canonical、RSS、sitemap 与 404 均指向最终域名。
 
-状态：本地 CI、生产产物审计和移动端浏览器回归均已通过。严格门禁现在会有意拒绝测试内容、上游身份、热链媒体和上游 GitHub 动态卡片；这些项目必须由最终内容替换完成后再解除。当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
+状态：本地 CI、生产产物审计、移动端目录浏览器回归和十一次真实 ClientRouter 跨页生命周期回归均已通过；后者验证入口重放、音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion 和无未捕获异常。禁用 Waline 时，页面浏览/评论 UI 与其客户端运行时均不再生成。GitHub Linux CI 将在生产预览上执行两项浏览器回归。严格门禁现在会有意拒绝测试内容、上游身份、热链媒体和上游 GitHub 动态卡片；这些项目必须由最终内容替换完成后再解除。当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
 
 ## 20. 主要风险与处理
 

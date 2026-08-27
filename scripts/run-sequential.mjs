@@ -4,19 +4,24 @@ import { resolve } from 'node:path'
 const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
 const astroCli = resolve(process.cwd(), 'node_modules/astro/bin/astro.mjs')
 const node = process.execPath
+const buildSequence = [
+  // `astro build` owns the required content sync.  Checking its resulting
+  // generated types avoids Astro 6's intermittent second sync deadlock on
+  // Windows while keeping a full type/diagnostic gate in every build.
+  [node, [astroCli, 'build']],
+  [node, [astroCli, 'check', '--noSync']]
+]
 
 const sequences = {
-  build: [
-    // `astro build` owns the required content sync.  Checking its resulting
-    // generated types avoids Astro 6's intermittent second sync deadlock on
-    // Windows while keeping a full type/diagnostic gate in every build.
-    [node, [astroCli, 'build']],
-    [node, [astroCli, 'check', '--noSync']]
-  ],
+  build: buildSequence,
   ci: [
     [bun, ['run', 'preflight']],
     [bun, ['run', 'lint:check']],
-    [bun, ['run', 'build']],
+    // Do not execute `bun run build` here. On Windows that adds a nested Bun
+    // launcher above this synchronous runner and can intermittently leave the
+    // Astro child waiting after "Building static entrypoints". Use the same
+    // concrete build contract as the standalone command instead.
+    ...buildSequence,
     [bun, ['run', 'verify:phase1']],
     [bun, ['run', 'test:phase2']],
     [bun, ['run', 'verify:phase2']],

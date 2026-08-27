@@ -27,6 +27,7 @@
     "verify:phase5": "bun scripts/verify-phase5.mjs",
     "verify:phase6": "bun scripts/verify-phase6.mjs",
     "verify:phase6:browser": "node scripts/verify-phase6-browser.mjs",
+    "verify:browser:lifecycle": "node scripts/verify-browser-lifecycle.mjs",
     "release:gate": "bun scripts/verify-phase6.mjs --strict",
     "test:phase2": "bun test test/phase2-strategies.test.ts",
     "test:phase4": "bun test test/phase4-effects.test.ts",

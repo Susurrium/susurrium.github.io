@@ -88,6 +88,15 @@ for (const path of ['.github/workflows/ci.yml', '.github/workflows/deploy.yml'])
 const ciWorkflow = read('.github/workflows/ci.yml')
 expect(/^\s*- main\s*$/m.test(ciWorkflow), 'CI validates pushes to main')
 expect(/^\s*- develop\s*$/m.test(ciWorkflow), 'CI validates pushes to develop')
+expect(
+  ciWorkflow.includes('browser-regression:'),
+  'CI defines a separate production-preview browser regression job'
+)
+expect(
+  ciWorkflow.includes('bun run verify:phase6:browser') &&
+    ciWorkflow.includes('bun run verify:browser:lifecycle'),
+  'CI runs both mobile accessibility and ClientRouter lifecycle browser regressions'
+)
 
 const deployWorkflow = read('.github/workflows/deploy.yml')
 expect(

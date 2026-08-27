@@ -71,7 +71,9 @@ function firstPaths(paths) {
 }
 
 function resourceUrls(tag) {
-  const urls = [attribute(tag, 'src'), attribute(tag, 'href'), attribute(tag, 'poster')].filter(Boolean)
+  const urls = [attribute(tag, 'src'), attribute(tag, 'href'), attribute(tag, 'poster')].filter(
+    Boolean
+  )
   const srcset = attribute(tag, 'srcset')
   if (srcset) {
     for (const candidate of srcset.split(',')) {
@@ -104,7 +106,9 @@ const notFound = existsSync(resolve(dist, '404.html')) ? readOutput('404.html') 
 const search = existsSync(resolve(dist, 'search/index.html')) ? readOutput('search/index.html') : ''
 const robots = existsSync(resolve(dist, 'robots.txt')) ? readOutput('robots.txt') : ''
 const rss = existsSync(resolve(dist, 'rss.xml')) ? readOutput('rss.xml') : ''
-const sitemapIndex = existsSync(resolve(dist, 'sitemap-index.xml')) ? readOutput('sitemap-index.xml') : ''
+const sitemapIndex = existsSync(resolve(dist, 'sitemap-index.xml'))
+  ? readOutput('sitemap-index.xml')
+  : ''
 const sitemap = existsSync(resolve(dist, 'sitemap-0.xml')) ? readOutput('sitemap-0.xml') : ''
 
 expect(
@@ -177,11 +181,15 @@ expect(
       )})`
 )
 expect(
-  readFileSync(resolve(root, 'src/layouts/ContentLayout.astro'), 'utf8').includes('prefers-reduced-motion'),
+  readFileSync(resolve(root, 'src/layouts/ContentLayout.astro'), 'utf8').includes(
+    'prefers-reduced-motion'
+  ),
   'mobile table-of-contents animation has a reduced-motion override'
 )
 
-const missingLanguage = htmlEntries.filter(({ text }) => !/<html\b[^>]*\blang=['"][^'"]+['"]/i.test(text))
+const missingLanguage = htmlEntries.filter(
+  ({ text }) => !/<html\b[^>]*\blang=['"][^'"]+['"]/i.test(text)
+)
 expect(missingLanguage.length === 0, 'every static HTML document declares a document language')
 
 const missingImageAlt = []
@@ -195,14 +203,19 @@ for (const entry of htmlEntries) {
   }
 
   for (const tag of entry.text.match(/<a\b[^>]*>/gi) ?? []) {
-    if (attribute(tag, 'target') === '_blank' && !/\brel\s*=\s*(['"])[^'"]*\b(?:noopener|noreferrer)\b/i.test(tag)) {
+    if (
+      attribute(tag, 'target') === '_blank' &&
+      !/\brel\s*=\s*(['"])[^'"]*\b(?:noopener|noreferrer)\b/i.test(tag)
+    ) {
       insecureBlankLinks.push(entry.path)
     }
   }
 
-  for (const tag of entry.text.match(/<(?:script|link|img|audio|video|source|iframe)\b[^>]*>/gi) ?? []) {
+  for (const tag of entry.text.match(/<(?:script|link|img|audio|video|source|iframe)\b[^>]*>/gi) ??
+    []) {
     for (const url of resourceUrls(tag)) {
-      if (!absoluteResourceExists(entry.file, url)) missingLocalResources.push(`${entry.path}: ${url}`)
+      if (!absoluteResourceExists(entry.file, url))
+        missingLocalResources.push(`${entry.path}: ${url}`)
 
       if (/^https?:\/\//i.test(url)) {
         const tagName = tag.match(/^<([a-z]+)/i)?.[1]?.toLowerCase()
@@ -212,7 +225,11 @@ for (const entry of htmlEntries) {
           const key = `${tagName}:${hostname}`
           externalRuntimeResources.set(key, (externalRuntimeResources.get(key) ?? 0) + 1)
         }
-        if (!sameOrigin && tagName === 'link' && /\brel\s*=\s*(['"])(?:stylesheet|preload)\1/i.test(tag)) {
+        if (
+          !sameOrigin &&
+          tagName === 'link' &&
+          /\brel\s*=\s*(['"])(?:stylesheet|preload)\1/i.test(tag)
+        ) {
           const key = `${tagName}:${hostname}`
           externalRuntimeResources.set(key, (externalRuntimeResources.get(key) ?? 0) + 1)
         }
@@ -267,11 +284,17 @@ const forbiddenClientApis = [
   {
     label: 'disabled Waline runtime endpoint',
     pattern: /waline\.arthals\.ink/i
+  },
+  {
+    label: 'disabled Waline pageview client runtime',
+    pattern: /@waline\/client(?:@|\/)|waline-pageview-count|waline-comment-count/i
   }
 ]
 
 for (const { label, pattern } of forbiddenClientApis) {
-  const matches = clientRuntimeEntries.filter((entry) => pattern.test(entry.text)).map(({ path }) => path)
+  const matches = clientRuntimeEntries
+    .filter((entry) => pattern.test(entry.text))
+    .map(({ path }) => path)
   releaseBlocker(
     matches.length === 0,
     matches.length === 0
@@ -289,7 +312,8 @@ expect(externalCssUrls.length === 0, 'generated CSS does not hotlink or import e
 const residenceSource = readFileSync(resolve(root, 'src/data/residence.ts'), 'utf8')
 const residenceUrls = residenceSource.match(/https:\/\/[^'"\s]+/g) ?? []
 expect(
-  residenceUrls.length > 0 && residenceUrls.every((url) => new URL(url).hostname === 'basemaps.cartocdn.com'),
+  residenceUrls.length > 0 &&
+    residenceUrls.every((url) => new URL(url).hostname === 'basemaps.cartocdn.com'),
   'the only declared client map runtime is the allowlisted CARTO style service'
 )
 

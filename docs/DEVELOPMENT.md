@@ -76,11 +76,12 @@ bun run release:gate
 
 严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。
 
-可选的浏览器回归（不进入 CI，因为它需要本机 Chrome 和已启动的生产预览）验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画。默认连接 `http://127.0.0.1:9224` 的 Chrome DevTools 与 `http://127.0.0.1:4321` 的预览，也可通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
+浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、空白点击过滤、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人，以及 reduced-motion 下的销毁。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
 
 ```powershell
 bun run preview -- --host 127.0.0.1 --port 4321
 bun run verify:phase6:browser
+bun run verify:browser:lifecycle
 ```
 
 资源预算：
@@ -97,7 +98,7 @@ CI 等价命令：
 bun run ci
 ```
 
-构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以 Node 直接运行 `node_modules/astro/bin/astro.mjs build`（它会刷新内容/类型），再运行 `astro check --noSync`；这避免 Windows 下 Bun launcher 和 Astro 6 第二次同步偶发未释放子进程。Linux CI 仍执行同一组构建与诊断门槛。
+构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以 Node 直接运行 `node_modules/astro/bin/astro.mjs build`（它会刷新内容/类型），再运行 `astro check --noSync`；CI 内联同一组命令而不再嵌套 `bun run build`。这避免 Windows 下嵌套 Bun launcher 与 Astro 6 偶发停在 `Building static entrypoints`。Linux CI 仍执行同一组构建与诊断门槛。
 
 ## 3. 分支
 

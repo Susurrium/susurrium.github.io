@@ -42,3 +42,78 @@ jobs:
 
       - name: Validate
         run: bun run ci
+
+  browser-regression:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build production preview
+        run: bun run build
+
+      - name: Start local Chrome and production preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome_bin="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$chrome_bin" ]; then
+            echo "A Chromium executable is required for browser regression."
+            exit 1
+          fi
+
+          "$chrome_bin" \
+            --headless=new \
+            --remote-debugging-address=127.0.0.1 \
+            --remote-debugging-port=9224 \
+            --user-data-dir="${RUNNER_TEMP}/susurrium-chrome" \
+            --no-first-run \
+            --no-default-browser-check \
+            --disable-gpu \
+            about:blank >"${RUNNER_TEMP}/susurrium-chrome.log" 2>&1 &
+          chrome_pid=$!
+
+          bun run preview -- --host 127.0.0.1 --port 4321 >"${RUNNER_TEMP}/susurrium-preview.log" 2>&1 &
+          preview_pid=$!
+          echo "CHROME_PID=$chrome_pid" >> "$GITHUB_ENV"
+          echo "PREVIEW_PID=$preview_pid" >> "$GITHUB_ENV"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:4321/home > /dev/null && \
+              curl --fail --silent --show-error http://127.0.0.1:9224/json/version > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat "${RUNNER_TEMP}/susurrium-preview.log" || true
+          cat "${RUNNER_TEMP}/susurrium-chrome.log" || true
+          exit 1
+
+      - name: Run browser regressions
+        run: |
+          bun run verify:phase6:browser
+          bun run verify:browser:lifecycle
+
+      - name: Stop local browser services
+        if: always()
+        shell: bash
+        run: |
+          kill "${PREVIEW_PID:-}" 2>/dev/null || true
+          kill "${CHROME_PID:-}" 2>/dev/null || true
