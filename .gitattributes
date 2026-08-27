@@ -1,5 +1,8 @@
 * text=auto eol=lf
 
+# Preserve authorized third-party visual-effect sources byte-for-byte.
+public/vendor/** -whitespace
+
 *.avif binary
 *.gif binary
 *.ico binary

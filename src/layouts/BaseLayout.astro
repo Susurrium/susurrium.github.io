@@ -1,9 +1,11 @@
 ---
 import { ClientRouter } from 'astro:transitions'
+import { resolveEffectProfile, type EffectProfile } from '@/data/effects'
 
 import { Footer, ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
+import VisualEffectsHost from '@/components/effects/VisualEffectsHost.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
 import MusicPlayer from '@/components/MusicPlayer.astro'
 import ViewTransitionRejectionGuard from '@/components/ViewTransitionRejectionGuard.astro'
@@ -18,6 +20,8 @@ interface Props {
   highlightColor?: string
   /** Home overlays the initial transparent header on the LargeSkull Hero. */
   pageKind?: 'home'
+  /** Route-level owner for PKU, petals and click-particle policy. */
+  effectProfile?: EffectProfile
   /** Article detail views use the compact persistent music treatment. */
   musicMode?: 'full' | 'compact'
 }
@@ -26,9 +30,11 @@ const {
   meta: { articleDate, description = config.description, ogImage, title },
   highlightColor,
   pageKind,
+  effectProfile: effectProfileInput,
   musicMode = 'full',
   ...props
 } = Astro.props
+const effectProfile = resolveEffectProfile(effectProfileInput)
 ---
 
 <html lang={config.locale.lang}>
@@ -42,9 +48,11 @@ const {
   <body
     class='flex justify-center bg-background text-foreground'
     data-page-kind={pageKind}
+    data-effect-profile={effectProfile}
     data-music-mode={musicMode}
     {...props}
   >
+    <VisualEffectsHost profile={effectProfile} />
     {
       highlightColor && (
         <div
@@ -56,15 +64,27 @@ const {
     }
     <div
       class:list={[
-        'w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between',
+        'relative w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between',
         pageKind === 'home' && 'relative'
       ]}
+      data-click-burst-zone
     >
       <SiteHeader />
-      <div class='flex-1 w-full'>
+      {
+        /* Keep the page shell out of a stacking context: the Header is a
+          root-level z-50 child and must stay above petals/click effects.
+          Only ordinary content and the Footer occupy the z-20 page layer. */
+      }
+      <div
+        class='relative flex-1 w-full'
+        style='z-index:var(--z-page-content)'
+        data-page-content-layer
+      >
         <slot />
       </div>
-      <Footer />
+      <div class='relative' style='z-index:var(--z-page-content)' data-page-footer-layer>
+        <Footer />
+      </div>
     </div>
     <!-- The persistence directive must live on a native DOM element. Passing
          it to an Astro component does not emit the runtime marker that

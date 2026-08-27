@@ -1,12 +1,13 @@
 ---
 import { getCollection } from 'astro:content'
+import { takeRecent } from '@/data/home-media'
+import { published, sortByDate } from '@/lib/content'
+
+import PageLayout from '@/layouts/BaseLayout.astro'
 import ContentCard from '@/components/cards/ContentCard.astro'
 import BlogTimeline from '@/components/home/BlogTimeline.astro'
 import LargeSkullHero from '@/components/home/LargeSkullHero.astro'
 import RandomSayingCard from '@/components/home/RandomSayingCard.astro'
-import { takeRecent } from '@/data/home-media'
-import PageLayout from '@/layouts/BaseLayout.astro'
-import { published, sortByDate } from '@/lib/content'
 
 const [blogEntries, traceEntries, sayingEntries] = await Promise.all([
   getCollection('blog'),
@@ -45,7 +46,9 @@ const meta = {
           {
             recentBlogs.length > 0 ? (
               <ul class='home-writing__blog-list' data-home-recent-blog-list>
-                {recentBlogs.map((post) => <ContentCard contentKind='blog' detailed entry={post} />)}
+                {recentBlogs.map((post) => (
+                  <ContentCard contentKind='blog' detailed entry={post} />
+                ))}
               </ul>
             ) : (
               <p class='home-writing__empty'>No published Blog posts yet.</p>
@@ -64,11 +67,9 @@ const meta = {
           {
             recentTraces.length > 0 ? (
               <div class='home-writing__trace-list' data-home-recent-trace-list>
-                {
-                  recentTraces.map((trace, index) => (
-                    <ContentCard actionLabel='Read Trace' contentKind='trace' entry={trace} {index} />
-                  ))
-                }
+                {recentTraces.map((trace, index) => (
+                  <ContentCard actionLabel='Read Trace' contentKind='trace' entry={trace} {index} />
+                ))}
               </div>
             ) : (
               <p class='home-writing__empty'>No published Traces yet.</p>
@@ -96,7 +97,11 @@ const meta = {
     padding: clamp(2rem, 6vw, 4.5rem) 0 clamp(4rem, 10vw, 7rem);
     flex-direction: column;
     gap: clamp(4rem, 9vw, 7rem);
-    background: hsl(var(--background));
+    /* The LargeSkull image remains an untouched, dedicated top scene. Below
+       its waves, a near-opaque surface preserves Arthals' reading contrast
+       while allowing the enabled PKU backdrop to remain subtly visible in
+       the whitespace rather than disappearing behind a solid page fill. */
+    background: hsl(var(--background) / 0.94);
   }
 
   .home-writing {

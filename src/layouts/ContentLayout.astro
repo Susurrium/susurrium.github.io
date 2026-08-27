@@ -1,4 +1,6 @@
 ---
+import type { EffectProfile } from '@/data/effects'
+
 import { BackToTop } from 'astro-pure/components/pages'
 import type { SiteMeta } from 'astro-pure/types'
 import { Button, Icon } from 'astro-pure/user'
@@ -12,6 +14,7 @@ interface Props {
   back?: string
   pagefindBody?: boolean
   contentType?: string
+  effectProfile?: EffectProfile
   musicMode?: 'full' | 'compact'
 }
 
@@ -21,12 +24,13 @@ const {
   back = '/home',
   pagefindBody = false,
   contentType,
+  effectProfile,
   musicMode,
   ...props
 } = Astro.props
 ---
 
-<PageLayout {meta} {highlightColor} {musicMode} {...props}>
+<PageLayout {meta} {highlightColor} {effectProfile} {musicMode} {...props}>
   <Button title='Back' href={back} variant='back' />
   <main class='mt-6 items-start gap-x-10 md:flex'>
     {/* Sidebar */}

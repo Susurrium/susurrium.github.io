@@ -593,6 +593,8 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 
 交付 PKU 三层、George 点击粒子、Links 花瓣和统一生命周期。
 
+状态：已完成。PKU 三层和 George 花瓣/点击所需的原始脚本已按锁定 SHA-256 本地化，运行时无参考站、CDN 或第三方效果脚本热链。项目自行开发的 `VisualEffectsHost` 以短生命周期同源 iframe 隔离并按原顺序执行原算法，负责 Astro ClientRouter 切换、页面隐藏、减少动画和设备条件变化时的创建、去重与彻底释放；原脚本本身不改写。`standard`（PKU + 点击）、`reading`（全关）、`links`（花瓣 + 点击）和 `about`（PKU + 点击，等待 Phase 5 小人）已接入全站页面 profile。PKU 保留来源页的三层参数，Links 保留原 50 花瓣，空白点击桥接至原 20 粒子与圆环实现；正文/页脚在内容层，Header 和播放器不被内容壳的堆叠上下文限制，始终在花瓣/点击层之上。静态 SHA/产物检查、profile 策略测试和生产预览中的桌面、移动、减少动画、滚动转发、空白点击过滤及多轮连续路由回归均已通过。
+
 ### Phase 5：特色模块
 
 交付 SkyWT 居住地、HanLife 热力图、TNXG 小人和 About Sayings 入口。

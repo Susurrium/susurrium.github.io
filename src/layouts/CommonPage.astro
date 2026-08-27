@@ -1,5 +1,6 @@
 ---
 import type { MarkdownHeading } from 'astro'
+import type { EffectProfile } from '@/data/effects'
 
 import { TOC } from 'astro-pure/components/pages'
 import PageLayout from '@/layouts/ContentLayout.astro'
@@ -10,12 +11,13 @@ interface Props {
   headings?: MarkdownHeading[]
   view?: boolean
   comment?: boolean
+  effectProfile?: EffectProfile
 }
 
-const { title, headings, view, comment: enableComment, ...props } = Astro.props
+const { title, headings, view, comment: enableComment, effectProfile, ...props } = Astro.props
 ---
 
-<PageLayout meta={{ title }} {...props}>
+<PageLayout meta={{ title }} {effectProfile} {...props}>
   {headings?.length && <TOC headings={headings} slot='sidebar' />}
 
   <Fragment slot='header'>

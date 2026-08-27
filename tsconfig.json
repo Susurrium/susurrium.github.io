@@ -33,6 +33,7 @@
     "dist",
     "packages/pure/**",
     "public/scripts/*",
+    "public/vendor/**",
     "test/*"
   ]
 }

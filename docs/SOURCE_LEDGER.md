@@ -1,6 +1,6 @@
 # 来源与复用台账
 
-> 台账版本：1.1｜冻结日期：2026-08-27｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–3 已按本台账落地并完成静态/浏览器回归
+> 台账版本：1.2｜冻结日期：2026-08-27｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–4 已按本台账落地并完成静态/浏览器回归
 
 ## 1. 作用与边界
 
@@ -117,7 +117,7 @@
 
 ### 5.3 George 花瓣与点击粒子
 
-George 当前定制脚本未发现可锁定的公开源码仓库，因此以 2026-08-27 的 Live 资源作为来源锁。实现阶段必须下载到本地并复核哈希。
+George 当前定制脚本未发现可锁定的公开源码仓库，因此以 2026-08-27 的 Live 资源作为来源锁。2026-08-27 已下载到本地并逐项复核哈希。
 
 | ID                 | 精确资源                                                                                |   字节 | SHA-256                                                            | 实施方式                                                          |
 | ------------------ | --------------------------------------------------------------------------------------- | -----: | ------------------------------------------------------------------ | ----------------------------------------------------------------- |
@@ -138,7 +138,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | `PKU-FLUTTER` | `https://cdn.cbd.int/butterfly-extsrc@1.1.3/dist/canvas-fluttering-ribbon.min.js` | `ae4d9f6cdc03736996029a8806cc162ec4340a92fc4bfa2bc273d4a46466b68a` |
 | `PKU-NEST`    | `https://cdn.cbd.int/butterfly-extsrc@1.1.3/dist/canvas-nest.min.js`              | `2c8951c894a012c98e55c3ba80045863c627cc5d144665bd54c286ac75f2a7dd` |
 
-三层视觉算法直接复用并本地化；`HIST-BACKDROP` 提供已有两层和生命周期参考，本项目自行开发统一 `VisualEffectsHost`，负责补齐第一层、路由启停、去重和销毁。页面源码中无关脚本、配置和凭据不复制、不记录。
+三层视觉算法直接复用并本地化；`HIST-BACKDROP` 提供已有两层和生命周期设计参考，本项目自行开发统一 `VisualEffectsHost`，负责补齐第一层、路由启停、去重和销毁。页面源码中无关脚本、配置和凭据不复制、不记录。
 
 ### 5.5 SkyWT 居住地
 
@@ -239,6 +239,30 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 `src/components/arthals/Copyright.astro` 为 `BASE-PURE` 版权区的本地适配：保留其 DOM/UI，二维码改由锁定的 `BASE-QRCODEJS` 经 Vite 同源资源加载，并以 custom element 管理复制、展开、加载和断连。`src/components/ViewTransitionRejectionGuard.astro` 位于 `ClientRouter` 前，仅消费 Chromium 对已完成 DOM 交换的原生 View Transition 所产生的三类已知、可恢复 `ready` 拒绝（`AbortError`、`InvalidStateError`、`TimeoutError`）；其他 Promise 拒绝仍正常冒泡。
 
+### 6.3 Phase 4 全局效果本地化核验
+
+2026-08-27 已将 §5.3 与 §5.4 锁定的原始脚本原样复制到 `public/vendor/`，逐项复核字节数和 SHA-256。生产效果运行时只加载以下同源路径，不热链 PKU、George、anime.js 或 tinycolor。
+
+| 台账 ID            | 本地路径                                                  | 字节数 | SHA-256                                                            |
+| ------------------ | --------------------------------------------------------- | -----: | ------------------------------------------------------------------ |
+| `PKU-RIBBON`       | `public/vendor/pku/canvas-ribbon@1.1.3.min.js`            |  1,235 | `0397a7e1a38f78ef831c1e284cf39c81263bdd022e1b462ad4c0955acf9ea3a6` |
+| `PKU-FLUTTER`      | `public/vendor/pku/canvas-fluttering-ribbon@1.1.3.min.js` |  5,928 | `ae4d9f6cdc03736996029a8806cc162ec4340a92fc4bfa2bc273d4a46466b68a` |
+| `PKU-NEST`         | `public/vendor/pku/canvas-nest@1.1.3.min.js`              |  1,805 | `2c8951c894a012c98e55c3ba80045863c627cc5d144665bd54c286ac75f2a7dd` |
+| `GEORGE-SAKURA`    | `public/vendor/george/sakura.js`                          | 63,105 | `36795ed7d5ae4e34667615993287e59a2f33eff0dcb9dfbd2e4769789b430229` |
+| `GEORGE-CLICK`     | `public/vendor/george/fireworks.js`                       |  6,291 | `5828f0a7f93a62920de3dce56a29f37658c30686932c5114faa06dcc5c79ebc8` |
+| `GEORGE-TINYCOLOR` | `public/vendor/george/tinycolor.min.js`                   | 14,583 | `af61a9951eda26670b81a7e33e49465f36086e92455e9b35fb19d15ab28d9d50` |
+| `GEORGE-ANIME`     | `public/vendor/george/anime.min.js`                       | 17,748 | `455938d7e835eec1b7ec9b05b302be31730bb4d828abb4e9076be86de8cf3a5f` |
+
+`src/components/effects/VisualEffectsHost.astro` 是本项目自行开发的生命周期宿主；它不改写原始算法，而是在短生命周期、同源 iframe 中按原顺序执行脚本。删除 iframe 即可同步清理原脚本建立的 canvas、RAF、定时器和监听器，适配 Astro ClientRouter 的页面切换。`HIST-BACKDROP`、`HIST-GEORGE-HOST` 只提供这类挂载、清理和交互过滤的设计参考。
+
+这些字节锁定的原始脚本作为静态资源，不参与 Astro 的 TypeScript 语义分析；`verify:phase4` 负责它们的 SHA-256、生产产物存在性、原始参数、profile 映射和无运行时热链检查，避免为了消除诊断提示而改写来源字节。
+
+PKU 保留原页参数：`canvas-ribbon` 的 `mobile=false`、`zIndex=-1`、`alpha=0.6`、`size=150`、`data-click=false`，`canvas-fluttering-ribbon` 的 `mobile=false`，以及 `canvas-nest` 的 `mobile=false`、`zIndex=-1`、`color=0,0,255`、`opacity=0.7`、`count=99`。宿主只把父页面的鼠标、离开和滚动状态转发给隔离上下文，使原算法保有页面级的交互输入；宽度小于 768px、粗指针设备或用户启用减少动画时不创建 PKU 层。
+
+George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `tinycolor → anime → fireworks` 顺序执行，并保留原 20 粒子加圆环视觉。本项目只在父页面过滤链接、按钮、表单、播放器、导航、文字选择和卡片等非空白交互区，再把允许的空白点击桥接给原脚本。
+
+页面 profile 为：`standard`（PKU + 点击粒子）、`reading`（全关）、`links`（花瓣 + 点击粒子）、`about`（PKU + 点击粒子；Phase 5 再加入小人）。所有未单列的普通页面使用 `standard`。`prefers-reduced-motion`、页面隐藏、离开、ClientRouter 切换和设备条件变化都会释放效果实例；恢复条件满足后按当前 profile 重建。
+
 ## 7. 完整模块分配闭环
 
 | 最终模块                                      | 原网站/上游直接部分                                             | 历史项目直接部分                      | 本项目自行开发或略调                                          |
@@ -254,9 +278,9 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | Blog Timeline                                 | `INNEI-IDEA` 只供思路                                           | `HIST-TIMELINE`                       | 改为 Blog-only，无独立路由                                    |
 | `/` 视频入口                                  | `XYX-TYPING` 动画参数                                           | `HIST-ENTRANCE`                       | 每次访问播放、replace 导航、noindex/canonical、文案和本地媒体 |
 | 全局音乐                                      | `XYX-MUSIC-UI` 可分离视觉                                       | `HIST-MUSIC` 引擎/状态                | `#nav-music` 视觉壳、本地单例、详情紧凑控制、无远程运行时     |
-| Links 花瓣                                    | `GEORGE-SAKURA` 算法                                            | `HIST-GEORGE-HOST` 生命周期           | Links-only、DPR/reduced-motion 适配                           |
-| 点击粒子                                      | `GEORGE-CLICK` 算法与依赖                                       | `HIST-GEORGE-HOST` 过滤/生命周期      | 空白区域过滤、页面 profile 和销毁                             |
-| PKU 全局背景                                  | `PKU-*` 三层算法                                                | `HIST-BACKDROP` 已有封装              | `VisualEffectsHost`、补第一层、默认/阅读/Links profile        |
+| Links 花瓣                                    | `GEORGE-SAKURA` 原算法                                          | `HIST-GEORGE-HOST` 生命周期设计参考   | 本地 iframe 宿主、Links-only、DPR/reduced-motion 适配         |
+| 点击粒子                                      | `GEORGE-CLICK` 原算法与依赖                                     | `HIST-GEORGE-HOST` 过滤/生命周期参考  | 本地 iframe 宿主、空白区域过滤、profile 和销毁                |
+| PKU 全局背景                                  | `PKU-*` 原三层算法                                              | `HIST-BACKDROP` 生命周期设计参考      | `VisualEffectsHost`、隔离执行、补第一层和 profile 映射        |
 | SkyWT 居住地                                  | 原站只供视觉校准                                                | `HIST-RESIDENCE` 几乎全部实现         | 个人坐标/文案、细节校准、CARTO/定位失败回退                   |
 | GitHub 热力图                                 | `HAN-HEATMAP` 组件、解析、CSS                                   | 历史实现不采用                        | 用户名、缓存、构建失败回退；无 schedule                       |
 | About 小人                                    | `TNXG-COMPANION` 素材和滚动公式                                 | `HIST-COMPANION` 生命周期             | About-only、≥1440px、层级和清理                               |
@@ -292,5 +316,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 - Phase 2 的 LargeSkull 锁定图、Hero/波浪、统一卡片策略、随机 Saying、双栏与 Blog Timeline。
 - Phase 3 的可重复根入口、本地视频/Typed.js、持久本地音乐壳、详情紧凑模式、局部生命周期清理、本地二维码与图片放大运行时。
 - Phase 3 的生产构建、三套静态契约检查、实际 Chrome 点击回归和同源网络扫描。
+- Phase 4 的 PKU 三层、George 点击粒子、Links 花瓣、本地化原始 vendor 脚本和统一 `VisualEffectsHost` 生命周期。
+- Phase 4 的 SHA/产物静态核验、profile 策略测试、生产预览中的桌面/移动/减少动画/多次 ClientRouter 路由回归及同源网络扫描。
 
-尚未落地的全局特效、居住地、热力图和 About 小人属于 Phase 4 至 Phase 5 功能开发，不是来源或准备阶段遗漏。它们必须按本台账实施，不能临时换成自行重做的近似效果。
+尚未落地的居住地、热力图和 About 小人属于 Phase 5 功能开发，不是来源或准备阶段遗漏。它们必须按本台账实施，不能临时换成自行重做的近似效果。
