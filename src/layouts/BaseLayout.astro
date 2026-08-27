@@ -1,7 +1,8 @@
 ---
-import { Footer, Header, ThemeProvider } from 'astro-pure/components/basic'
+import { Footer, ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import config from '@/site-config'
 
 // Import the global.css file here so that it is included on
@@ -37,7 +38,7 @@ const {
       )
     }
     <div class='w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between'>
-      <Header />
+      <SiteHeader />
       <div class="flex-1 w-full">
         <slot />
       </div>

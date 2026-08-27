@@ -1,0 +1,26 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content'
+import SayingPost from '@/layouts/SayingPost.astro'
+import { published, sortByDate } from '@/lib/content'
+
+export const prerender = true
+
+export async function getStaticPaths() {
+  const sayings = sortByDate(published(await getCollection('saying')))
+  return sayings.map((saying) => ({
+    params: { slug: saying.id },
+    props: { saying }
+  }))
+}
+
+interface Props {
+  saying: CollectionEntry<'saying'>
+}
+
+const { saying } = Astro.props
+const { Content, headings } = await render(saying)
+---
+
+<SayingPost {saying} {headings}>
+  <Content />
+</SayingPost>

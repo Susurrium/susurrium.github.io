@@ -1,0 +1,70 @@
+---
+import type { MarkdownHeading } from 'astro'
+import type { CollectionEntry } from 'astro:content'
+import { TOC } from 'astro-pure/components/pages'
+import { Icon } from 'astro-pure/user'
+import PageLayout from '@/layouts/ContentLayout.astro'
+import { formatContentDate } from '@/lib/content'
+
+interface Props {
+  trace: CollectionEntry<'trace'>
+  headings: MarkdownHeading[]
+}
+
+const {
+  trace: { data },
+  headings
+} = Astro.props
+const articleDate = data.updatedDate ?? data.publishDate
+---
+
+<PageLayout
+  meta={{
+    articleDate: articleDate.toISOString(),
+    description: data.description ?? data.title,
+    title: data.title
+  }}
+  back='/traces'
+  pagefindBody
+  contentType='Trace'
+>
+  {!!headings.length && <TOC {headings} slot='sidebar' />}
+
+  <Fragment slot='header'>
+    <div data-pagefind-body>
+      <div class='flex flex-wrap items-center gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'>
+        <span class='flex items-center gap-1'>
+          <Icon name='calendar' class='size-5' />
+          <time datetime={data.publishDate.toISOString()}>{formatContentDate(data.publishDate)}</time>
+          {
+            data.updatedDate && (
+              <span>
+                {' '}/ Updated{' '}
+                <time datetime={data.updatedDate.toISOString()}>{formatContentDate(data.updatedDate)}</time>
+              </span>
+            )
+          }
+        </span>
+        {
+          data.tags.length > 0 && (
+            <span class='flex items-center gap-1'>
+              <Icon name='hashtag' class='size-5' />
+              {data.tags.join(' / ')}
+            </span>
+          )
+        }
+      </div>
+      <h1 class='mt-4 text-2xl font-medium sm:mb-2 sm:mt-6 sm:text-3xl'>{data.title}</h1>
+      {
+        data.description && (
+          <blockquote class='mt-3 text-sm italic text-muted-foreground'>
+            <q>{data.description}</q>
+          </blockquote>
+        )
+      }
+      <div class='mt-4 w-1/2 border-t max-md:mx-auto sm:mt-6 sm:w-1/3'></div>
+    </div>
+  </Fragment>
+
+  <slot />
+</PageLayout>

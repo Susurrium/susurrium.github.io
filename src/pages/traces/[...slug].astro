@@ -1,0 +1,26 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content'
+import TracePost from '@/layouts/TracePost.astro'
+import { published, sortByDate } from '@/lib/content'
+
+export const prerender = true
+
+export async function getStaticPaths() {
+  const traces = sortByDate(published(await getCollection('trace')))
+  return traces.map((trace) => ({
+    params: { slug: trace.id },
+    props: { trace }
+  }))
+}
+
+interface Props {
+  trace: CollectionEntry<'trace'>
+}
+
+const { trace } = Astro.props
+const { Content, headings } = await render(trace)
+---
+
+<TracePost {trace} {headings}>
+  <Content />
+</TracePost>

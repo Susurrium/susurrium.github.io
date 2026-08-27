@@ -10,9 +10,18 @@ interface Props {
   meta: SiteMeta
   highlightColor?: string
   back?: string
+  pagefindBody?: boolean
+  contentType?: string
 }
 
-const { meta, highlightColor, back = '/', ...props } = Astro.props
+const {
+  meta,
+  highlightColor,
+  back = '/home',
+  pagefindBody = false,
+  contentType,
+  ...props
+} = Astro.props
 ---
 
 <PageLayout {meta} {highlightColor} {...props}>
@@ -33,7 +42,11 @@ const { meta, highlightColor, back = '/', ...props } = Astro.props
     >
     </div>
 
-    <article class='min-w-0 grow'>
+    <article
+      class='min-w-0 grow'
+      data-pagefind-body={pagefindBody ? '' : undefined}
+      data-pagefind-meta={contentType ? `content-type:${contentType}` : undefined}
+    >
       {/* Content header */}
       <div id='content-header' class='animate'>
         <slot name='header' />

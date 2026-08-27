@@ -1,0 +1,58 @@
+---
+import { getCollection } from 'astro:content'
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import { formatContentDate, published, sortByDate } from '@/lib/content'
+
+const traces = sortByDate(published(await getCollection('trace')))
+const meta = {
+  description: 'Short notes, fragments, and observations that are still growing.',
+  title: 'Traces'
+}
+---
+
+<PageLayout {meta}>
+  <Button title='Back' href='/home' variant='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <p class='text-sm text-muted-foreground'>Short notes and evolving observations</p>
+      <h1 class='mb-6 mt-3 text-3xl font-medium sm:mt-4'>Traces</h1>
+    </div>
+
+    {
+      traces.length === 0 ? (
+        <p id='content' class='animate text-muted-foreground'>No published traces yet.</p>
+      ) : (
+        <ul id='content' class='animate flex flex-col gap-y-4' aria-label='Trace list'>
+          {
+            traces.map((trace) => (
+              <li class='rounded-2xl border bg-background transition-colors hover:bg-muted hover:text-primary'>
+                <a
+                  class='block px-5 py-4 sm:px-6 sm:py-5'
+                  href={`/traces/${trace.id}`}
+                  data-astro-prefetch
+                >
+                  <div class='flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground'>
+                    <time datetime={trace.data.publishDate.toISOString()}>
+                      {formatContentDate(trace.data.publishDate)}
+                    </time>
+                    {trace.data.tags.length > 0 && <span>{trace.data.tags.map((tag) => `#${tag}`).join(' ')}</span>}
+                  </div>
+                  <div class='mt-2 flex items-start justify-between gap-x-4'>
+                    <div>
+                      <h2 class='font-medium'>{trace.data.title}</h2>
+                      {trace.data.description && (
+                        <p class='mt-1 text-sm leading-6 text-muted-foreground'>{trace.data.description}</p>
+                      )}
+                    </div>
+                    <span aria-hidden='true' class='mt-1 shrink-0 text-muted-foreground'>→</span>
+                  </div>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      )
+    }
+  </main>
+</PageLayout>

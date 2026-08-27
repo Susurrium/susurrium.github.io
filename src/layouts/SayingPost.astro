@@ -1,0 +1,63 @@
+---
+import type { MarkdownHeading } from 'astro'
+import type { CollectionEntry } from 'astro:content'
+import { TOC } from 'astro-pure/components/pages'
+import { Icon } from 'astro-pure/user'
+import PageLayout from '@/layouts/ContentLayout.astro'
+import { formatContentDate } from '@/lib/content'
+
+interface Props {
+  saying: CollectionEntry<'saying'>
+  headings: MarkdownHeading[]
+}
+
+const {
+  saying: { data },
+  headings
+} = Astro.props
+const pageTitle = data.text.length > 60 ? `${data.text.slice(0, 57)}…` : data.text
+---
+
+<PageLayout
+  meta={{
+    articleDate: data.publishDate.toISOString(),
+    description: data.text,
+    title: pageTitle
+  }}
+  back='/sayings'
+  pagefindBody
+  contentType='Saying'
+>
+  {!!headings.length && <TOC {headings} slot='sidebar' />}
+
+  <Fragment slot='header'>
+    <div data-pagefind-body>
+      <h1 class='sr-only'>Saying: {data.text}</h1>
+      <p class='text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground'>Saying</p>
+      <blockquote class='mt-4 text-2xl font-medium leading-relaxed sm:mt-6 sm:text-3xl'>
+        <q>{data.text}</q>
+      </blockquote>
+      <div class='mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground'>
+        <span>{data.author ?? 'Unknown'}</span>
+        {data.source && <span>· {data.source}</span>}
+        <span>·</span>
+        <time datetime={data.publishDate.toISOString()}>{formatContentDate(data.publishDate)}</time>
+        {
+          data.sourceUrl && (
+            <a
+              class='inline-flex items-center gap-1 hover:underline'
+              href={data.sourceUrl}
+              target='_blank'
+              rel='noreferrer'
+            >
+              Source <Icon name='link' class='size-4' />
+            </a>
+          )
+        }
+      </div>
+      <div class='mt-4 w-1/2 border-t max-md:mx-auto sm:mt-6 sm:w-1/3'></div>
+    </div>
+  </Fragment>
+
+  <slot />
+</PageLayout>

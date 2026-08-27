@@ -57,4 +57,51 @@ const docs = defineCollection({
     })
 })
 
-export const collections = { blog, docs }
+// Trace is deliberately separate from Blog: it is a short-form record with its
+// own list/detail route and is not included in the Blog tag, archive or RSS views.
+const trace = defineCollection({
+  loader: glob({ base: './src/content/traces', pattern: '**/*.{md,mdx}' }),
+  schema: ({ image }) =>
+    z
+      .object({
+        title: z.string().min(1).max(80),
+        description: z.string().min(1).max(180).optional(),
+        publishDate: z.coerce.date(),
+        updatedDate: z.coerce.date().optional(),
+        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
+        cover: image().optional(),
+        coverAlt: z.string().min(1).max(160).optional(),
+        draft: z.boolean().default(false)
+      })
+      .refine((entry) => !entry.updatedDate || entry.updatedDate >= entry.publishDate, {
+        message: 'updatedDate cannot be earlier than publishDate',
+        path: ['updatedDate']
+      })
+      .refine((entry) => !entry.cover || Boolean(entry.coverAlt), {
+        message: 'coverAlt is required when cover is set',
+        path: ['coverAlt']
+      })
+})
+
+// Sayings are a third content type, not a shortened Blog or Trace. Their tags
+// remain local metadata until a future product decision explicitly exposes them.
+const saying = defineCollection({
+  loader: glob({ base: './src/content/sayings', pattern: '**/*.{md,mdx}' }),
+  schema: () =>
+    z
+      .object({
+        text: z.string().min(1).max(500),
+        author: z.string().min(1).max(80).optional(),
+        source: z.string().min(1).max(160).optional(),
+        sourceUrl: z.url().optional(),
+        publishDate: z.coerce.date(),
+        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
+        draft: z.boolean().default(false)
+      })
+      .refine((entry) => !entry.sourceUrl || Boolean(entry.source), {
+        message: 'source is required when sourceUrl is set',
+        path: ['source']
+      })
+})
+
+export const collections = { blog, docs, trace, saying }
