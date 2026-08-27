@@ -34,20 +34,25 @@ const linksConf = config.integ.links
   <!-- apply-links -->
   <h2 id='apply-links'>Apply Links</h2>
   <p>本站信息（点击复制）The site information (click to copy)：</p>
-  <blockquote class='not-prose grid grid-cols-[auto_1fr] gap-x-2 break-words border-s-4 ps-4'>
-    {
-      linksConf.applyTip.map(({ name, val }) => {
-        const script = `navigator.clipboard.writeText('${val}');document.dispatchEvent(new CustomEvent('toast',{detail:{message:'Copied "${val}" to clipboard!'}}))`
-        return (
+  <blockquote class='not-prose border-s-4 ps-4'>
+    <site-info-copy class='grid grid-cols-[auto_1fr] gap-x-2 break-words'>
+      {
+        linksConf.applyTip.map(({ name, val }) => (
           <>
             <span class='text-end'>{name}:</span>
-            <samp class='cursor-pointer' onclick={script}>
+            <button
+              class='site-info-copy__value focus-ring'
+              type='button'
+              data-copy-value={val}
+              aria-label={`Copy ${name}`}
+              title='Copy'
+            >
               {val}
-            </samp>
+            </button>
           </>
-        )
-      })
-    }
+        ))
+      }
+    </site-info-copy>
   </blockquote>
 
   <p>申请时还请按照这个模板留言，此外有关申请说明：</p>
@@ -70,3 +75,85 @@ const linksConf = config.integ.links
   </div>
   <Signature />
 </PageLayout>
+
+<script>
+  class SiteInfoCopy extends HTMLElement {
+    #controller?: AbortController
+
+    connectedCallback() {
+      this.#controller?.abort()
+      this.#controller = new AbortController()
+      this.addEventListener('click', this.#handleClick, { signal: this.#controller.signal })
+    }
+
+    disconnectedCallback() {
+      this.#controller?.abort()
+      this.#controller = undefined
+    }
+
+    #handleClick = (event: MouseEvent) => {
+      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+        '[data-copy-value]'
+      )
+      if (!button || !this.contains(button)) return
+
+      const value = button.dataset.copyValue ?? ''
+      void this.#copy(value)
+    }
+
+    async #copy(value: string) {
+      let copied = false
+
+      try {
+        await navigator.clipboard.writeText(value)
+        copied = true
+      } catch {
+        const input = document.createElement('textarea')
+        input.value = value
+        input.setAttribute('aria-hidden', 'true')
+        input.style.cssText = 'position:fixed;opacity:0;pointer-events:none'
+        document.body.append(input)
+        try {
+          input.select()
+          copied = document.execCommand('copy')
+        } catch {
+          copied = false
+        } finally {
+          input.remove()
+        }
+      }
+
+      document.dispatchEvent(
+        new CustomEvent('toast', {
+          detail: {
+            message: copied
+              ? `Copied "${value}" to clipboard!`
+              : 'Unable to copy. Please select the value.'
+          }
+        })
+      )
+    }
+  }
+
+  if (!customElements.get('site-info-copy')) {
+    customElements.define('site-info-copy', SiteInfoCopy)
+  }
+</script>
+
+<style>
+  .site-info-copy__value {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    text-align: left;
+  }
+
+  .site-info-copy__value:hover {
+    color: hsl(var(--primary));
+  }
+</style>

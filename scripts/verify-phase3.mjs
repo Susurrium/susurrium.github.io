@@ -255,6 +255,10 @@ expect(
     linksSource.includes("data-friend-circle-status='deferred'"),
   'Links defers the non-allowlisted Friend Circle runtime to a future local snapshot'
 )
+expect(
+  linksSource.includes('<site-info-copy') && !linksSource.includes('onclick={script}'),
+  'Links uses a local copy control instead of interpolating values into inline handlers'
+)
 
 for (const path of ['home/index.html', 'blog/xv6-os-lab-part8/index.html']) {
   if (!existsSync(resolve(dist, path))) continue
@@ -305,6 +309,12 @@ if (existsSync(resolve(dist, 'links/index.html'))) {
     'Links emits the local Friend Circle deferred state'
   )
   expect(!links.includes('friends.arthals.ink'), 'Links emits no Friend Circle remote endpoint')
+  expect(
+    links.includes('<site-info-copy') &&
+      links.includes('data-copy-value=') &&
+      !links.includes('onclick="navigator.clipboard.writeText'),
+    'Links emits copy controls without executable value interpolation'
+  )
 }
 
 for (const path of [

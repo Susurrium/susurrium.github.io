@@ -324,6 +324,57 @@ async function assertRoute(
   return state
 }
 
+async function assertLinksCopyControl(cdp) {
+  const copy = await evaluate(
+    cdp,
+    `(async () => {
+      const button = document.querySelector('site-info-copy [data-copy-value]')
+      if (!(button instanceof HTMLButtonElement)) return { exists: false }
+
+      const value = button.dataset.copyValue ?? ''
+      const inlineHandler = button.getAttribute('onclick')
+      const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+      let copied = null
+      let toast = null
+      const onToast = (event) => {
+        toast = event.detail?.message ?? null
+      }
+      document.addEventListener('toast', onToast, { once: true })
+
+      try {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: async (nextValue) => {
+              copied = nextValue
+            }
+          }
+        })
+        button.click()
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        return { exists: true, value, copied, toast, inlineHandler }
+      } catch (error) {
+        return { exists: true, value, copied, toast, inlineHandler, error: String(error) }
+      } finally {
+        document.removeEventListener('toast', onToast)
+        if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard)
+        else delete navigator.clipboard
+      }
+    })()`
+  )
+
+  expect(
+    copy.exists &&
+      !copy.error &&
+      copy.copied === copy.value &&
+      copy.toast === `Copied "${copy.value}" to clipboard!` &&
+      copy.inlineHandler === null,
+    copy.exists
+      ? `Links copies an exact quoted value through its lifecycle-scoped control${copy.error ? ` (${copy.error})` : ''}`
+      : 'Links renders a lifecycle-scoped copy control'
+  )
+}
+
 async function darkScreenshotStats(cdp) {
   const { data } = await cdp.call('Page.captureScreenshot', {
     captureBeyondViewport: false,
@@ -593,6 +644,7 @@ try {
   for (const route of routeMatrix) {
     await navigateWithClientRouter(cdp, route.pathname)
     await assertRoute(cdp, route, musicMarker)
+    if (route.pathname === '/links') await assertLinksCopyControl(cdp)
   }
 
   await cdp.call('Emulation.setEmulatedMedia', {
