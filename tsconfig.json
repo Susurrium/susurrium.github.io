@@ -30,7 +30,7 @@
     "node_modules",
     "**/node_modules/*",
     ".vscode",
-    "dist",
+    "dist*/**",
     "packages/pure/**",
     "public/scripts/*",
     "public/vendor/**",

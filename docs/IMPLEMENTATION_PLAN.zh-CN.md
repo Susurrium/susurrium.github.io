@@ -599,6 +599,8 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 
 交付 SkyWT 居住地、HanLife 热力图、TNXG 小人和 About Sayings 入口。
 
+状态：已完成。Home 在 Blog-only Timeline 之后接入了来自历史项目的 `ResidenceCard`、`FlightOverlay`、地图控制器、几何函数和 CSS；只将内容配置、图标和 Astro base path 适配到当前项目。MapLibre `5.24.0` 的已构建 UMD JS/CSS 固定在本仓库并在组件进入视口前后才加载，保留静态 poster、CARTO/OSM 地图失败回退、Globe、定位、航线、主题切换、减少动画和 ClientRouter 清理。HanLife 热力图直接复用了 53 周 DOM、公开 GitHub HTML 解析和视觉层级，用户名为 `Susurrium`；不使用 Token、定时任务或伪造数据，失败时仅显示中性骨架。About 小人采用本地 TNXG WebP 与当前 `0→.35` 滚动公式，历史 `ScrollCompanion` 只提供 custom element 和生命周期；仅 About、宽度 ≥1440px 且非减少动画时显示，容器按本项目 70rem 主内容宽度校准。About 的 Saying 完整入口已在 Phase 2 随 Sayings 路由提供，本阶段完成回归确认。`test:phase5`、`verify:phase5`、生产构建和浏览器回归均为验收门槛。
+
 ### Phase 6：发布审计
 
 交付 SEO、RSS、sitemap、404、性能、无障碍、占位扫描、网络扫描和正式 Pages 自动部署。

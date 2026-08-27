@@ -7,8 +7,11 @@ const node = process.execPath
 
 const sequences = {
   build: [
-    [node, [astroCli, 'check']],
-    [bun, ['run', 'astro', 'build']]
+    // `astro build` owns the required content sync.  Checking its resulting
+    // generated types avoids Astro 6's intermittent second sync deadlock on
+    // Windows while keeping a full type/diagnostic gate in every build.
+    [node, [astroCli, 'build']],
+    [node, [astroCli, 'check', '--noSync']]
   ],
   ci: [
     [bun, ['run', 'preflight']],
@@ -20,6 +23,8 @@ const sequences = {
     [bun, ['run', 'verify:phase3']],
     [bun, ['run', 'test:phase4']],
     [bun, ['run', 'verify:phase4']],
+    [bun, ['run', 'test:phase5']],
+    [bun, ['run', 'verify:phase5']],
     [bun, ['run', 'check:assets']]
   ],
   preflight: [
@@ -39,8 +44,10 @@ if (!sequence) {
 for (const [command, args] of sequence) {
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
+    // Keep Astro's output on the caller's console rather than buffering a
+    // second process stream during the Windows build sequence.
     stdio: 'inherit',
-    windowsHide: true
+    shell: false
   })
 
   if (result.error) {

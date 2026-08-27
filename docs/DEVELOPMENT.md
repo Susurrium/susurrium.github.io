@@ -55,11 +55,15 @@ bun run verify:phase2
 bun run verify:phase3
 bun run test:phase4
 bun run verify:phase4
+bun run test:phase5
+bun run verify:phase5
 ```
 
 `verify:phase3` 覆盖根路径可重复入口、本地入口媒体哈希、Typed.js 固定版本、全局音乐单例/详情紧凑模式、无远程音乐/图片缩放/二维码运行时、原生 View Transition rejection guard，以及 ClientRouter 生命周期清理。
 
 `test:phase4` 覆盖页面 profile 的纯策略边界；`verify:phase4` 复核 PKU/George 原始 vendor 文件和构建产物的 SHA-256、原始 PKU 参数、宿主的销毁钩子、路由映射，以及生产产物中不存在效果脚本热链。
+
+`test:phase5` 覆盖 HanLife 公开贡献 HTML 的解析、53 周中性骨架，以及 SkyWT 复用的地理计算；`verify:phase5` 复核 SkyWT/TNXG/MapLibre 的本地资源哈希、MapLibre 惰性加载与 ClientRouter 清理契约、热力图的无 Token 回退、About-only 小人和生产产物中无 TNXG 热链。
 
 资源预算：
 
@@ -75,7 +79,7 @@ CI 等价命令：
 bun run ci
 ```
 
-构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。这避免 Windows 下 Bun/`astro check` 组合命令未释放子进程时让后续检查误卡住；Linux CI 仍执行同一组命令与同一失败门槛。
+构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以 Node 直接运行 `node_modules/astro/bin/astro.mjs build`（它会刷新内容/类型），再运行 `astro check --noSync`；这避免 Windows 下 Bun launcher 和 Astro 6 第二次同步偶发未释放子进程。Linux CI 仍执行同一组构建与诊断门槛。
 
 ## 3. 分支
 

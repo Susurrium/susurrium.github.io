@@ -20,6 +20,7 @@ html {
   /* Shared layer budget for ClientRouter-persistent UI and future visual
      effects. Effects must stay beneath content; overlays remain above them. */
   --z-page-effects: 10;
+  --z-companion: 15;
   --z-page-content: 20;
   --z-petals: 30;
   --z-click: 40;

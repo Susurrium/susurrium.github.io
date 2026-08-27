@@ -1,0 +1,241 @@
+/* HAN-HEATMAP / hanlife02/Astro-star at the ledger-locked revision.
+   Structure, proportions and hover sweep are retained; component-local
+   variables translate the source theme's --line/--text-muted tokens. */
+.githeatmap-link {
+  --githeatmap-gap: clamp(2px, 0.22vw, 3px);
+  --githeatmap-line: hsl(var(--primary));
+  --githeatmap-text-muted: hsl(var(--muted-foreground));
+  --githeatmap-empty: color-mix(in srgb, hsl(var(--border)) 8%, transparent);
+  --githeatmap-active: var(--githeatmap-line);
+  position: relative;
+  display: grid;
+  gap: 0.42rem;
+  width: 100%;
+  max-width: min(100%, 34rem);
+  padding: 0.42rem 0;
+  color: var(--githeatmap-line);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.githeatmap-summary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.githeatmap-count,
+.githeatmap-month,
+.githeatmap-footer,
+.githeatmap-legend {
+  letter-spacing: 0;
+}
+
+.githeatmap-count {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--githeatmap-text-muted);
+  font-size: clamp(0.64rem, 0.58rem + 0.16vw, 0.78rem);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.githeatmap-calendar {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+}
+
+.githeatmap-months {
+  display: grid;
+  grid-template-columns: repeat(var(--githeatmap-week-count, 53), 1fr);
+  height: 0.78rem;
+  line-height: 1;
+}
+
+.githeatmap-month {
+  display: block;
+  overflow: visible;
+  color: var(--githeatmap-text-muted);
+  font-size: clamp(0.55rem, 0.5rem + 0.16vw, 0.68rem);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.githeatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--githeatmap-week-count, 53), 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  gap: var(--githeatmap-gap);
+  width: 100%;
+  aspect-ratio: var(--githeatmap-week-count, 53) / 7;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.githeatmap-week {
+  display: contents;
+}
+
+.githeatmap-cell,
+.githeatmap-legend-cell {
+  --githeatmap-fill: var(--githeatmap-empty);
+  border-radius: 2px;
+  background-color: var(--githeatmap-fill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--border)) 4%, transparent);
+}
+
+.githeatmap-cell {
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+}
+
+.githeatmap-cell[data-blank='true'] {
+  --githeatmap-fill: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.githeatmap-cell[data-level='1'],
+.githeatmap-legend-cell[data-level='1'] {
+  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 28%, transparent);
+}
+
+.githeatmap-cell[data-level='2'],
+.githeatmap-legend-cell[data-level='2'] {
+  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 46%, transparent);
+}
+
+.githeatmap-cell[data-level='3'],
+.githeatmap-legend-cell[data-level='3'] {
+  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 66%, transparent);
+}
+
+.githeatmap-cell[data-level='4'],
+.githeatmap-legend-cell[data-level='4'] {
+  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 88%, transparent);
+}
+
+.githeatmap-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 0.78rem;
+  color: var(--githeatmap-text-muted);
+  font-size: clamp(0.55rem, 0.5rem + 0.16vw, 0.68rem);
+  line-height: 1;
+}
+
+.githeatmap-legend {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.34rem;
+}
+
+.githeatmap-legend-scale {
+  display: inline-grid;
+  grid-template-columns: repeat(5, 0.58rem);
+  gap: 0.12rem;
+}
+
+.githeatmap-legend-cell {
+  display: block;
+  width: 0.58rem;
+  height: 0.58rem;
+}
+
+.githeatmap-link[data-githeatmap-state='fallback'] .githeatmap-grid,
+.githeatmap-link[data-githeatmap-state='fallback'] .githeatmap-legend-scale {
+  opacity: 0.44;
+}
+
+@keyframes githeatmap-fill-sweep {
+  0% {
+    background-color: var(--githeatmap-empty);
+    opacity: 0.5;
+    transform: scale(0.72);
+  }
+
+  72% {
+    background-color: var(--githeatmap-fill);
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    background-color: var(--githeatmap-fill);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (hover: hover) {
+  .githeatmap-link:hover {
+    opacity: 0.86;
+  }
+
+  .githeatmap-link:hover .githeatmap-cell:not([data-blank='true']) {
+    animation: githeatmap-fill-sweep 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--githeatmap-hover-delay, 0ms);
+  }
+}
+
+.githeatmap-link:focus-visible {
+  outline: 2px solid hsl(var(--foreground));
+  outline-offset: 4px;
+  opacity: 0.86;
+}
+
+.githeatmap-link:focus-visible .githeatmap-cell:not([data-blank='true']) {
+  animation: githeatmap-fill-sweep 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--githeatmap-hover-delay, 0ms);
+}
+
+@media (max-width: 30rem) {
+  .githeatmap-link {
+    max-width: min(100%, 27rem);
+  }
+
+  .githeatmap-month:nth-child(even) {
+    visibility: hidden;
+  }
+}
+
+@media (min-width: 48rem) {
+  .githeatmap-link {
+    --githeatmap-gap: 3px;
+    max-width: min(100%, 38rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .githeatmap-link {
+    transition: none;
+  }
+
+  .githeatmap-link:hover,
+  .githeatmap-link:focus-visible {
+    transform: none;
+  }
+
+  .githeatmap-link:hover .githeatmap-cell,
+  .githeatmap-link:focus-visible .githeatmap-cell {
+    animation: none;
+  }
+}

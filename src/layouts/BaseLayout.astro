@@ -1,10 +1,11 @@
 ---
 import { ClientRouter } from 'astro:transitions'
-import { resolveEffectProfile, type EffectProfile } from '@/data/effects'
+import { effectProfiles, resolveEffectProfile, type EffectProfile } from '@/data/effects'
 
 import { Footer, ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
+import ScrollCompanion from '@/components/effects/ScrollCompanion.astro'
 import VisualEffectsHost from '@/components/effects/VisualEffectsHost.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
 import MusicPlayer from '@/components/MusicPlayer.astro'
@@ -53,6 +54,7 @@ const effectProfile = resolveEffectProfile(effectProfileInput)
     {...props}
   >
     <VisualEffectsHost profile={effectProfile} />
+    {effectProfiles[effectProfile].companion && <ScrollCompanion />}
     {
       highlightColor && (
         <div

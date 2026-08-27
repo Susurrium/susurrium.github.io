@@ -1,6 +1,6 @@
 # 来源与复用台账
 
-> 台账版本：1.2｜冻结日期：2026-08-27｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–4 已按本台账落地并完成静态/浏览器回归
+> 台账版本：1.3｜冻结日期：2026-08-27｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–5 已按本台账落地并完成静态/浏览器回归
 
 ## 1. 作用与边界
 
@@ -148,7 +148,11 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | 视觉校准页     | [`https://skywt.cn/`](https://skywt.cn/)；核验日期 2026-08-27                                  |
 | 可维护代码真源 | `HIST-RESIDENCE` 固定快照                                                                      |
 | 实施           | 历史实现几乎直接复用；仅校准飞机、原点、云影、脉冲延迟、Globe 裁切、标题、控件、个人坐标和测试 |
-| 外部运行时     | 只允许 CARTO 地图瓦片；Geolocation 仅在用户主动授权后使用                                      |
+| 本地实现       | `src/components/home/ResidenceCard.astro`、`FlightOverlay.astro`、`src/scripts/residence-map.ts`、`residence-map-geometry.ts`、`src/assets/styles/residence-map.css` |
+| 本地运行时     | `public/vendor/maplibre-gl@5.24.0/maplibre-gl.js`（1,056,837 bytes；SHA-256 `45a9b07a9189ce56054c620a947ccf41e291e58c95e9b61533b740aaa65ee5cb`）与 `maplibre-gl.css`（70,024 bytes；SHA-256 `ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732`） |
+| 外部运行时     | 只允许 CARTO/OSM 地图请求；Geolocation 仅在用户打开 Globe 后由浏览器授权流程使用              |
+
+飞机、云影、地图回退图和访客头像已经从 `HIST-RESIDENCE` 固定快照复制到 `public/media/residence/` 并由 `verify:phase5` 核验哈希。MapLibre 固定为 `5.24.0`（BSD-3-Clause）：npm 依赖保留精确 TypeScript 类型，已经构建好的 UMD JS/CSS 本地惰性加载。此调整避免 Vite 在每个静态入口构建时重复处理约 1 MiB 的第三方运行时，不改变地图算法或加载时机，并兼容 GitHub Pages 的纯静态输出。
 
 当前公开仓库中未找到与 SkyWT 当前居住地动图一一对应的可维护源码，因此不能把同作者的其他 Daydreamer/Map 组件误记为真源，也不重写为 React/Framer。
 
@@ -164,6 +168,8 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | CSS     | `archive-activity-heatmap.css` blob `33624c97bbd76f73bcfc4d38a8f1b1af04642588`；`githeatmap.css` blob `196dee74b834832acb80c5cbed2d3889b432cb89`                                              |
 | 数据    | `src/utils/github-contributions.ts` blob `c918eef3dd5c96c849d5f2adac970eff5aa4e79e`                                                                                                           |
 | 实施    | 原组件结构、53 周视觉、解析和 CSS 直接复用；只适配 Astro 6、本项目样式变量、用户名 `Susurrium`、缓存与失败回退                                                                                |
+
+最终文件为 `src/components/home/GitHubContributionHeatmap.astro`、`src/data/github-contributions.ts` 与 `src/assets/styles/github-contribution-heatmap.css`。组件在静态构建时读取 GitHub 公开 contributions HTML，进程内缓存为 6 小时；超时、结构变化或网络失败时渲染 53 周中性骨架，不伪造贡献数量，也不会让 GitHub Pages 构建失败。
 
 首版不创建定时抓取任务，不存 GitHub Token。该组件只展示公开 GitHub 贡献，不把 Blog/Trace 伪装成 GitHub 数据。
 
@@ -185,9 +191,12 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | 校准页   | [`https://www.tnxg.moe/`](https://www.tnxg.moe/)；2026-08-27 重定向到 `/en`                                                                 |
 | 当前素材 | `https://cdn.tnxg.top/images/cover/background_aijo_karen.webp`                                                                              |
 | 素材证据 | 407,100 bytes；SHA-256 `bdfa95bf30097a9bd10500e8847c33bbf28cbf9a7013f933db3f63b5ea57f511`                                                   |
-| 实施     | 当前 WebP 与当前滚动变换作为视觉/公式真源；`HIST-COMPANION` 提供 Astro custom element 和生命周期；本项目只做 About 路由、≥1440px 和层级适配 |
+| 本地素材 | `public/media/effects/tnxg-background-aijo-karen.webp`；保留上述 SHA-256                                                                    |
+| 实施     | 当前 WebP 与当前滚动变换作为视觉/公式真源；`HIST-COMPANION` 提供 Astro custom element 和生命周期；本项目只做 About 路由、≥1440px、70rem 容器和层级适配 |
 
-不使用 TNXG 旧公开仓库代码，不增加原需求没有的呼吸或点击互动。实现阶段提取当前发布 bundle 中与滚动变换直接相关的最小片段，并把本地化文件和新哈希追加到本条目；其他 Next.js 应用代码不复制。
+最终组件为 `src/components/effects/ScrollCompanion.astro`：滚动进度 `0 → .35` 映射为 `x 0 → 140%`、`rotate 0 → 42deg`，在 `.25` 前保持不透明、到 `.35` 淡出；路由切换、页面隐藏、bfcache、减少动画和阈值宽度变化都会暂停或释放更新。
+
+不使用 TNXG 旧公开仓库代码，不增加原需求没有的呼吸或点击互动。实现阶段只提取当前发布 bundle 中与滚动变换直接相关的最小片段；其他 Next.js 应用代码不复制。
 
 ## 6. LargeSkull 首版占位图锁
 
@@ -261,7 +270,7 @@ PKU 保留原页参数：`canvas-ribbon` 的 `mobile=false`、`zIndex=-1`、`alp
 
 George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `tinycolor → anime → fireworks` 顺序执行，并保留原 20 粒子加圆环视觉。本项目只在父页面过滤链接、按钮、表单、播放器、导航、文字选择和卡片等非空白交互区，再把允许的空白点击桥接给原脚本。
 
-页面 profile 为：`standard`（PKU + 点击粒子）、`reading`（全关）、`links`（花瓣 + 点击粒子）、`about`（PKU + 点击粒子；Phase 5 再加入小人）。所有未单列的普通页面使用 `standard`。`prefers-reduced-motion`、页面隐藏、离开、ClientRouter 切换和设备条件变化都会释放效果实例；恢复条件满足后按当前 profile 重建。
+页面 profile 为：`standard`（PKU + 点击粒子）、`reading`（全关）、`links`（花瓣 + 点击粒子）、`about`（PKU + 点击粒子 + TNXG 小人）。所有未单列的普通页面使用 `standard`。`prefers-reduced-motion`、页面隐藏、离开、ClientRouter 切换和设备条件变化都会释放效果实例；恢复条件满足后按当前 profile 重建。
 
 ## 7. 完整模块分配闭环
 
@@ -318,5 +327,9 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 - Phase 3 的生产构建、三套静态契约检查、实际 Chrome 点击回归和同源网络扫描。
 - Phase 4 的 PKU 三层、George 点击粒子、Links 花瓣、本地化原始 vendor 脚本和统一 `VisualEffectsHost` 生命周期。
 - Phase 4 的 SHA/产物静态核验、profile 策略测试、生产预览中的桌面/移动/减少动画/多次 ClientRouter 路由回归及同源网络扫描。
+- Phase 5 的 SkyWT 居住地完整历史模块（本地资源、MapLibre 惰性运行时、Globe/定位/地图回退和 ClientRouter 清理）。
+- Phase 5 的 HanLife 53 周 GitHub 热力图（公开 HTML 解析、6 小时缓存和非声明性中性骨架回退）。
+- Phase 5 的本地 TNXG 小人素材、当前滚动公式、About-only 响应式与生命周期外壳；About Saying 入口已随 Phase 2 的 Saying 路由落地。
+- Phase 5 的静态 SHA/产物检查和专业模块纯函数回归；浏览器回归结果随本阶段提交记录。
 
-尚未落地的居住地、热力图和 About 小人属于 Phase 5 功能开发，不是来源或准备阶段遗漏。它们必须按本台账实施，不能临时换成自行重做的近似效果。
+Phase 6 之前不得替换这些模块的来源边界或将其降级为自行近似实现；最终个人位置、头像、文案和真实内容仍按发布清单替换。

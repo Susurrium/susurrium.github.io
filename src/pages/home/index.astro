@@ -6,8 +6,10 @@ import { published, sortByDate } from '@/lib/content'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import ContentCard from '@/components/cards/ContentCard.astro'
 import BlogTimeline from '@/components/home/BlogTimeline.astro'
+import GitHubContributionHeatmap from '@/components/home/GitHubContributionHeatmap.astro'
 import LargeSkullHero from '@/components/home/LargeSkullHero.astro'
 import RandomSayingCard from '@/components/home/RandomSayingCard.astro'
+import ResidenceCard from '@/components/home/ResidenceCard.astro'
 
 const [blogEntries, traceEntries, sayingEntries] = await Promise.all([
   getCollection('blog'),
@@ -79,6 +81,19 @@ const meta = {
       </section>
 
       <BlogTimeline posts={blogs} />
+
+      <ResidenceCard />
+
+      <section class='home-github-activity' aria-labelledby='home-github-activity-heading'>
+        <div class='home-github-activity__heading'>
+          <div>
+            <p>Public development activity</p>
+            <h2 id='home-github-activity-heading'>GitHub Activity</h2>
+          </div>
+          <a href='https://github.com/Susurrium' target='_blank' rel='noopener noreferrer'>GitHub ↗</a>
+        </div>
+        <GitHubContributionHeatmap />
+      </section>
     </div>
   </main>
 </PageLayout>
@@ -171,6 +186,44 @@ const meta = {
     padding: 1.25rem;
     color: hsl(var(--muted-foreground));
     font-size: 0.9rem;
+  }
+
+  .home-github-activity {
+    display: grid;
+    gap: 0.8rem;
+    width: min(100%, 38rem);
+  }
+
+  .home-github-activity__heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .home-github-activity__heading h2,
+  .home-github-activity__heading p {
+    margin: 0;
+  }
+
+  .home-github-activity__heading p {
+    margin-bottom: 0.22rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
+
+  .home-github-activity__heading h2 {
+    font-size: clamp(1.22rem, 2.1vw, 1.55rem);
+    font-weight: 600;
+  }
+
+  .home-github-activity__heading > a {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
 
   @media (max-width: 900px) {
