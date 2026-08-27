@@ -1,7 +1,8 @@
 name: Deploy to GitHub Pages
 
-# Preparation-stage safety: deployment is manual only.
-# Add a main push trigger only after the release checklist passes.
+# Preparation-stage safety: deployment is manual only and the workflow itself
+# enforces the strict release gate. Add a main push trigger only after the
+# release checklist passes and the owner authorizes automatic publishing.
 on:
   workflow_dispatch:
 
@@ -41,6 +42,9 @@ jobs:
 
       - name: Validate and build
         run: bun run ci
+
+      - name: Verify strict release readiness
+        run: bun run release:gate
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

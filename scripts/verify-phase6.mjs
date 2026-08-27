@@ -375,6 +375,12 @@ expect(
   /^\s*workflow_dispatch\s*:/m.test(deployWorkflow) && !/^\s*push\s*:/m.test(deployWorkflow),
   'Pages deployment remains manual while the fixture-content release gate is open'
 )
+expect(
+  deployWorkflow.indexOf('run: bun run release:gate') >= 0 &&
+    deployWorkflow.indexOf('run: bun run release:gate') <
+      deployWorkflow.indexOf('uses: actions/upload-pages-artifact@v5'),
+  'Pages workflow cannot upload an artifact without the strict release gate'
+)
 
 console.log(
   `Phase 6 ${strict ? 'strict release gate' : 'readiness audit'} complete: ${failures.length} failure(s), ${warnings.length} warning(s).`

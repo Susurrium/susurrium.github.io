@@ -171,7 +171,7 @@ git log --oneline --decorate develop..upstream/main
 正式发布前：
 
 1. 替换个人内容和资源。
-2. 运行 `bun run ci` 和 `bun run release:gate`，清除所有严格门禁项。
+2. 运行 `bun run ci` 和 `bun run release:gate`，清除所有严格门禁项；Pages workflow 也会在上传产物前再次运行严格门禁，不能依赖人工跳过。
 3. 本地验证深层路由、404、RSS、sitemap 和减少动画。
 4. 获得上线确认后，将 deploy workflow 增加 `main` push 触发（并同步更新 `scripts/verify-preflight.mjs` 的触发器断言）。
 5. 将已验证提交合并、推送到 `main`，在仓库 Settings → Pages 选择 **GitHub Actions**，并验证实际部署 URL。

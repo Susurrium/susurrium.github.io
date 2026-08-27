@@ -128,7 +128,16 @@ expect(
   deployWorkflow.includes('bun install --frozen-lockfile'),
   'Pages deployment uses the frozen lockfile'
 )
-expect(deployWorkflow.includes('bun run ci'), 'Pages deployment runs the complete validation gate')
+expect(
+  deployWorkflow.includes('bun run ci'),
+  'Pages deployment runs the development validation gate'
+)
+expect(
+  deployWorkflow.indexOf('run: bun run release:gate') >= 0 &&
+    deployWorkflow.indexOf('run: bun run release:gate') <
+      deployWorkflow.indexOf('uses: actions/upload-pages-artifact@v5'),
+  'Pages deployment runs the strict release gate before uploading an artifact'
+)
 
 try {
   const origin = command('git', ['remote', 'get-url', 'origin'])
