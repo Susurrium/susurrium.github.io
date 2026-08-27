@@ -112,13 +112,19 @@ expect(
 )
 
 const deployWorkflow = read('.github/workflows/deploy.yml')
+const hasManualPagesTrigger = /^[ \t]*workflow_dispatch:[ \t]*$/m.test(deployWorkflow)
+const hasPushTrigger = /^[ \t]*push:[ \t]*$/m.test(deployWorkflow)
+const hasMainOnlyPushTrigger =
+  /^[ \t]*push:[ \t]*\r?\n[ \t]+branches:[ \t]*\[[ \t]*main[ \t]*\][ \t]*$/m.test(
+    deployWorkflow
+  )
 expect(
-  /^\s*workflow_dispatch\s*:/m.test(deployWorkflow),
+  hasManualPagesTrigger,
   'Pages deployment can be triggered manually'
 )
 expect(
-  !/^\s*push\s*:/m.test(deployWorkflow),
-  'Pages deployment has no push trigger during preparation'
+  !hasPushTrigger || hasMainOnlyPushTrigger,
+  'Pages deployment is manual during preparation or restricted to main for a clean release'
 )
 expect(
   !/^\s*pull_request\s*:/m.test(deployWorkflow),

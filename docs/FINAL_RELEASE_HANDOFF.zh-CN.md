@@ -73,7 +73,7 @@ bun run release:gate
 1. 复核 `git status`，只暂存本次已审核的文件。
 2. 合并并推送已验证的提交到 `main`。
 3. 在 GitHub 仓库 Settings → Pages 中选择 **GitHub Actions**。
-4. 当前 workflow 仍是手动触发，并会在上传产物前再次执行 `release:gate`，测试资料无法被误发。若决定启用后续的 `main` 自动部署，先按 `docs/DEVELOPMENT.md` 更新 workflow 及其预检断言；首版始终不添加 `schedule`。
+4. 当前 workflow 仍是手动触发，并会在上传产物前再次执行 `release:gate`，测试资料无法被误发。若决定启用后续自动部署，保留 `workflow_dispatch` 并只增加 `push → branches: [main]`；现有预检与 Phase 6 已支持这种最终状态，首版始终不添加 PR 或 `schedule`。
 5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
 
 发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](./DEVELOPMENT.md)、[准备状态](./PREPARATION_STATUS.md)、[视觉基线](./VISUAL_BASELINE.md) 与 [来源台账](./SOURCE_LEDGER.md)。

@@ -137,7 +137,7 @@ GitHub 上的仓库保留了真实 Fork 关系，并由原 `Susurrium/Arthals-In
 | 手动发布     | 保留 `workflow_dispatch`        |
 | 定时任务     | 不创建                          |
 
-用户名站点从根路径发布，所以不能设置 `base: '/susurrium.github.io'`。正式发布前再把部署工作流改为监听 `main` push。
+用户名站点从根路径发布，所以不能设置 `base: '/susurrium.github.io'`。正式发布前只有在严格门禁清零且用户确认后，才保留手动触发并把部署工作流增加为仅监听 `main` 的 push。
 
 ## 8. 信息架构
 

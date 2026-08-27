@@ -182,4 +182,4 @@ Phase 0 的记录只证明了本地准备完成，不等同于站点已上线。
 
 已不再有 GitHub 动态卡片 API、`target=_blank` 安全属性、Waline 或统计运行时的发布拦截。个人资料与本地音乐替换后应重新运行严格门禁，而不是将这些开发期例外永久白名单化。精确替换入口见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
 
-最终资料替换后，应依次运行 `bun run ci` 与 `bun run release:gate`；手动 Pages workflow 在上传产物前会再次执行严格门禁。经用户确认后再启用 `main` 推送部署、在 GitHub Pages 设置中选择 **GitHub Actions**，并对实际 `https://susurrium.github.io/` 进行上线回归。
+最终资料替换后，应依次运行 `bun run ci` 与 `bun run release:gate`；手动 Pages workflow 在上传产物前会再次执行严格门禁。经用户确认后，保留 `workflow_dispatch` 并只启用 `push → branches: [main]`，在 GitHub Pages 设置中选择 **GitHub Actions**，并对实际 `https://susurrium.github.io/` 进行上线回归。

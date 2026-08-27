@@ -371,9 +371,19 @@ for (const { label, pattern } of markerChecks) {
 }
 
 const deployWorkflow = readFileSync(resolve(root, '.github/workflows/deploy.yml'), 'utf8')
+const hasManualPagesTrigger = /^[ \t]*workflow_dispatch:[ \t]*$/m.test(deployWorkflow)
+const hasPushTrigger = /^[ \t]*push:[ \t]*$/m.test(deployWorkflow)
+const hasMainOnlyPushTrigger =
+  /^[ \t]*push:[ \t]*\r?\n[ \t]+branches:[ \t]*\[[ \t]*main[ \t]*\][ \t]*$/m.test(
+    deployWorkflow
+  )
+const releaseAuditIsClean = failures.length === 0 && warnings.length === 0
 expect(
-  /^\s*workflow_dispatch\s*:/m.test(deployWorkflow) && !/^\s*push\s*:/m.test(deployWorkflow),
-  'Pages deployment remains manual while the fixture-content release gate is open'
+  hasManualPagesTrigger &&
+    (!hasPushTrigger || (hasMainOnlyPushTrigger && releaseAuditIsClean)),
+  releaseAuditIsClean
+    ? 'Pages deployment is manual or restricted to main after a clean release audit'
+    : 'Pages deployment remains manual while release gate findings exist'
 )
 expect(
   deployWorkflow.indexOf('run: bun run release:gate') >= 0 &&
