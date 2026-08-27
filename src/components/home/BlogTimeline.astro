@@ -1,0 +1,377 @@
+---
+/**
+ * A focused, Blog-only extraction of the historical NotesPreview timeline.
+ * It deliberately keeps the horizontal year rail but removes Notes modes,
+ * demo data, panels and client lifecycle code. Every dot is a real Blog link.
+ */
+import type { CollectionEntry } from 'astro:content'
+
+interface Props {
+  posts: readonly CollectionEntry<'blog'>[]
+}
+
+type TimelinePost = {
+  date: Date
+  id: string
+  position: number
+  title: string
+}
+
+const { posts } = Astro.props
+const dateFormatter = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' })
+
+function dayProgress(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 1).getTime()
+  const end = new Date(date.getFullYear() + 1, 0, 1).getTime()
+  return ((date.getTime() - start) / (end - start)) * 100
+}
+
+/**
+ * Retain date-position logic while deterministically opening room for the
+ * upstream Blog's many same-day posts. The historical component allowed all
+ * of those dots to overlap and made them unreachable by pointer or keyboard.
+ */
+function assignPositions(entries: Omit<TimelinePost, 'position'>[]): TimelinePost[] {
+  const sorted = [...entries].sort(
+    (left, right) => left.date.getTime() - right.date.getTime() || left.id.localeCompare(right.id)
+  )
+  if (sorted.length === 0) return []
+
+  const minPosition = 1.5
+  const maxPosition = 98.5
+  const minimumGap = Math.min(1.15, (maxPosition - minPosition) / Math.max(sorted.length, 1))
+  const positions: TimelinePost[] = []
+  let previous = minPosition - minimumGap
+
+  for (const entry of sorted) {
+    const intended = Math.min(Math.max(dayProgress(entry.date), minPosition), maxPosition)
+    const position = Math.max(intended, previous + minimumGap)
+    positions.push({ ...entry, position })
+    previous = position
+  }
+
+  const overflow = positions.at(-1)!.position - maxPosition
+  if (overflow > 0) {
+    for (const entry of positions) {
+      entry.position = Math.max(minPosition, entry.position - overflow)
+    }
+  }
+
+  return positions
+}
+
+const publishedPosts = posts.filter((post) => !post.data.draft)
+const byYear = new Map<number, Omit<TimelinePost, 'position'>[]>()
+
+for (const post of publishedPosts) {
+  const year = post.data.publishDate.getFullYear()
+  const yearPosts = byYear.get(year) ?? []
+  yearPosts.push({ date: post.data.publishDate, id: post.id, title: post.data.title })
+  byYear.set(year, yearPosts)
+}
+
+const years = [...byYear.entries()]
+  .sort(([left], [right]) => left - right)
+  .map(([year, yearPosts]) => ({ entries: assignPositions(yearPosts), year }))
+---
+
+<section class='blog-timeline' aria-labelledby='blog-timeline-heading' data-blog-timeline data-content-type='blog' data-notes-timeline>
+  <header class='blog-timeline__header'>
+    <p class='blog-timeline__eyebrow'>Writing timeline</p>
+    <h2 id='blog-timeline-heading'>Blog timeline</h2>
+    <p>Follow the formal posts that have accumulated over time.</p>
+  </header>
+
+  {
+    years.length > 0 ? (
+      <div class='blog-timeline__rail' data-blog-timeline-rail tabindex='0'>
+        <div class='blog-timeline__rail-content'>
+          {years.map(({ entries, year }) => (
+            <section class='blog-timeline__year' aria-labelledby={`blog-timeline-year-${year}`}>
+              <div class='blog-timeline__topline'>
+                <h3 id={`blog-timeline-year-${year}`}>{year}</h3>
+                <span>{entries.length} posts</span>
+              </div>
+              <div class='blog-timeline__track'>
+                <span class='blog-timeline__line' aria-hidden='true' />
+                <span class='blog-timeline__accent' aria-hidden='true' />
+                {
+                  entries.map((entry, index) => (
+                    <a
+                      class:list={['blog-timeline__dot', index === entries.length - 1 && 'is-last']}
+                      href={`/blog/${entry.id}`}
+                      aria-label={`${dateFormatter.format(entry.date)}, ${entry.title}`}
+                      data-blog-id={entry.id}
+                      data-timeline-entry
+                      style={`--timeline-position:${entry.position}%`}
+                    >
+                      <span class='blog-timeline__point' />
+                      <span class='blog-timeline__tooltip' aria-hidden='true'>
+                        <small>{dateFormatter.format(entry.date)}</small>
+                        {entry.title}
+                      </span>
+                    </a>
+                  ))
+                }
+              </div>
+              <div class='blog-timeline__seasons' aria-hidden='true'>
+                <span>Spring</span>
+                <span>Summer</span>
+                <span>Autumn</span>
+                <span>Winter</span>
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+    ) : (
+      <p class='blog-timeline__empty'>The Blog timeline will appear after the first published post.</p>
+    )
+  }
+</section>
+
+<style>
+  .blog-timeline {
+    --blog-timeline-rose: #d98497;
+    min-width: 0;
+  }
+
+  .blog-timeline__header {
+    max-width: 38rem;
+    margin: 0 auto clamp(2.25rem, 5vw, 3.75rem);
+    text-align: center;
+  }
+
+  .blog-timeline__header h2,
+  .blog-timeline__header p {
+    margin: 0;
+  }
+
+  .blog-timeline__eyebrow {
+    margin-bottom: 0.55rem !important;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.62rem;
+    font-weight: 620;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .blog-timeline__header h2 {
+    font-family: ui-serif, 'Noto Serif SC', Georgia, serif;
+    font-size: clamp(1.45rem, 3vw, 1.85rem);
+    font-weight: 520;
+    letter-spacing: 0.11em;
+    line-height: 1.25;
+  }
+
+  .blog-timeline__header > p:last-child {
+    margin-top: 0.65rem;
+    color: hsl(var(--muted-foreground));
+    font-family: ui-serif, 'Noto Serif SC', Georgia, serif;
+    font-size: 0.78rem;
+    font-style: italic;
+    line-height: 1.65;
+  }
+
+  .blog-timeline__rail {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.35rem 0.35rem 0.7rem;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-color: color-mix(in srgb, var(--blog-timeline-rose) 45%, transparent) transparent;
+    scrollbar-width: thin;
+  }
+
+  .blog-timeline__rail:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--blog-timeline-rose) 24%, transparent);
+    outline-offset: 0.25rem;
+  }
+
+  .blog-timeline__rail-content {
+    display: flex;
+    width: max-content;
+    min-width: 100%;
+    gap: clamp(1.5rem, 4vw, 3rem);
+    align-items: flex-start;
+  }
+
+  .blog-timeline__year {
+    width: 46rem;
+    flex: 0 0 46rem;
+    scroll-snap-align: start;
+    scroll-margin-inline: 0.35rem;
+  }
+
+  .blog-timeline__topline {
+    display: flex;
+    margin-bottom: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .blog-timeline__topline h3 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: 580;
+  }
+
+  .blog-timeline__track {
+    position: relative;
+    height: 2rem;
+  }
+
+  .blog-timeline__accent,
+  .blog-timeline__line {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 1px;
+    transform: translateY(-50%);
+  }
+
+  .blog-timeline__line {
+    background: hsl(var(--border) / 0.92);
+  }
+
+  .blog-timeline__accent {
+    left: 74%;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--blog-timeline-rose) 58%, transparent));
+  }
+
+  .blog-timeline__dot {
+    position: absolute;
+    top: 50%;
+    left: var(--timeline-position);
+    z-index: 2;
+    display: block;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+    outline: none;
+    text-decoration: none;
+    transform: translate(-50%, -50%);
+  }
+
+  .blog-timeline__point {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, hsl(var(--muted-foreground)) 52%, hsl(var(--border)));
+    box-shadow: 0 0 0 0 transparent;
+    transform: translate(-50%, -50%);
+    transition:
+      width 220ms ease-out,
+      height 220ms ease-out,
+      background-color 220ms ease-out,
+      box-shadow 220ms ease-out;
+  }
+
+  .blog-timeline__dot:is(:hover, :focus-visible, .is-last) .blog-timeline__point {
+    width: 0.58rem;
+    height: 0.58rem;
+    background: var(--blog-timeline-rose);
+    box-shadow:
+      0 0 0 0.25rem color-mix(in srgb, var(--blog-timeline-rose) 11%, transparent),
+      0 3px 9px color-mix(in srgb, var(--blog-timeline-rose) 28%, transparent);
+  }
+
+  .blog-timeline__tooltip {
+    position: absolute;
+    bottom: calc(100% + 0.45rem);
+    left: 50%;
+    width: max-content;
+    max-width: min(17rem, 60vw);
+    border: 1px solid hsl(var(--border) / 0.84);
+    border-radius: 0.48rem;
+    padding: 0.52rem 0.68rem;
+    background: hsl(var(--card) / 0.94);
+    box-shadow: 0 10px 28px rgb(35 36 39 / 10%);
+    color: hsl(var(--foreground));
+    font-size: 0.68rem;
+    line-height: 1.35;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 0.35rem) scale(0.96);
+    transform-origin: center bottom;
+    transition:
+      opacity 180ms ease,
+      transform 260ms ease-out;
+  }
+
+  .blog-timeline__tooltip small {
+    display: block;
+    margin-bottom: 0.16rem;
+    color: var(--blog-timeline-rose);
+    font-size: 0.58rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .blog-timeline__dot:is(:hover, :focus-visible) .blog-timeline__tooltip {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .blog-timeline__seasons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    color: hsl(var(--muted-foreground));
+    font-family: ui-serif, 'Noto Serif SC', Georgia, serif;
+    font-size: 0.66rem;
+  }
+
+  .blog-timeline__seasons span {
+    text-align: center;
+  }
+
+  .blog-timeline__seasons span:last-child {
+    color: var(--blog-timeline-rose);
+  }
+
+  .blog-timeline__empty {
+    border: 1px dashed hsl(var(--border));
+    border-radius: 0.65rem;
+    padding: 1.25rem;
+    color: hsl(var(--muted-foreground));
+    text-align: center;
+  }
+
+  @media (max-width: 680px) {
+    .blog-timeline__header {
+      margin-bottom: 2rem;
+    }
+
+    .blog-timeline__rail {
+      padding-inline: 0.25rem;
+    }
+
+    .blog-timeline__year {
+      width: 34rem;
+      flex-basis: 34rem;
+    }
+
+    .blog-timeline__tooltip {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blog-timeline__point,
+    .blog-timeline__tooltip {
+      transition: none;
+    }
+  }
+</style>

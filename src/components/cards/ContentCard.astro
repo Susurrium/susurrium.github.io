@@ -1,0 +1,193 @@
+---
+/**
+ * The single presentation host for Blog, Trace and Saying lists.
+ *
+ * It intentionally owns policy selection. Content-specific adapters only
+ * translate their data to a visual primitive; they must not decide which
+ * visual primitive a page receives. This keeps page override → type default
+ * → safe fallback meaningful as the site grows.
+ */
+import type { CollectionEntry } from 'astro:content'
+import ArthalsBlogCard from '@/components/cards/ArthalsBlogCard.astro'
+import ArthalsTextCard from '@/components/cards/ArthalsTextCard.astro'
+import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
+import SayingCard from '@/components/cards/SayingCard.astro'
+import TraceCard from '@/components/cards/TraceCard.astro'
+import {
+  getSayingDecorativeImage,
+  getTraceCardImage,
+  resolvePresentation,
+  type ContentImageInput,
+  type ContentKind,
+  type ContentPresentation
+} from '@/data/home-media'
+
+type ContentEntry =
+  | CollectionEntry<'blog'>
+  | CollectionEntry<'trace'>
+  | CollectionEntry<'saying'>
+
+type HeadingLevel = 2 | 3 | 4 | 5 | 6
+
+type NormalizedContent = {
+  contentImage?: ContentImageInput
+  date: Date
+  description?: string
+  footerText: string
+  href: string
+  title: string
+}
+
+interface Props {
+  actionLabel?: string
+  class?: string
+  contentKind: ContentKind
+  detailed?: boolean
+  entry: ContentEntry
+  headingLevel?: HeadingLevel
+  index?: number
+  /** A page-level visual decision. Omit it to use the type default. */
+  presentation?: ContentPresentation
+}
+
+const {
+  actionLabel,
+  class: className,
+  contentKind,
+  detailed = false,
+  entry,
+  headingLevel,
+  index = 0,
+  presentation: presentationOverride
+} = Astro.props
+
+function toContentImage(source: unknown, alt: string | undefined, contentId: string): ContentImageInput | undefined {
+  if (typeof source === 'string') {
+    return { alt, key: `content-${contentId}`, src: source }
+  }
+  if (!source || typeof source !== 'object' || !('src' in source)) return undefined
+
+  const src = (source as { src?: unknown }).src
+  return typeof src === 'string' ? { alt, key: `content-${contentId}`, src } : undefined
+}
+
+function normalize(entryToNormalize: ContentEntry, kind: ContentKind): NormalizedContent {
+  if (kind === 'blog') {
+    const blog = entryToNormalize as CollectionEntry<'blog'>
+    return {
+      contentImage: toContentImage(blog.data.heroImage, blog.data.heroImage?.alt, blog.id),
+      date: blog.data.updatedDate ?? blog.data.publishDate,
+      description: blog.data.description,
+      footerText: blog.data.tags.length > 0 ? blog.data.tags.map((tag) => `#${tag}`).join(' ') : 'Blog',
+      href: `/blog/${blog.id}`,
+      title: blog.data.title
+    }
+  }
+
+  if (kind === 'trace') {
+    const trace = entryToNormalize as CollectionEntry<'trace'>
+    return {
+      contentImage: toContentImage(trace.data.cover, trace.data.coverAlt, trace.id),
+      date: trace.data.updatedDate ?? trace.data.publishDate,
+      description: trace.data.description,
+      footerText: trace.data.tags.length > 0 ? trace.data.tags.map((tag) => `#${tag}`).join(' ') : 'Trace',
+      href: `/traces/${trace.id}`,
+      title: trace.data.title
+    }
+  }
+
+  const saying = entryToNormalize as CollectionEntry<'saying'>
+  return {
+    date: saying.data.publishDate,
+    description: saying.data.author ? `— ${saying.data.author}` : 'Collected saying',
+    footerText: saying.data.source ?? 'Saying',
+    href: `/sayings/${saying.id}`,
+    title: `“${saying.data.text}”`
+  }
+}
+
+const resolvedPresentation = resolvePresentation(contentKind, presentationOverride)
+const normalized = normalize(entry, contentKind)
+const defaultActionLabel = contentKind === 'saying' ? 'View complete saying' : contentKind === 'trace' ? 'Read Trace' : 'Read Blog'
+const resolvedActionLabel = actionLabel ?? defaultActionLabel
+const genericContentImage = getTraceCardImage(entry.id, normalized.contentImage)
+const genericDecorativeImage = getSayingDecorativeImage(index)
+---
+
+{
+  resolvedPresentation === 'arthals-text' &&
+    (contentKind === 'blog' ? (
+      <ArthalsBlogCard class={className} {detailed} post={entry as CollectionEntry<'blog'>} />
+    ) : (
+      <ArthalsTextCard
+        class={className}
+        contentId={entry.id}
+        contentType={contentKind}
+        date={normalized.date}
+        description={normalized.description}
+        {detailed}
+        href={normalized.href}
+        title={normalized.title}
+      />
+    ))
+}
+
+{
+  resolvedPresentation === 'large-skull-content' &&
+    (contentKind === 'trace' ? (
+      <TraceCard
+        actionLabel={resolvedActionLabel}
+        class={className}
+        {headingLevel}
+        index={index}
+        presentation={resolvedPresentation}
+        trace={entry as CollectionEntry<'trace'>}
+      />
+    ) : (
+      <LargeSkullCard
+        actionLabel={resolvedActionLabel}
+        class={className}
+        contentId={entry.id}
+        contentType={contentKind}
+        date={normalized.date}
+        description={normalized.description}
+        footerText={normalized.footerText}
+        {headingLevel}
+        href={normalized.href}
+        image={genericContentImage}
+        index={index}
+        presentation={resolvedPresentation}
+        title={normalized.title}
+      />
+    ))
+}
+
+{
+  resolvedPresentation === 'large-skull-decorative' &&
+    (contentKind === 'saying' ? (
+      <SayingCard
+        actionLabel={resolvedActionLabel}
+        archiveIndex={index}
+        class={className}
+        {headingLevel}
+        presentation={resolvedPresentation}
+        saying={entry as CollectionEntry<'saying'>}
+      />
+    ) : (
+      <LargeSkullCard
+        actionLabel={resolvedActionLabel}
+        class={className}
+        contentId={entry.id}
+        contentType={contentKind}
+        date={normalized.date}
+        description={normalized.description}
+        footerText={normalized.footerText}
+        {headingLevel}
+        href={normalized.href}
+        image={genericDecorativeImage}
+        index={index}
+        presentation={resolvedPresentation}
+        title={normalized.title}
+      />
+    ))
+}

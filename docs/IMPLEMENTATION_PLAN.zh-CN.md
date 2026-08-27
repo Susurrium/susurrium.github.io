@@ -579,6 +579,8 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - 三种 presentation 策略。
 - Hero、waves、随机 Saying、双栏和 Blog Timeline。
 
+状态：已完成。LargeSkull 锁定图已本地化并复核哈希；Home 按固定顺序输出 Hero、四层波浪、客户端逐访随机 Saying、Blog/Traces 3+3 双栏及 Blog-only 时间线。所有列表和 Home 的卡片都经统一策略宿主解析；同日 Saying 以内容 ID 固定归档顺序；归档卡片在 767px 以下保持原站纵向斜边布局，About 已提供唯一的 Saying 归档入口。`verify:phase2`、纯策略测试、静态构建和桌面/移动浏览器检查均已通过。
+
 ### Phase 3：入口与音乐
 
 交付入口视频、Typed.js、手动进入、持久音乐和详情页折叠。

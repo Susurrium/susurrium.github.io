@@ -1,5 +1,176 @@
 ---
-import LegacyHome from '@/components/home/LegacyHome.astro'
+import { getCollection } from 'astro:content'
+import ContentCard from '@/components/cards/ContentCard.astro'
+import BlogTimeline from '@/components/home/BlogTimeline.astro'
+import LargeSkullHero from '@/components/home/LargeSkullHero.astro'
+import RandomSayingCard from '@/components/home/RandomSayingCard.astro'
+import { takeRecent } from '@/data/home-media'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import { published, sortByDate } from '@/lib/content'
+
+const [blogEntries, traceEntries, sayingEntries] = await Promise.all([
+  getCollection('blog'),
+  getCollection('trace'),
+  getCollection('saying')
+])
+
+const blogs = sortByDate(published(blogEntries))
+const traces = sortByDate(published(traceEntries))
+const sayings = sortByDate(published(sayingEntries))
+const recentBlogs = takeRecent(blogs)
+const recentTraces = takeRecent(traces)
+
+const meta = {
+  description: 'A personal blog of formal writing, short traces, and collected sayings.',
+  title: 'Home'
+}
 ---
 
-<LegacyHome />
+<PageLayout {meta} pageKind='home'>
+  <main class='home-page' data-page-kind='home'>
+    <LargeSkullHero />
+
+    <div class='home-content'>
+      <RandomSayingCard sayings={sayings} />
+
+      <section class='home-writing' aria-label='Recent writing' data-home-writing-grid>
+        <section class='home-writing__column' data-home-blog-column>
+          <div class='home-writing__heading'>
+            <div>
+              <p>Formal writing</p>
+              <h2>Recent Blog</h2>
+            </div>
+            <a href='/blog' data-astro-prefetch>All Blog →</a>
+          </div>
+          {
+            recentBlogs.length > 0 ? (
+              <ul class='home-writing__blog-list' data-home-recent-blog-list>
+                {recentBlogs.map((post) => <ContentCard contentKind='blog' detailed entry={post} />)}
+              </ul>
+            ) : (
+              <p class='home-writing__empty'>No published Blog posts yet.</p>
+            )
+          }
+        </section>
+
+        <section class='home-writing__column' data-home-traces-column>
+          <div class='home-writing__heading'>
+            <div>
+              <p>Short-form records</p>
+              <h2>Recent Traces</h2>
+            </div>
+            <a href='/traces' data-astro-prefetch>All Traces →</a>
+          </div>
+          {
+            recentTraces.length > 0 ? (
+              <div class='home-writing__trace-list' data-home-recent-trace-list>
+                {
+                  recentTraces.map((trace, index) => (
+                    <ContentCard actionLabel='Read Trace' contentKind='trace' entry={trace} {index} />
+                  ))
+                }
+              </div>
+            ) : (
+              <p class='home-writing__empty'>No published Traces yet.</p>
+            )
+          }
+        </section>
+      </section>
+
+      <BlogTimeline posts={blogs} />
+    </div>
+  </main>
+</PageLayout>
+
+<style>
+  .home-page {
+    position: relative;
+    width: 100%;
+  }
+
+  .home-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-height: 28rem;
+    padding: clamp(2rem, 6vw, 4.5rem) 0 clamp(4rem, 10vw, 7rem);
+    flex-direction: column;
+    gap: clamp(4rem, 9vw, 7rem);
+    background: hsl(var(--background));
+  }
+
+  .home-writing {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+
+  .home-writing__column {
+    min-width: 0;
+  }
+
+  .home-writing__heading {
+    display: flex;
+    min-height: 3.1rem;
+    margin-bottom: 0.85rem;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .home-writing__heading h2,
+  .home-writing__heading p {
+    margin: 0;
+  }
+
+  .home-writing__heading p {
+    margin-bottom: 0.22rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
+
+  .home-writing__heading h2 {
+    font-size: clamp(1.22rem, 2.1vw, 1.55rem);
+    font-weight: 600;
+  }
+
+  .home-writing__heading > a {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .home-writing__blog-list {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    flex-direction: column;
+    gap: 0.75rem;
+    list-style: none;
+  }
+
+  .home-writing__trace-list {
+    display: flex;
+    margin: -1rem 0;
+    flex-direction: column;
+  }
+
+  .home-writing__empty {
+    margin: 0;
+    border: 1px dashed hsl(var(--border));
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 900px) {
+    .home-writing {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

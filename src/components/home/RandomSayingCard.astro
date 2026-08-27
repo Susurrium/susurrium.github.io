@@ -1,0 +1,201 @@
+---
+/**
+ * Historical says-query idea, adapted for the separate Saying collection.
+ * A deterministic server fallback preserves no-JS HTML; client code chooses a
+ * fresh published Saying on every Home visit. Do not move that selection into
+ * Astro frontmatter: Home is statically generated.
+ */
+import type { CollectionEntry } from 'astro:content'
+import ContentCard from '@/components/cards/ContentCard.astro'
+import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
+import { getSayingDecorativeImage } from '@/data/home-media'
+import { formatContentDate } from '@/lib/content'
+
+interface Props {
+  sayings: readonly CollectionEntry<'saying'>[]
+}
+
+type SayingCatalogItem = {
+  author: string
+  date: string
+  dateLabel: string
+  footer: string
+  href: string
+  id: string
+  image: ReturnType<typeof getSayingDecorativeImage>
+  text: string
+}
+
+const { sayings } = Astro.props
+const catalog: SayingCatalogItem[] = sayings.map((saying, archiveIndex) => ({
+  author: saying.data.author ? `— ${saying.data.author}` : 'Collected saying',
+  date: saying.data.publishDate.toISOString(),
+  dateLabel: formatContentDate(saying.data.publishDate),
+  footer: saying.data.source ?? 'Saying',
+  href: `/sayings/${saying.id}`,
+  id: saying.id,
+  image: getSayingDecorativeImage(archiveIndex),
+  text: saying.data.text
+}))
+const fallbackEntry = sayings[0]
+const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
+---
+
+<section class='home-random-saying' aria-labelledby='home-random-saying-heading' data-home-random-saying>
+  <div class='home-section-heading'>
+    <div>
+      <p class='home-section-heading__eyebrow'>A line to keep</p>
+      <h2 id='home-random-saying-heading'>Saying</h2>
+    </div>
+    <a href='/sayings' data-astro-prefetch>View archive →</a>
+  </div>
+
+  {
+    fallbackEntry ? (
+      <saying-random-card data-random-saying data-saying-id={fallbackEntry.id}>
+        <ContentCard
+          actionLabel='View complete saying'
+          contentKind='saying'
+          entry={fallbackEntry}
+          index={0}
+        />
+        <script is:inline type='application/json' data-random-saying-catalog set:html={serializedCatalog}></script>
+      </saying-random-card>
+    ) : (
+      <LargeSkullCard
+        contentType='saying'
+        description='A future saying will appear here without shifting the rest of Home.'
+        footerText='Saying archive'
+        image={getSayingDecorativeImage(0)}
+        index={0}
+        presentation='large-skull-decorative'
+        title='Sayings are being prepared.'
+      />
+    )
+  }
+</section>
+
+<script>
+  import { selectRandom } from '@/data/home-media'
+
+  type ClientCatalogItem = {
+    author: string
+    date: string
+    dateLabel: string
+    footer: string
+    href: string
+    id: string
+    image: {
+      alt: string
+      decorative: boolean
+      key?: string
+      source: string
+      src?: string
+    }
+    text: string
+  }
+
+  type RandomWindow = Window & {
+    __susurriumRandom?: () => number
+  }
+
+  class SayingRandomCard extends HTMLElement {
+    connectedCallback() {
+      const catalogElement = this.querySelector<HTMLScriptElement>('[data-random-saying-catalog]')
+      if (!catalogElement?.textContent) return
+
+      let catalog: ClientCatalogItem[] = []
+      try {
+        const candidate: unknown = JSON.parse(catalogElement.textContent)
+        if (Array.isArray(candidate)) catalog = candidate as ClientCatalogItem[]
+      } catch {
+        return
+      }
+
+      const suppliedRandom = (window as RandomWindow).__susurriumRandom
+      const selected = selectRandom(catalog, typeof suppliedRandom === 'function' ? suppliedRandom : Math.random)
+      if (!selected) return
+
+      this.dataset.sayingId = selected.id
+
+      const card = this.querySelector<HTMLElement>('[data-largeskull-card]')
+      if (!card) return
+      card.dataset.contentId = selected.id
+      card.dataset.imageKey = selected.image.key ?? ''
+      card.dataset.imageSource = selected.image.source
+
+      const link = card.querySelector<HTMLAnchorElement>('.large-skull-card__link')
+      if (link) link.href = selected.href
+
+      const title = card.querySelector<HTMLElement>('[data-card-title]')
+      if (title) title.textContent = `“${selected.text}”`
+
+      const description = card.querySelector<HTMLElement>('[data-card-description]')
+      if (description) description.textContent = selected.author
+
+      const footer = card.querySelector<HTMLElement>('[data-card-footer]')
+      if (footer) footer.textContent = selected.footer
+
+      const date = card.querySelector<HTMLTimeElement>('[data-card-date]')
+      if (date) {
+        date.dateTime = selected.date
+        date.textContent = selected.dateLabel
+      }
+
+      const image = card.querySelector<HTMLImageElement>('[data-card-image]')
+      if (image && selected.image.src) {
+        image.src = selected.image.src
+        image.alt = selected.image.alt
+        image.setAttribute('data-image-key', selected.image.key ?? '')
+        image.setAttribute('aria-hidden', String(selected.image.decorative))
+      }
+    }
+  }
+
+  if (!customElements.get('saying-random-card')) {
+    customElements.define('saying-random-card', SayingRandomCard)
+  }
+</script>
+
+<style>
+  .home-random-saying {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .home-section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .home-section-heading h2,
+  .home-section-heading p {
+    margin: 0;
+  }
+
+  .home-section-heading h2 {
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 600;
+  }
+
+  .home-section-heading__eyebrow {
+    margin-bottom: 0.25rem !important;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .home-section-heading > a {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.8rem;
+  }
+
+  saying-random-card {
+    display: block;
+  }
+</style>

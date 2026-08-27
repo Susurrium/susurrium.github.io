@@ -75,7 +75,39 @@ const menu = config.header.menu ?? []
   }
 </script>
 <script>
-  import { setTheme, showToast } from 'astro-pure/utils'
+  // The two tiny browser helpers are copied from astro-pure@1.4.6 instead of
+  // importing its barrel. The barrel also exports date.ts, which imports the
+  // Astro-only `virtual:config` module and makes Vite dev prebundling fail.
+  function setTheme(theme?: string, save = false) {
+    const themes = ['system', 'dark', 'light']
+    if (theme) {
+      if (!themes.includes(theme)) return
+      if (save) localStorage.setItem('theme', theme)
+    } else {
+      theme = localStorage.getItem('theme') ?? undefined
+      if (save) {
+        const currentIndex = themes.indexOf(theme ?? 'system')
+        theme = themes[(currentIndex + 1) % themes.length]
+        localStorage.setItem('theme', theme)
+      }
+    }
+
+    let targetTheme = theme
+    if (theme === 'system') {
+      targetTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+
+    document.documentElement.classList.toggle('dark', targetTheme === 'dark')
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', targetTheme === 'dark' ? '#0B0B10' : '#FCFCFD')
+
+    return theme
+  }
+
+  function showToast(message: string) {
+    document.dispatchEvent(new CustomEvent('toast', { detail: { message } }))
+  }
 
   class SiteHeaderComponent extends HTMLElement {
     connectedCallback() {
@@ -91,7 +123,7 @@ const menu = config.header.menu ?? []
       darkModeButton?.addEventListener('click', () => {
         const newTheme = setTheme(undefined, true)
         darkModeButton.dataset.theme = newTheme
-        showToast({ message: `Set theme to ${newTheme}` })
+        showToast(`Set theme to ${newTheme}`)
       })
 
       this.querySelector('#toggleMenu')?.addEventListener('click', () => {

@@ -1,8 +1,9 @@
 ---
 import { getCollection } from 'astro:content'
 import { Button } from 'astro-pure/user'
+import ContentCard from '@/components/cards/ContentCard.astro'
 import PageLayout from '@/layouts/BaseLayout.astro'
-import { formatContentDate, published, sortByDate } from '@/lib/content'
+import { published, sortByDate } from '@/lib/content'
 
 const sayings = sortByDate(published(await getCollection('saying')))
 const meta = {
@@ -23,29 +24,13 @@ const meta = {
       sayings.length === 0 ? (
         <p id='content' class='animate text-muted-foreground'>No published sayings yet.</p>
       ) : (
-        <ul id='content' class='animate grid gap-4 md:grid-cols-2' aria-label='Saying archive'>
+        <div id='content' class='animate -mx-4 flex flex-col' aria-label='Saying archive' data-sayings-archive>
           {
-            sayings.map((saying) => (
-              <li class='rounded-2xl border bg-background transition-colors hover:bg-muted hover:text-primary'>
-                <a
-                  class='block h-full px-5 py-5 sm:px-6'
-                  href={`/sayings/${saying.id}`}
-                  data-astro-prefetch
-                >
-                  <blockquote class='text-lg font-medium leading-8'>
-                    <q>{saying.data.text}</q>
-                  </blockquote>
-                  <div class='mt-5 flex items-end justify-between gap-x-4 text-xs text-muted-foreground'>
-                    <span>
-                      {saying.data.author ?? 'Unknown'} · {formatContentDate(saying.data.publishDate)}
-                    </span>
-                    <span aria-hidden='true' class='shrink-0'>→</span>
-                  </div>
-                </a>
-              </li>
+            sayings.map((saying, index) => (
+              <ContentCard contentKind='saying' entry={saying} headingLevel={2} {index} />
             ))
           }
-        </ul>
+        </div>
       )
     }
   </main>

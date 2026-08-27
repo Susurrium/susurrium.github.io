@@ -12,11 +12,14 @@ import '@/assets/styles/app.css'
 interface Props {
   meta: SiteMeta
   highlightColor?: string
+  /** Home overlays the initial transparent header on the LargeSkull Hero. */
+  pageKind?: 'home'
 }
 
 const {
   meta: { articleDate, description = config.description, ogImage, title },
   highlightColor,
+  pageKind,
   ...props
 } = Astro.props
 ---
@@ -27,7 +30,7 @@ const {
     <ThemeProvider />
   </head>
 
-  <body class='flex justify-center bg-background text-foreground' {...props}>
+  <body class='flex justify-center bg-background text-foreground' data-page-kind={pageKind} {...props}>
     {
       highlightColor && (
         <div
@@ -37,7 +40,12 @@ const {
         />
       )
     }
-    <div class='w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between'>
+    <div
+      class:list={[
+        'w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between',
+        pageKind === 'home' && 'relative'
+      ]}
+    >
       <SiteHeader />
       <div class="flex-1 w-full">
         <slot />
@@ -59,3 +67,45 @@ const {
     </style>
   </body>
 </html>
+
+<style is:global>
+  /* Home starts beneath the transparent Arthals header, matching the source
+     Hero's fixed brand area while preserving normal sticky behaviour later. */
+  body[data-page-kind='home'] header-component:not(.not-top) {
+    position: absolute;
+    top: 1rem;
+    right: 0;
+    left: 0;
+    margin-bottom: 0;
+    color: #fff;
+  }
+
+  body[data-page-kind='home'] header-component:not(.not-top) :is(a, button) {
+    color: #fff;
+  }
+
+  body[data-page-kind='home'] header-component:not(.not-top) button {
+    border-color: rgb(255 255 255 / 0.5);
+    background: rgb(0 0 0 / 0.08);
+  }
+
+  body[data-page-kind='home'] header-component:not(.not-top) button:hover {
+    background: rgb(0 0 0 / 0.24);
+  }
+
+  body[data-page-kind='home'] header-component.not-top {
+    position: fixed;
+    top: 1rem;
+    right: max(1rem, calc(50% - 35rem));
+    left: max(1rem, calc(50% - 35rem));
+    margin-bottom: 0;
+    margin-inline: 0;
+  }
+
+  @media (max-width: 640px) {
+    body[data-page-kind='home'] header-component.not-top {
+      right: 1rem;
+      left: 1rem;
+    }
+  }
+</style>

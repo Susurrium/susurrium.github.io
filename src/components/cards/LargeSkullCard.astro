@@ -1,0 +1,403 @@
+---
+/**
+ * LargeSkull article-card primitive.
+ * Visual DOM/CSS: LargeSkull/LargeSkull.github.io@9599a54f23cdfc4606f2f5edc07e8138e050205b
+ * (`.segments > .item`, index.html:118-164 and css/app.css:3827-4161).
+ *
+ * The source site's duplicate inner links are intentionally consolidated into
+ * one semantic card link. Its slanted media, alternating direction and hover
+ * geometry remain unchanged; data wiring is local to this Astro project.
+ */
+import type { ContentKind, ContentPresentation, ImageSource, ResolvedCardImage } from '@/data/home-media'
+import { formatContentDate } from '@/lib/content'
+
+type HeadingLevel = 2 | 3 | 4 | 5 | 6
+
+interface Props {
+  actionLabel?: string
+  class?: string
+  contentId?: string
+  contentType?: ContentKind
+  date?: Date
+  description?: string
+  footerText?: string
+  /**
+   * Card lists need to join the heading outline of their host page. Archive
+   * pages pass `2`; cards nested below a Home section keep the default `3`.
+   */
+  headingLevel?: HeadingLevel
+  href?: string
+  image?: ResolvedCardImage
+  imageSource?: ImageSource
+  index?: number
+  presentation?: ContentPresentation
+  title: string
+}
+
+const {
+  actionLabel = 'Read more',
+  class: className,
+  contentId,
+  contentType,
+  date,
+  description,
+  footerText,
+  headingLevel = 3,
+  href,
+  image,
+  imageSource = image?.source ?? 'none',
+  index = 0,
+  presentation,
+  title
+} = Astro.props as Props
+
+const even = index % 2 === 1
+const imageIsDecorative = image?.decorative ?? true
+const headingId = `large-skull-card-${contentId ?? `item-${index}`}`
+const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+---
+
+<div class='large-skull-card-container'>
+  <article
+    class:list={['large-skull-card', even && 'is-even', className]}
+    aria-labelledby={headingId}
+    data-content-id={contentId}
+    data-content-type={contentType}
+    data-image-key={image?.key}
+    data-image-source={imageSource}
+    data-presentation={presentation}
+    data-largeskull-card
+  >
+    <a
+      class='large-skull-card__link'
+      href={href}
+      aria-disabled={href ? undefined : 'true'}
+      data-astro-prefetch={href ? true : undefined}
+    >
+      <div class='large-skull-card__cover' aria-hidden={imageIsDecorative ? 'true' : undefined}>
+        {
+          image?.src ? (
+            <img
+              alt={image.alt}
+              class='large-skull-card__image'
+              data-card-image
+              data-image-key={image.key}
+              height='448'
+              loading='lazy'
+              src={image.src}
+              width='640'
+            />
+          ) : (
+            <span class='large-skull-card__missing-image' data-card-image-missing aria-hidden='true' />
+          )
+        }
+      </div>
+      <div class='large-skull-card__info'>
+        <div class='large-skull-card__meta'>
+          {
+            date && (
+              <time data-card-date datetime={date.toISOString()}>
+                {formatContentDate(date)}
+              </time>
+            )
+          }
+        </div>
+        <Heading class='large-skull-card__title' id={headingId} data-card-title>{title}</Heading>
+        {description && <p class='large-skull-card__excerpt' data-card-description>{description}</p>}
+        <div class='large-skull-card__footer' data-card-footer>{footerText}</div>
+        {href && <span class='large-skull-card__button' data-card-action>{actionLabel}</span>}
+      </div>
+    </a>
+  </article>
+</div>
+
+<style>
+  /* Scoped extraction of LargeSkull's `.segments` card system. */
+  .large-skull-card-container {
+    container-type: inline-size;
+  }
+
+  .large-skull-card {
+    --large-skull-card-accent: hsl(var(--primary));
+    --large-skull-card-background: hsl(var(--card));
+    --large-skull-card-copy: hsl(var(--muted-foreground));
+    --large-skull-card-shadow: hsl(var(--foreground) / 0.18);
+    --large-skull-card-pink: #e9546b;
+    --large-skull-card-orange: #f5a623;
+    display: block;
+    width: calc(100% - 2rem);
+    min-width: calc(100% - 2rem);
+    height: 14rem;
+    margin: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.625rem 1.875rem -0.9375rem var(--large-skull-card-shadow);
+    transition: all 0.2s ease-in-out 0s;
+  }
+
+  .large-skull-card:hover {
+    box-shadow: 0 0 2rem var(--large-skull-card-shadow);
+  }
+
+  .large-skull-card__link {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .large-skull-card__link:focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 0.25rem;
+  }
+
+  .large-skull-card__cover {
+    width: 50%;
+    margin-right: 1.5rem;
+    overflow: hidden;
+    border-radius: 0.625rem 0 0 0.625rem;
+    clip-path: polygon(0 0, 92% 0%, 100% 100%, 0% 100%);
+  }
+
+  .large-skull-card__image,
+  .large-skull-card__missing-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: all 0.2s ease-in-out 0s;
+  }
+
+  .large-skull-card__missing-image {
+    background:
+      linear-gradient(135deg, hsl(var(--muted)), hsl(var(--background))),
+      hsl(var(--muted));
+  }
+
+  .large-skull-card:hover .large-skull-card__image {
+    transform: scale(1.05) rotate(1deg);
+  }
+
+  .large-skull-card__info {
+    position: relative;
+    display: flex;
+    width: 50%;
+    padding: 1rem 1.5rem 3rem 0;
+    flex-direction: column;
+    perspective: 62.5rem;
+  }
+
+  .large-skull-card__meta {
+    display: flex;
+    min-height: 1rem;
+    justify-content: flex-end;
+    color: var(--large-skull-card-copy);
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .large-skull-card__title {
+    margin: 0.625rem 0;
+    overflow: hidden;
+    color: var(--large-skull-card-accent);
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .large-skull-card__excerpt {
+    display: -webkit-box;
+    max-height: 5rem;
+    margin: 0;
+    overflow: hidden;
+    color: var(--large-skull-card-copy);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .large-skull-card__footer {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    left: 0;
+    max-width: calc(100% - 7rem);
+    overflow: hidden;
+    color: var(--large-skull-card-copy);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .large-skull-card__button {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    border-radius: 1rem 0;
+    padding: 0.38rem 0.8rem;
+    background-image: linear-gradient(
+      to right,
+      var(--large-skull-card-pink) 0,
+      var(--large-skull-card-orange) 100%
+    );
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: transform 0.2s ease-in-out 0s;
+  }
+
+  .large-skull-card:hover .large-skull-card__button {
+    transform: translateZ(2.5rem);
+  }
+
+  .large-skull-card.is-even .large-skull-card__link {
+    flex-direction: row-reverse;
+  }
+
+  .large-skull-card.is-even .large-skull-card__cover {
+    margin-right: auto;
+    margin-left: 1.5rem;
+    border-radius: 0 0.625rem 0.625rem 0;
+    clip-path: polygon(0 0%, 100% 0%, 100% 100%, 8% 100%);
+  }
+
+  .large-skull-card.is-even .large-skull-card__info {
+    padding: 1rem 0 3rem 1.5rem;
+  }
+
+  .large-skull-card.is-even .large-skull-card__meta {
+    justify-content: flex-start;
+  }
+
+  .large-skull-card.is-even .large-skull-card__footer {
+    right: 0;
+    left: 0.5rem;
+  }
+
+  .large-skull-card.is-even .large-skull-card__button {
+    right: auto;
+    left: 0;
+    border-radius: 0 1rem;
+    background-image: linear-gradient(
+      to right,
+      var(--large-skull-card-orange) 0,
+      var(--large-skull-card-pink) 100%
+    );
+  }
+
+  .large-skull-card.is-even:hover .large-skull-card__image {
+    transform: scale(1.05) rotate(-1deg);
+  }
+
+  /* LargeSkull's original breakpoint is viewport-based. Keep that exact
+     behavior for archive pages, and repeat it as a container query because a
+     Home column can become narrow even on a wide display. */
+  @media (max-width: 767px) {
+    .large-skull-card {
+      width: calc(100% - 1rem);
+      min-width: calc(100% - 1rem);
+      margin: 1rem 0.5rem;
+      height: auto;
+      min-height: 28rem;
+    }
+
+    .large-skull-card__link,
+    .large-skull-card.is-even .large-skull-card__link {
+      flex-direction: column;
+    }
+
+    .large-skull-card__cover,
+    .large-skull-card.is-even .large-skull-card__cover {
+      width: 100%;
+      height: 14rem;
+      margin: auto;
+      border-radius: 0.625rem 0.625rem 0 0;
+      clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+    }
+
+    .large-skull-card.is-even .large-skull-card__cover {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 92%);
+    }
+
+    .large-skull-card__info,
+    .large-skull-card.is-even .large-skull-card__info {
+      width: 100%;
+      height: 14rem;
+      padding: 0 1rem 3rem;
+    }
+
+    .large-skull-card__meta,
+    .large-skull-card.is-even .large-skull-card__meta {
+      justify-content: flex-start;
+      padding-top: 0.8rem;
+    }
+
+    .large-skull-card__footer {
+      left: 1rem;
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .large-skull-card {
+      width: calc(100% - 1rem);
+      min-width: calc(100% - 1rem);
+      margin: 1rem 0.5rem;
+      height: auto;
+      min-height: 28rem;
+    }
+
+    .large-skull-card__link,
+    .large-skull-card.is-even .large-skull-card__link {
+      flex-direction: column;
+    }
+
+    .large-skull-card__cover,
+    .large-skull-card.is-even .large-skull-card__cover {
+      width: 100%;
+      height: 14rem;
+      margin: auto;
+      border-radius: 0.625rem 0.625rem 0 0;
+      clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+    }
+
+    .large-skull-card.is-even .large-skull-card__cover {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 92%);
+    }
+
+    .large-skull-card__info,
+    .large-skull-card.is-even .large-skull-card__info {
+      width: 100%;
+      height: 14rem;
+      padding: 0 1rem 3rem;
+    }
+
+    .large-skull-card__meta,
+    .large-skull-card.is-even .large-skull-card__meta {
+      justify-content: flex-start;
+      padding-top: 0.8rem;
+    }
+
+    .large-skull-card__footer {
+      left: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .large-skull-card,
+    .large-skull-card__image,
+    .large-skull-card__button {
+      transition: none;
+    }
+
+    .large-skull-card:hover .large-skull-card__image,
+    .large-skull-card.is-even:hover .large-skull-card__image,
+    .large-skull-card:hover .large-skull-card__button {
+      transform: none;
+    }
+  }
+</style>

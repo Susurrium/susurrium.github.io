@@ -202,6 +202,21 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 这 6 张图片可暂时同时填入 `heroSlides`、`sayingDecorativeImages` 和 `traceFallbackImages`，但三个数组必须独立，不能共享业务语义。
 
+### 6.1 Phase 2 本地化核验
+
+2026-08-27 已下载并逐项复核原始 SHA-256；生产页面只引用下列本地路径，不再热链 `loli.net`。两张大 JPEG 仍低于 2 MiB 硬门槛，保留原图是为了首版与来源视觉一致，资源门禁会提示推荐尺寸警告。
+
+| 顺序 | 本地路径                                    | 字节数 | SHA-256                                                            |
+| ---: | ------------------------------------------- | -----: | ------------------------------------------------------------------ |
+|    1 | `public/images/largeskull/hero-01.jpg`      | 1,915,733 | `e77260690388904ca6f0ca2b19f5f3206468f97b6d7272a06c920df1d9cb0e6d` |
+|    2 | `public/images/largeskull/hero-02.webp`     |   190,834 | `319f2a38009f13e8ae5f1c6cbea9013b74e5408f29b6958fa1ac1571e991b8ca` |
+|    3 | `public/images/largeskull/hero-03.jpg`      | 1,845,471 | `010664a398386fa5f387764e9c41c28f2bc729151915229dc172fbe11abb9909` |
+|    4 | `public/images/largeskull/hero-04.webp`     |    57,512 | `235f105fcc5bbf6ea9acb69f2b75def95fb8f79867be0beafc27fa153da35dc4` |
+|    5 | `public/images/largeskull/hero-05.webp`     |   110,742 | `d7f20af3e09c32dd6a1494af6a02383599218131a2796a71c33e4f796bd615c6` |
+|    6 | `public/images/largeskull/hero-06.png`      |   735,786 | `277c5db8d016a8993467481d88ad840926adc8d54f8b49de5213e047476f6c0f` |
+
+实现文件：`src/data/home-media.ts`（三个独立资源池与稳定分配策略）、`src/components/cards/ContentCard.astro`（页面覆盖 → 类型默认 → 安全回退的唯一策略宿主）、`src/components/home/LargeSkullHero.astro`（原 Hero / wave DOM 与时序）、`src/components/cards/LargeSkullCard.astro`（原 `.segments` 斜边卡片）。必要适配仅包括 Astro 局部样式、当前主题变量、无障碍的单一链接语义、原站 767px/容器响应式和 `prefers-reduced-motion`；同日 Saying 以内容 ID 作为固定次级归档键。
+
 ## 7. 完整模块分配闭环
 
 | 最终模块                                      | 原网站/上游直接部分                   | 历史项目直接部分                      | 本项目自行开发或略调                                          |

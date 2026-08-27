@@ -1,6 +1,7 @@
 import type { CollectionEntry } from 'astro:content'
 
 type DatedEntry = {
+  id?: string
   data: {
     publishDate: Date
     updatedDate?: Date
@@ -23,11 +24,23 @@ export function published<T extends PublishableEntry>(entries: T[]): T[] {
   return entries.filter((entry) => !entry.data.draft)
 }
 
-/** Latest first, without mutating Astro's collection result. */
+/**
+ * Latest first, without mutating Astro's collection result.
+ *
+ * A date alone is not enough for the Saying decorative-image contract: two
+ * records may intentionally share a day. Use the stable content id as an
+ * explicit secondary key rather than depending on loader enumeration order.
+ */
 export function sortByDate<T extends DatedEntry>(entries: T[]): T[] {
-  return [...entries].sort(
-    (left, right) => right.data.publishDate.getTime() - left.data.publishDate.getTime()
-  )
+  return [...entries].sort((left, right) => {
+    const byDate = right.data.publishDate.getTime() - left.data.publishDate.getTime()
+    if (byDate !== 0) return byDate
+
+    const leftId = left.id ?? ''
+    const rightId = right.id ?? ''
+    if (leftId === rightId) return 0
+    return leftId < rightId ? -1 : 1
+  })
 }
 
 export function formatContentDate(date: Date): string {

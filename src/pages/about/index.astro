@@ -19,6 +19,11 @@ const headings = [
   },
   {
     depth: 2,
+    slug: 'sayings',
+    text: 'Sayings'
+  },
+  {
+    depth: 2,
     slug: 'education',
     text: 'Education'
   },
@@ -47,17 +52,6 @@ const headings = [
   <p>我即将在北京大学先进制造与机器人学院攻读博士学位。</p>
   <p>我的兴趣主要在 Large Language Model / Embodied AI 方向。</p>
   <p>我喜欢 Minecraft。</p>
-  <div class='flex w-fit gap-x-2'>
-    <!-- <img
-      src='https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fzhuozhiyongde&count_bg=%23000000&title_bg=%23000000&icon=spacex.svg&icon_color=%23E7E7E7&title=Hits&edge_flat=true'
-      class='my-0 rounded-md border'
-    /> -->
-    <img
-      alt='CodeTime Badge'
-      src='https://shields.jannchie.com/endpoint?style=flat&color=222&url=https%3A%2F%2Fapi.codetime.dev%2Fv3%2Fusers%2Fshield%3Fuid%3D20455'
-      class='rounded-md border'
-    />
-  </div>
 
   {/* tools */}
   <h2 id='tools'>Tools</h2>
@@ -203,6 +197,16 @@ const headings = [
       }
     ]}
   />
+
+  <h2 id='sayings'>Sayings</h2>
+  <p>收集与留存的名言，和 Blog、Traces 一样可以独立阅读。</p>
+  <a
+    href='/sayings'
+    data-astro-prefetch
+    class='not-prose inline-flex items-center rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted'
+  >
+    查看完整 Sayings 归档 →
+  </a>
 
   <h2 id='education'>Education</h2>
   <Timeline

@@ -1,14 +1,15 @@
 ---
-import { PostPreview } from 'astro-pure/components/pages'
+import type { CollectionEntry } from 'astro:content'
 import { getBlogCollection, groupCollectionsByYear, sortMDByDate } from 'astro-pure/server'
 import { Button } from 'astro-pure/user'
+import ContentCard from '@/components/cards/ContentCard.astro'
 import PageLayout from '@/layouts/BaseLayout.astro'
 
 export const prerender = true
 
 const allPosts = await getBlogCollection()
 const allPostsByDate = sortMDByDate(allPosts)
-const allPostsByYear = groupCollectionsByYear(allPostsByDate)
+const allPostsByYear = groupCollectionsByYear(allPostsByDate) as [number, CollectionEntry<'blog'>[]][]
 
 const meta = {
   description: 'A list of all the years of creating my posts',
@@ -40,9 +41,7 @@ const meta = {
               {posts.length} post{posts.length > 1 && 's'}
             </p>
             <ul class='flex flex-col text-start'>
-              {posts.map((p) => (
-                <PostPreview post={p} class='border-0 bg-transparent py-2' />
-              ))}
+              {posts.map((post) => <ContentCard class='py-2' contentKind='blog' entry={post} />)}
             </ul>
           </div>
         ))

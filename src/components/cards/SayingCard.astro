@@ -1,0 +1,42 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
+import { getSayingDecorativeImage, type ContentPresentation } from '@/data/home-media'
+
+interface Props {
+  actionLabel?: string
+  archiveIndex: number
+  class?: string
+  headingLevel?: 2 | 3 | 4 | 5 | 6
+  presentation?: ContentPresentation
+  saying: CollectionEntry<'saying'>
+}
+
+const {
+  actionLabel = 'View complete saying',
+  archiveIndex,
+  class: className,
+  headingLevel,
+  presentation = 'large-skull-decorative',
+  saying
+} = Astro.props
+const image = getSayingDecorativeImage(archiveIndex)
+const author = saying.data.author ? `— ${saying.data.author}` : 'Collected saying'
+const footerText = saying.data.source ?? 'Saying'
+---
+
+<LargeSkullCard
+  actionLabel={actionLabel}
+  class={className}
+  contentId={saying.id}
+  contentType='saying'
+  date={saying.data.publishDate}
+  description={author}
+  footerText={footerText}
+  {headingLevel}
+  href={`/sayings/${saying.id}`}
+  {image}
+  index={archiveIndex}
+  {presentation}
+  title={`“${saying.data.text}”`}
+/>

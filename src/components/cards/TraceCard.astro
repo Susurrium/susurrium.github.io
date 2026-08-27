@@ -1,0 +1,57 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
+import {
+  getTraceCardImage,
+  type ContentImageInput,
+  type ContentPresentation
+} from '@/data/home-media'
+
+interface Props {
+  actionLabel?: string
+  class?: string
+  headingLevel?: 2 | 3 | 4 | 5 | 6
+  index?: number
+  presentation?: ContentPresentation
+  trace: CollectionEntry<'trace'>
+}
+
+const {
+  actionLabel = 'Read Trace',
+  class: className,
+  headingLevel,
+  index = 0,
+  presentation = 'large-skull-content',
+  trace
+} = Astro.props
+
+function asContentImage(
+  cover: unknown,
+  alt: string | undefined,
+  contentId: string
+): ContentImageInput | undefined {
+  if (!cover || typeof cover !== 'object' || !('src' in cover)) return undefined
+  const src = (cover as { src?: unknown }).src
+  if (typeof src !== 'string') return undefined
+  return { alt, key: `content-${contentId}`, src }
+}
+
+const image = getTraceCardImage(trace.id, asContentImage(trace.data.cover, trace.data.coverAlt, trace.id))
+const footerText = trace.data.tags.length > 0 ? trace.data.tags.map((tag) => `#${tag}`).join(' ') : 'Trace'
+---
+
+<LargeSkullCard
+  actionLabel={actionLabel}
+  class={className}
+  contentId={trace.id}
+  contentType='trace'
+  date={trace.data.publishDate}
+  description={trace.data.description}
+  footerText={footerText}
+  {headingLevel}
+  href={`/traces/${trace.id}`}
+  {image}
+  index={index}
+  {presentation}
+  title={trace.data.title}
+/>
