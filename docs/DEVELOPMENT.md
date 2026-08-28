@@ -46,6 +46,8 @@ bun run lint:check
 bun run build
 ```
 
+如果开发覆盖层提示 `Failed to load url /vendor/maplibre...`，先停止并重新启动开发服务器，再硬刷新浏览器。MapLibre 的锁定运行时是 `public/vendor` 下的 UMD 文件，`src/scripts/residence-map.ts` 会在地图接近视口时以普通 `<script>` 加载；不要把它改回 `import()`，因为 Vite 不会将 `public/` 文件作为源码模块转换。
+
 已完成阶段的静态契约回归：
 
 ```powershell
@@ -76,7 +78,7 @@ bun run release:gate
 
 严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
 
-浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
+浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre UMD 加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
 
 ```powershell
 bun run preview -- --host 127.0.0.1 --port 4321

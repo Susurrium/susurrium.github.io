@@ -12,31 +12,66 @@ type MapInstance = import('maplibre-gl').Map;
 type MarkerInstance = import('maplibre-gl').Marker;
 
 // MapLibre's already-built UMD bundle is intentionally served from public/
-// and loaded only once the residence card approaches the viewport.  Letting
-// Vite parse/minify this 1 MiB runtime during every static entrypoint build
-// is both unnecessary and unreliable on the current Windows toolchain.  The
-// pinned package remains installed solely for exact TypeScript API types.
+// and loaded only once the residence card approaches the viewport.  It must be
+// appended as a normal script rather than passed to import(): Vite treats files
+// in public/ as opaque browser assets and refuses to transform them as modules.
+// The pinned package remains installed solely for exact TypeScript API types.
 const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '');
-const mapLibreModuleUrl = `${basePath}/vendor/maplibre-gl@5.24.0/maplibre-gl.js`;
+const mapLibreScriptUrl = `${basePath}/vendor/maplibre-gl@5.24.0/maplibre-gl.js`;
 const mapLibreCssUrl = `${basePath}/vendor/maplibre-gl@5.24.0/maplibre-gl.css`;
 
-let mapImportPromise: Promise<MapLibreApi> | undefined;
+let mapScriptPromise: Promise<MapLibreApi> | undefined;
 let stylesheetPromise: Promise<HTMLLinkElement> | undefined;
 let stylesheetLink: HTMLLinkElement | undefined;
 let stylesheetReferences = 0;
 let clientRouterHookInstalled = false;
 
 async function loadMapLibre() {
-  if (!mapImportPromise) {
-    mapImportPromise = import(/* @vite-ignore */ mapLibreModuleUrl).then(() => {
-      const api = (window as typeof window & { maplibregl?: MapLibreApi }).maplibregl;
-      if (!api) throw new Error('MapLibre runtime did not expose maplibregl');
-      return api;
+  const globalWindow = window as typeof window & { maplibregl?: MapLibreApi };
+  if (globalWindow.maplibregl) return globalWindow.maplibregl;
+
+  if (!mapScriptPromise) {
+    const existing = document.head.querySelector<HTMLScriptElement>('[data-residence-maplibre]');
+    const script = existing ?? document.createElement('script');
+    if (!existing) {
+      script.src = mapLibreScriptUrl;
+      script.async = true;
+      script.dataset.residenceMaplibre = '';
+    }
+    mapScriptPromise = new Promise<MapLibreApi>((resolve, reject) => {
+      const cleanup = () => {
+        script.removeEventListener('load', onLoad);
+        script.removeEventListener('error', onError);
+        window.clearTimeout(timeout);
+      };
+      const onLoad = () => {
+        cleanup();
+        const api = globalWindow.maplibregl;
+        if (api) resolve(api);
+        else {
+          script.remove();
+          reject(new Error('MapLibre runtime did not expose maplibregl'));
+        }
+      };
+      const onError = () => {
+        cleanup();
+        script.remove();
+        reject(new Error('MapLibre runtime failed to load'));
+      };
+      const timeout = window.setTimeout(() => {
+        cleanup();
+        script.remove();
+        reject(new Error('MapLibre runtime load timed out'));
+      }, 8_000);
+      script.addEventListener('load', onLoad, { once: true });
+      script.addEventListener('error', onError, { once: true });
+      if (globalWindow.maplibregl) onLoad();
+      else if (!existing) document.head.append(script);
     });
   }
-  return mapImportPromise.catch((error: unknown) => {
-    // A network hiccup must not permanently cache a rejected public UMD import.
-    mapImportPromise = undefined;
+  return mapScriptPromise.catch((error: unknown) => {
+    // A network hiccup must not permanently cache a rejected public script.
+    mapScriptPromise = undefined;
     throw error;
   });
 }
@@ -290,7 +325,7 @@ function setupResidenceScene(scene: HTMLElement) {
     try {
       await acquireMapLibreStylesheet();
       mapCssAcquired = true;
-      const api = await withTimeout(loadMapLibre(), 8_000, 'MapLibre import');
+      const api = await withTimeout(loadMapLibre(), 8_000, 'MapLibre runtime');
       if (disposed || !preloadIntersecting) {
         removeMainMap();
         return;
@@ -445,7 +480,7 @@ function setupResidenceScene(scene: HTMLElement) {
         return;
       }
       globeCssAcquired = true;
-      const api = await withTimeout(loadMapLibre(), 8_000, 'MapLibre import');
+      const api = await withTimeout(loadMapLibre(), 8_000, 'MapLibre runtime');
       if (disposed || generation !== globeGeneration || !dialog.open) {
         releaseMapLibreStylesheet();
         globeCssAcquired = false;

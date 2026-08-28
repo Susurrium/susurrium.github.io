@@ -87,8 +87,12 @@ const baseLayout = source('src/layouts/BaseLayout.astro')
 expect(
   residenceCard.includes('data-residence-map') &&
     residenceCard.includes('FlightOverlay') &&
-    residenceController.includes('mapLibreModuleUrl') &&
-    residenceController.includes('@vite-ignore') &&
+    residenceController.includes('mapLibreScriptUrl') &&
+    residenceController.includes("document.createElement('script')") &&
+    residenceController.includes('data-residence-maplibre') &&
+    residenceController.includes("script.addEventListener('load'") &&
+    residenceController.includes("script.addEventListener('error'") &&
+    !residenceController.includes('import(/* @vite-ignore */') &&
     residenceController.includes('mapLibreCssUrl') &&
     residenceController.includes('IntersectionObserver') &&
     residenceController.includes("'astro:before-swap'") &&

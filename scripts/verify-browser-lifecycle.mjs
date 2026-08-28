@@ -375,6 +375,45 @@ async function assertLinksCopyControl(cdp) {
   )
 }
 
+async function assertResidenceMapRuntime(cdp) {
+  const map = await evaluate(
+    cdp,
+    `(async () => {
+      const scene = document.querySelector('[data-residence-map]')
+      if (!(scene instanceof HTMLElement)) return { exists: false }
+
+      scene.scrollIntoView({ block: 'center', inline: 'nearest' })
+      const deadline = performance.now() + 5000
+      return new Promise((resolve) => {
+        const inspect = () => {
+          const script = document.querySelector('script[data-residence-maplibre]')
+          const mapState = scene.dataset.mapState ?? null
+          const settled = Boolean(script && window.maplibregl)
+          if (settled || performance.now() >= deadline) {
+            resolve({
+              exists: true,
+              script: Boolean(script),
+              mapState,
+              global: Boolean(window.maplibregl),
+              overlay: Boolean(document.querySelector('vite-error-overlay'))
+            })
+            return
+          }
+          requestAnimationFrame(inspect)
+        }
+        inspect()
+      })
+    })()`
+  )
+
+  expect(
+    map.exists && map.script && map.global && !map.overlay,
+    map.exists
+      ? `Home loads the local MapLibre UMD script without a Vite error overlay${map.mapState ? ` (state: ${map.mapState})` : ''}`
+      : 'Home renders the residence scene for MapLibre runtime verification'
+  )
+}
+
 async function darkScreenshotStats(cdp) {
   const { data } = await cdp.call('Page.captureScreenshot', {
     captureBeyondViewport: false,
@@ -537,6 +576,7 @@ try {
     'Home keeps independent three-item Blog and Trace columns'
   )
   expect(home.homeTimelineCount > 0, 'Home renders its Blog-only timeline')
+  await assertResidenceMapRuntime(cdp)
 
   const clickFiltering = await evaluate(
     cdp,
