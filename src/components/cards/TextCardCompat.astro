@@ -1,0 +1,55 @@
+---
+/**
+ * Compatibility adapter for callers that already provide StandardCardData.
+ * The actual visual implementation is TextCard.astro.
+ */
+import type { TextCardViewData } from '@/lib/content-layer/card-data'
+import type { ContentKind, StandardCardData } from '@/lib/content-layer/types'
+
+import TextCard from '@/components/cards/TextCard.astro'
+
+interface ModelProps {
+  class?: string
+  data: StandardCardData
+  detailed?: boolean
+}
+
+interface LegacyProps {
+  class?: string
+  contentId: string
+  contentType: ContentKind
+  date: Date
+  description?: string
+  detailed?: boolean
+  href: string
+  title: string
+}
+
+type Props = ModelProps | LegacyProps
+
+const props = Astro.props as Props
+const className = props.class
+const detailed = props.detailed ?? false
+const data: StandardCardData =
+  'data' in props
+    ? props.data
+    : {
+        contentId: props.contentId,
+        contentType: props.contentType,
+        date: props.date,
+        description: props.description,
+        footerText: '',
+        href: props.href,
+        title: props.title
+      }
+const textData: TextCardViewData = {
+  ...data,
+  draft: false,
+  family: 'text',
+  metadata: [],
+  skin: 'plain',
+  tags: []
+}
+---
+
+<TextCard as='article' class={className} data={textData} {detailed} />

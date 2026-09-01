@@ -2,11 +2,9 @@
 /**
  * The only runtime owner of ambient visual effects.
  *
- * Sources:
- * - `PKU-*`: the three locked butterfly-extsrc@1.1.3 canvas scripts.
- * - `GEORGE-*`: the locked sakura / fireworks / tinycolor / anime scripts.
- * - `HIST-BACKDROP` and `HIST-GEORGE-HOST`: lifecycle and route-scoping
- *   precedent from the fixed historical snapshot.
+ * The drawing sources are locked local vendor scripts. Their original paths
+ * remain under the vendor boundary; this host owns only lifecycle, routing,
+ * and coordinate forwarding.
  *
  * The original vendor scripts create document-global canvases and listeners.
  * Loading each visual family into a disposable same-origin iframe preserves
@@ -24,20 +22,20 @@ const enabled = effectProfiles[profile]
 const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
 const asset = (path: string) => `${basePath}${path}`
 const serializedSources = JSON.stringify({
-  georgeAnime: asset('/vendor/george/anime.min.js'),
-  georgeFireworks: asset('/vendor/george/fireworks.js'),
-  georgeSakura: asset('/vendor/george/sakura.js'),
-  georgeTinycolor: asset('/vendor/george/tinycolor.min.js'),
-  pkuFlutter: asset('/vendor/pku/canvas-fluttering-ribbon@1.1.3.min.js'),
-  pkuNest: asset('/vendor/pku/canvas-nest@1.1.3.min.js'),
-  pkuRibbon: asset('/vendor/pku/canvas-ribbon@1.1.3.min.js')
+  clickBurstAnime: asset('/vendor/george/anime.min.js'),
+  clickBurstRuntime: asset('/vendor/george/fireworks.js'),
+  petalRuntime: asset('/vendor/george/sakura.js'),
+  colorRuntime: asset('/vendor/george/tinycolor.min.js'),
+  ambientFlutter: asset('/vendor/pku/canvas-fluttering-ribbon@1.1.3.min.js'),
+  ambientNetwork: asset('/vendor/pku/canvas-nest@1.1.3.min.js'),
+  ambientRibbon: asset('/vendor/pku/canvas-ribbon@1.1.3.min.js')
 }).replace(/</g, '\\u003c')
 ---
 
 <visual-effects-host
   data-visual-effects-host
   data-effect-profile={profile}
-  data-pku-backdrop={String(enabled.pkuBackdrop)}
+  data-ambient-backdrop={String(enabled.ambientBackdrop)}
   data-petals={String(enabled.petals)}
   data-click={String(enabled.click)}
   data-companion={String(enabled.companion)}
@@ -48,39 +46,39 @@ const serializedSources = JSON.stringify({
   aria-hidden='true'></visual-effects-host>
 
 <script>
-  type EffectKind = 'click' | 'petals' | 'pku'
+  type EffectKind = 'click' | 'petals' | 'ambient-canvas'
 
   type VendorSources = {
-    georgeAnime: string
-    georgeFireworks: string
-    georgeSakura: string
-    georgeTinycolor: string
-    pkuFlutter: string
-    pkuNest: string
-    pkuRibbon: string
+    clickBurstAnime: string
+    clickBurstRuntime: string
+    petalRuntime: string
+    colorRuntime: string
+    ambientFlutter: string
+    ambientNetwork: string
+    ambientRibbon: string
   }
 
   type EffectPolicy = {
     click: boolean
     petals: boolean
-    pkuBackdrop: boolean
+    ambientBackdrop: boolean
   }
 
-  const effectKinds: EffectKind[] = ['pku', 'petals', 'click']
-  const pkuMobileQuery = '(max-width: 767px), (pointer: coarse)'
+  const effectKinds: EffectKind[] = ['ambient-canvas', 'petals', 'click']
+  const ambientMobileQuery = '(max-width: 767px), (pointer: coarse)'
 
   class VisualEffectsHostElement extends HTMLElement {
     private controller: AbortController | null = null
     private clickController: AbortController | null = null
-    private pkuController: AbortController | null = null
+    private ambientController: AbortController | null = null
     private frames = new Map<EffectKind, HTMLIFrameElement>()
     private motionQuery: MediaQueryList | null = null
-    private pkuMobileMedia: MediaQueryList | null = null
+    private ambientMobileMedia: MediaQueryList | null = null
     private sources: VendorSources | null = null
-    private pkuMessageFrame = 0
-    private pkuPointer: { x: number; y: number } | null = null
-    private pkuPointerOutside = false
-    private pkuScrollY = 0
+    private ambientMessageFrame = 0
+    private ambientPointer: { x: number; y: number } | null = null
+    private ambientPointerOutside = false
+    private ambientScrollY = 0
 
     connectedCallback() {
       this.destroy()
@@ -103,10 +101,10 @@ const serializedSources = JSON.stringify({
       this.controller = new AbortController()
       const { signal } = this.controller
       this.motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-      this.pkuMobileMedia = window.matchMedia(pkuMobileQuery)
+      this.ambientMobileMedia = window.matchMedia(ambientMobileQuery)
 
       this.motionQuery.addEventListener('change', this.sync, { signal })
-      this.pkuMobileMedia.addEventListener('change', this.sync, { signal })
+      this.ambientMobileMedia.addEventListener('change', this.sync, { signal })
       document.addEventListener('visibilitychange', this.sync, { signal })
       document.addEventListener('astro:before-preparation', this.pauseForNavigation, { signal })
       document.addEventListener('astro:before-swap', this.pauseForNavigation, { signal })
@@ -124,9 +122,9 @@ const serializedSources = JSON.stringify({
       this.controller?.abort()
       this.controller = null
       this.stopClickForwarder()
-      this.stopPkuForwarder()
+      this.stopAmbientForwarder()
       this.motionQuery = null
-      this.pkuMobileMedia = null
+      this.ambientMobileMedia = null
 
       for (const frame of this.frames.values()) frame.remove()
       this.frames.clear()
@@ -142,7 +140,7 @@ const serializedSources = JSON.stringify({
 
     private stopFrames() {
       this.stopClickForwarder()
-      this.stopPkuForwarder()
+      this.stopAmbientForwarder()
       for (const frame of this.frames.values()) frame.remove()
       this.frames.clear()
       this.dataset.activeEffects = ''
@@ -155,13 +153,13 @@ const serializedSources = JSON.stringify({
 
         const candidate = parsed as Partial<VendorSources>
         const required: Array<keyof VendorSources> = [
-          'georgeAnime',
-          'georgeFireworks',
-          'georgeSakura',
-          'georgeTinycolor',
-          'pkuFlutter',
-          'pkuNest',
-          'pkuRibbon'
+          'clickBurstAnime',
+          'clickBurstRuntime',
+          'petalRuntime',
+          'colorRuntime',
+          'ambientFlutter',
+          'ambientNetwork',
+          'ambientRibbon'
         ]
         if (
           required.some(
@@ -180,7 +178,7 @@ const serializedSources = JSON.stringify({
       return {
         click: this.dataset.click === 'true',
         petals: this.dataset.petals === 'true',
-        pkuBackdrop: this.dataset.pkuBackdrop === 'true'
+        ambientBackdrop: this.dataset.ambientBackdrop === 'true'
       }
     }
 
@@ -205,7 +203,7 @@ const serializedSources = JSON.stringify({
 
       const policy = this.policy()
       const desired = new Set<EffectKind>()
-      if (policy.pkuBackdrop && !this.pkuMobileMedia?.matches) desired.add('pku')
+      if (policy.ambientBackdrop && !this.ambientMobileMedia?.matches) desired.add('ambient-canvas')
       if (policy.petals) desired.add('petals')
       if (policy.click) desired.add('click')
 
@@ -215,7 +213,7 @@ const serializedSources = JSON.stringify({
       }
 
       this.syncClickForwarder(desired.has('click'))
-      this.syncPkuForwarder(desired.has('pku'))
+      this.syncAmbientForwarder(desired.has('ambient-canvas'))
       this.dataset.activeEffects = effectKinds.filter((kind) => desired.has(kind)).join(',')
       this.dataset.lifecycle = desired.size > 0 ? 'active' : 'disabled'
     }
@@ -232,8 +230,8 @@ const serializedSources = JSON.stringify({
       // created inside a dark-color-scheme document unless both properties are
       // present before srcdoc is assigned. That white surface would cover the
       // page even though the vendor canvases themselves are transparent.
-      // These are compositing compatibility attributes only; the original
-      // PKU/George drawing scripts below remain untouched.
+      // These are compositing compatibility attributes only; the locked
+      // vendor drawing scripts below remain untouched.
       frame.setAttribute('allowtransparency', 'true')
       frame.setAttribute('tabindex', '-1')
       frame.setAttribute('title', '')
@@ -259,7 +257,7 @@ const serializedSources = JSON.stringify({
       frame.remove()
       this.frames.delete(kind)
       if (kind === 'click') this.stopClickForwarder()
-      if (kind === 'pku') this.stopPkuForwarder()
+      if (kind === 'ambient-canvas') this.stopAmbientForwarder()
     }
 
     private syncClickForwarder(enabled: boolean) {
@@ -281,67 +279,67 @@ const serializedSources = JSON.stringify({
       this.clickController = null
     }
 
-    private syncPkuForwarder(enabled: boolean) {
-      if (!enabled || !this.frames.has('pku')) {
-        this.stopPkuForwarder()
+    private syncAmbientForwarder(enabled: boolean) {
+      if (!enabled || !this.frames.has('ambient-canvas')) {
+        this.stopAmbientForwarder()
         return
       }
-      if (this.pkuController) return
+      if (this.ambientController) return
 
-      this.pkuController = new AbortController()
-      const { signal } = this.pkuController
-      this.pkuScrollY = window.scrollY
-      document.addEventListener('mousemove', this.forwardPkuPointer, { passive: true, signal })
-      window.addEventListener('mouseout', this.forwardPkuMouseOut, { passive: true, signal })
-      window.addEventListener('scroll', this.forwardPkuScroll, { passive: true, signal })
-      this.schedulePkuMessage()
+      this.ambientController = new AbortController()
+      const { signal } = this.ambientController
+      this.ambientScrollY = window.scrollY
+      document.addEventListener('mousemove', this.forwardAmbientPointer, { passive: true, signal })
+      window.addEventListener('mouseout', this.forwardAmbientMouseOut, { passive: true, signal })
+      window.addEventListener('scroll', this.forwardAmbientScroll, { passive: true, signal })
+      this.scheduleAmbientMessage()
     }
 
-    private stopPkuForwarder() {
-      this.pkuController?.abort()
-      this.pkuController = null
-      if (this.pkuMessageFrame) cancelAnimationFrame(this.pkuMessageFrame)
-      this.pkuMessageFrame = 0
-      this.pkuPointer = null
-      this.pkuPointerOutside = false
+    private stopAmbientForwarder() {
+      this.ambientController?.abort()
+      this.ambientController = null
+      if (this.ambientMessageFrame) cancelAnimationFrame(this.ambientMessageFrame)
+      this.ambientMessageFrame = 0
+      this.ambientPointer = null
+      this.ambientPointerOutside = false
     }
 
-    private forwardPkuPointer = (event: MouseEvent) => {
-      this.pkuPointer = { x: event.clientX, y: event.clientY }
-      this.schedulePkuMessage()
+    private forwardAmbientPointer = (event: MouseEvent) => {
+      this.ambientPointer = { x: event.clientX, y: event.clientY }
+      this.scheduleAmbientMessage()
     }
 
-    private forwardPkuScroll = () => {
-      this.pkuScrollY = window.scrollY
-      this.schedulePkuMessage()
+    private forwardAmbientScroll = () => {
+      this.ambientScrollY = window.scrollY
+      this.scheduleAmbientMessage()
     }
 
-    private forwardPkuMouseOut = (event: MouseEvent) => {
+    private forwardAmbientMouseOut = (event: MouseEvent) => {
       // Only relay an actual departure from the viewport, not every movement
       // between descendants in the page shell.
       if (event.relatedTarget) return
-      this.pkuPointerOutside = true
-      this.schedulePkuMessage()
+      this.ambientPointerOutside = true
+      this.scheduleAmbientMessage()
     }
 
-    private schedulePkuMessage() {
-      if (this.pkuMessageFrame || !this.frames.has('pku')) return
-      this.pkuMessageFrame = requestAnimationFrame(() => {
-        this.pkuMessageFrame = 0
-        const frame = this.frames.get('pku')
+    private scheduleAmbientMessage() {
+      if (this.ambientMessageFrame || !this.frames.has('ambient-canvas')) return
+      this.ambientMessageFrame = requestAnimationFrame(() => {
+        this.ambientMessageFrame = 0
+        const frame = this.frames.get('ambient-canvas')
         if (!frame) return
-        if (this.pkuPointer) {
+        if (this.ambientPointer) {
           frame.contentWindow?.postMessage(
-            { type: 'susurrium:pku-pointer', x: this.pkuPointer.x, y: this.pkuPointer.y },
+            { type: 'susurrium:ambient-pointer', x: this.ambientPointer.x, y: this.ambientPointer.y },
             '*'
           )
-          this.pkuPointer = null
+          this.ambientPointer = null
         }
-        if (this.pkuPointerOutside) {
-          frame.contentWindow?.postMessage({ type: 'susurrium:pku-pointer-out' }, '*')
-          this.pkuPointerOutside = false
+        if (this.ambientPointerOutside) {
+          frame.contentWindow?.postMessage({ type: 'susurrium:ambient-pointer-out' }, '*')
+          this.ambientPointerOutside = false
         }
-        frame.contentWindow?.postMessage({ type: 'susurrium:pku-scroll', y: this.pkuScrollY }, '*')
+        frame.contentWindow?.postMessage({ type: 'susurrium:ambient-scroll', y: this.ambientScrollY }, '*')
       })
     }
 
@@ -351,7 +349,7 @@ const serializedSources = JSON.stringify({
       if (!frame || frame.dataset.ready !== 'true') return
 
       frame.contentWindow?.postMessage(
-        { type: 'susurrium:george-fireworks', x: event.clientX, y: event.clientY },
+        { type: 'susurrium:click-burst', x: event.clientX, y: event.clientY },
         '*'
       )
       this.dataset.clickBurstCount = String(Number(this.dataset.clickBurstCount ?? '0') + 1)
@@ -432,26 +430,26 @@ const serializedSources = JSON.stringify({
       const documentStart = `<!doctype html><html style="background:transparent;color-scheme:light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>:root{background:transparent!important;color-scheme:light!important}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:transparent!important;color-scheme:light!important}canvas{pointer-events:none}</style></head><body>`
       const documentEnd = '</body></html>'
 
-      if (kind === 'pku') {
+      if (kind === 'ambient-canvas') {
         // The scripts themselves are unchanged. The only adaptation is their
         // z order inside this isolated frame, preserving the original three
         // layers while keeping all of them beneath site content.
         const labelLastCanvas = (layer: string, zIndex: number) =>
-          `<script>(()=>{const canvas=document.body.querySelector('canvas:last-of-type');if(canvas){canvas.dataset.pkuLayer='${layer}';canvas.style.zIndex='${zIndex}'}})()${closeScript}`
-        const relay = `<script>(()=>{let pageY=0;try{Object.defineProperty(window,'pageYOffset',{configurable:true,get:()=>pageY})}catch{}window.addEventListener('message',event=>{const data=event.data;if(event.source!==parent||!data)return;if(data.type==='susurrium:pku-pointer'&&Number.isFinite(data.x)&&Number.isFinite(data.y)){window.dispatchEvent(new MouseEvent('mousemove',{clientX:data.x,clientY:data.y}))}if(data.type==='susurrium:pku-pointer-out'){window.dispatchEvent(new MouseEvent('mouseout'))}if(data.type==='susurrium:pku-scroll'&&Number.isFinite(data.y)){pageY=Math.max(0,data.y);window.dispatchEvent(new Event('scroll'))}})})()${closeScript}`
-        return `${documentStart}${relay}${script(sources.pkuRibbon, 'ribbon', ' mobile="false" zIndex="-1" alpha="0.6" size="150" data-click="false"')}${labelLastCanvas('ribbon', 1)}${script(sources.pkuFlutter, 'fluttering_ribbon', ' mobile="false"')}${labelLastCanvas('flutter', 2)}${script(sources.pkuNest, 'canvas_nest', ' mobile="false" zIndex="-1" color="0,0,255" opacity="0.7" count="99"')}${labelLastCanvas('nest', 3)}${documentEnd}`
+          `<script>(()=>{const canvas=document.body.querySelector('canvas:last-of-type');if(canvas){canvas.dataset.ambientLayer='${layer}';canvas.style.zIndex='${zIndex}'}})()${closeScript}`
+        const relay = `<script>(()=>{let pageY=0;try{Object.defineProperty(window,'pageYOffset',{configurable:true,get:()=>pageY})}catch{}window.addEventListener('message',event=>{const data=event.data;if(event.source!==parent||!data)return;if(data.type==='susurrium:ambient-pointer'&&Number.isFinite(data.x)&&Number.isFinite(data.y)){window.dispatchEvent(new MouseEvent('mousemove',{clientX:data.x,clientY:data.y}))}if(data.type==='susurrium:ambient-pointer-out'){window.dispatchEvent(new MouseEvent('mouseout'))}if(data.type==='susurrium:ambient-scroll'&&Number.isFinite(data.y)){pageY=Math.max(0,data.y);window.dispatchEvent(new Event('scroll'))}})})()${closeScript}`
+        return `${documentStart}${relay}${script(sources.ambientRibbon, 'ribbon', ' mobile="false" zIndex="-1" alpha="0.6" size="150" data-click="false"')}${labelLastCanvas('ribbon', 1)}${script(sources.ambientFlutter, 'fluttering_ribbon', ' mobile="false"')}${labelLastCanvas('flutter', 2)}${script(sources.ambientNetwork, 'canvas_nest', ' mobile="false" zIndex="-1" color="0,0,255" opacity="0.7" count="99"')}${labelLastCanvas('nest', 3)}${documentEnd}`
       }
 
       if (kind === 'petals') {
-        // `GEORGE-SAKURA` creates its original fifty sprite petals itself.
-        return `${documentStart}${script(sources.georgeSakura)}${documentEnd}`
+        // The locked petal runtime creates its original fifty sprite petals.
+        return `${documentStart}${script(sources.petalRuntime)}${documentEnd}`
       }
 
-      // `GEORGE-CLICK` stays byte-for-byte intact. The parent owns the
+      // The locked click-burst runtime stays byte-for-byte intact. The parent owns the
       // permitted-target filter, then relays an accepted coordinate as a
       // synthetic iframe mousedown so the original 20 particles + ring draw.
-      const relay = `<script>window.addEventListener('message',event=>{const data=event.data;if(event.source!==parent||!data||data.type!=='susurrium:george-fireworks'||!Number.isFinite(data.x)||!Number.isFinite(data.y))return;document.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,clientX:data.x,clientY:data.y,button:0}))})${closeScript}`
-      return `${documentStart}<canvas class="fireworks" aria-hidden="true"></canvas><style>canvas.fireworks{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}</style>${script(sources.georgeTinycolor)}${script(sources.georgeAnime)}${script(sources.georgeFireworks)}${relay}${documentEnd}`
+      const relay = `<script>window.addEventListener('message',event=>{const data=event.data;if(event.source!==parent||!data||data.type!=='susurrium:click-burst'||!Number.isFinite(data.x)||!Number.isFinite(data.y))return;document.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,clientX:data.x,clientY:data.y,button:0}))})${closeScript}`
+      return `${documentStart}<canvas class="fireworks" aria-hidden="true"></canvas><style>canvas.fireworks{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}</style>${script(sources.colorRuntime)}${script(sources.clickBurstAnime)}${script(sources.clickBurstRuntime)}${relay}${documentEnd}`
     }
   }
 
@@ -478,7 +476,7 @@ const serializedSources = JSON.stringify({
     pointer-events: none;
   }
 
-  visual-effects-host > .visual-effects-frame[data-effect-frame='pku'] {
+  visual-effects-host > .visual-effects-frame[data-effect-frame='ambient-canvas'] {
     z-index: var(--z-page-effects);
   }
 

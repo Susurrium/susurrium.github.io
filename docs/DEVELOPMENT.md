@@ -62,23 +62,29 @@ bun run verify:phase5
 bun run verify:phase6
 ```
 
-`verify:phase3` 覆盖根路径可重复入口、本地入口媒体哈希、Typed.js 固定版本、全局音乐单例/详情紧凑模式、无远程音乐/图片缩放/二维码运行时、原生 View Transition rejection guard，以及 ClientRouter 生命周期清理。
+`verify:phase3` 覆盖根路径可重复入口、本地入口媒体哈希、Typed.js 固定版本、全局音乐单例/详情紧凑模式、已登记音乐运行时/图片缩放/二维码运行时、原生 View Transition rejection guard，以及 ClientRouter 生命周期清理。音乐播放器继续使用当前公共网易云 Meting 配置；这不是文章媒体的通用远程白名单。
 
 `test:phase4` 覆盖页面 profile 的纯策略边界；`verify:phase4` 复核 PKU/George 原始 vendor 文件和构建产物的 SHA-256、原始 PKU 参数、宿主的销毁钩子、路由映射，以及生产产物中不存在效果脚本热链。
 
 `test:phase5` 覆盖 HanLife 公开贡献 HTML 的解析、53 周中性骨架，以及 SkyWT 复用的地理计算；`verify:phase5` 复核 SkyWT/TNXG/MapLibre 的本地资源哈希、MapLibre 惰性加载与 ClientRouter 清理契约、热力图的无 Token 回退、About-only 小人和生产产物中无 TNXG 热链。
 
-`verify:phase6` 是开发期的发布就绪审计：它验证 noindex、canonical、RSS、sitemap、静态资源、语言声明、图片替代文本决策、外部资源边界、每个每日音乐条目的同源音频契约和手动部署保护。为了允许当前测试内容继续用于开发，占位身份、上游测试媒体、未配置的本地音乐和未替换的个人资料会显示为警告，而不会让 CI 失败。
+`verify:phase6` 是开发期的发布就绪审计：它验证 noindex、canonical、RSS、sitemap、静态资源、语言声明、图片替代文本决策、已登记的外部资源边界、公共网易云音乐配置和手动部署保护。占位扫描和外部资源扫描针对的是最终生成 HTML 中用户实际能看到或加载的 DOM/属性，不把源码注释、CSS 类名或只存在于脚本字符串中的测试字样误判为页面内容。为了允许当前测试内容继续用于开发，测试文章、上游身份和未替换的文章媒体会显示为警告，而不会让普通 CI 失败；未知远程资源的警告同时给出有限数量的精确 URL 和页面，便于逐项决定。
 
-最终资料替换完成后，必须额外执行严格门禁：
+`bun run ci` 还会运行 `bun run test:all`，覆盖 `test/` 下的全部测试文件，而不只运行按阶段命名的测试。
+
+需要逐条审阅全部未知远程资源时，可在构建后运行 `node scripts/verify-phase6.mjs --external-details`；它只读取 `dist`，在不改变门禁结论的前提下输出完整 URL/页面清单。不要把该清单中的整域名直接加入白名单。
+
+候选或最终资料替换完成后，必须在新构建之后额外执行严格门禁：
 
 ```powershell
-bun run release:gate
+bun run release:gate --strict
 ```
 
-严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
+严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。当前 release-prep 候选已经移除旧上游内容并覆盖空集合路径，但素材权利、个人资料和公开位置仍需人工确认。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
 
-浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape 和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre UMD 加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
+已确认的运行时例外只包括当前保留的功能：CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像。它们按精确服务/路径登记；文章正文中的其他远程图片、音频、视频、iframe、脚本或样式不会因为“同一域名”而自动放行。
+
+浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape、空 Blog 归档和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre UMD 加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、Blog/Trace 公共 Opening Media 向下淡出并向上恢复、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。脚本会从当前构建动态发现详情路由，因此不会把某一篇测试文章写死。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
 
 ```powershell
 bun run preview -- --host 127.0.0.1 --port 4321
@@ -92,7 +98,7 @@ bun run verify:browser:lifecycle
 bun run capture:visual-baseline
 ```
 
-该命令会采集 `/`（上游）对 `/home`（当前）以及 Blog、标签、归档、搜索、About、Links 的桌面/移动、明/暗主题顶部和底部截图，并写入 `artifacts/visual-baseline/`。复核范围和已登记差异见 [VISUAL_BASELINE.md](./VISUAL_BASELINE.md)。
+该命令会采集 `/`（上游）对 `/home`（当前）以及 Blog、标签、归档、搜索、About、Links 的桌面/移动、明/暗主题顶部和底部截图，并写入 `artifacts/visual-baseline/`。详情页不再写死测试 slug；如需详情证据，设置 `VISUAL_CURRENT_BLOG_DETAIL_PATH`（及可选的 upstream/GitHub 详情变量）。复核范围和已登记差异见 [VISUAL_BASELINE.md](./VISUAL_BASELINE.md)。
 
 资源预算：
 
@@ -102,13 +108,32 @@ bun run check:assets
 
 上游遗留的大图只可通过 `scripts/asset-budget-legacy.json` 的精确路径、字节数和 SHA-256 临时豁免。不要为新资源增加宽泛例外；替换上游占位图时同时删除对应条目。
 
+友链健康检查：
+
+```powershell
+# dry-run：只检查，不改动友链文件
+bun run links:check:dry
+
+# 检查并按状态更新 cf-links / inactive-links
+bun run links:check
+```
+
+检查器只探测博客主链接，不探测头像 CDN。临时故障连续失败达到默认阈值（2 次）才会移动；
+证书错误、HTTP 404/410 和降级到 HTTP 的重定向会立即移动。恢复后会按稳定顺序移回；
+状态计数保存在 `scripts/link-health.json`。发布候选只运行 dry-run；不会启用定时
+workflow，也不会让 Pages 部署在工作树中写回链接状态。若要使用写模式，必须人工审阅
+diff 后单独提交。
+
 CI 等价命令：
 
 ```powershell
 bun run ci
 ```
 
-构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以 Node 直接运行 `node_modules/astro/bin/astro.mjs build`（它会刷新内容/类型），再运行 `astro check --noSync`；CI 内联同一组命令而不再嵌套 `bun run build`。这避免 Windows 下嵌套 Bun launcher 与 Astro 6 偶发停在 `Building static entrypoints`。Linux CI 仍执行同一组构建与诊断门槛。
+构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以
+`bun run astro -- build` 刷新内容/类型，再运行 `bun run astro -- check --noSync`；CI 内联同一组命令而不再嵌套
+`bun run build`。这避免 Windows 下直接 Node Astro 入口或嵌套 Bun launcher 偶发停在
+`Building static entrypoints`。Linux CI 仍执行同一组构建与诊断门槛。
 
 ## 3. 分支
 

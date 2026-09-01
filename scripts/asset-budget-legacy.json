@@ -1,25 +1,4 @@
 {
   "schemaVersion": 1,
-  "entries": {
-    "src/assets/projects/alex-tyson-2BAXJ7ha74s-unsplash.jpg": {
-      "bytes": 2493143,
-      "sha256": "0d6dc289efbe76b7193601900b798e3347850163c358f016f1b84dfbaf83fd69",
-      "reason": "Frozen Arthals upstream test asset; replace before release."
-    },
-    "src/assets/projects/angelica-teran-Bk9hpaXHK4o-unsplash.jpg": {
-      "bytes": 3882318,
-      "sha256": "b62fe4ead9c36a22e4306a7a277bbb12e2006f978df95f9e212216560229ea2f",
-      "reason": "Frozen Arthals upstream test asset; replace before release."
-    },
-    "src/assets/projects/kseniia-zapiatkina-yATU3rg8tNI-unsplash.jpg": {
-      "bytes": 2292942,
-      "sha256": "ac3afb54e452b9046cca360e7c0740b604c8cf7c03015d5c8a9a71e39f9b548e",
-      "reason": "Frozen Arthals upstream test asset; replace before release."
-    },
-    "src/assets/projects/wen-qiao-g_w8I64FiO0-unsplash.jpg": {
-      "bytes": 2342286,
-      "sha256": "ae0727201df577b4ddfbbcf4368c988c2904bf11c7337d75378e1285c79954ba",
-      "reason": "Frozen Arthals upstream test asset; replace before release."
-    }
-  }
+  "entries": {}
 }

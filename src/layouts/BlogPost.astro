@@ -1,81 +1,39 @@
 ---
+/** Compatibility route layout; the actual composition lives in ContentReadingPage. */
 import type { MarkdownHeading } from 'astro'
-import type { CollectionEntry } from 'astro:content'
+import type {
+  ReadingPageConfig,
+  ReadingPageConfigOverride,
+  RenderablePageItem
+} from '@/lib/content-layer'
 
-// Plugin styles
-import 'katex/dist/katex.min.css'
-
-import { ArticleBottom, Hero, TOC } from 'astro-pure/components/pages'
-import PageLayout from '@/layouts/ContentLayout.astro'
-import ArticleImageZoom from '@/components/arthals/ArticleImageZoom.astro'
-import Copyright from '@/components/arthals/Copyright.astro'
-import Signature from '@/components/arthals/Signature.astro'
-import { Comment, PageInfo } from '@/components/waline'
-import { integ } from '@/site-config'
+import ContentReadingPage from './ContentReadingPage.astro'
 
 interface Props {
-  post: CollectionEntry<'blog'>
-  posts: CollectionEntry<'blog'>[]
+  item: Extract<RenderablePageItem, { record: { kind: 'blog' } }>
+  relatedItems: readonly RenderablePageItem[]
   headings: MarkdownHeading[]
+  /** Optional one-page composition override; baseline remains resolved centrally. */
+  readingConfig?: ReadingPageConfig
+  readingOverride?: ReadingPageConfigOverride
   remarkPluginFrontmatter: Record<string, unknown>
 }
 
-const {
-  post: { id, data },
-  posts,
-  headings,
-  remarkPluginFrontmatter
-} = Astro.props
-
-const {
-  description,
-  heroImage,
-  publishDate,
-  title,
-  updatedDate,
-  draft: isDraft,
-  comment: enableComment
-} = data
-
-const socialImage = heroImage
-  ? typeof heroImage.src === 'string'
-    ? heroImage.src
-    : heroImage.src.src
-  : '/images/social-card.png'
-const articleDate = updatedDate?.toISOString() ?? publishDate.toISOString()
-const primaryColor = data.heroImage?.color ?? 'hsl(var(--primary) / var(--un-text-opacity))'
-const commentsEnabled = integ.waline.enable
+const { headings, item, readingConfig, readingOverride, relatedItems, remarkPluginFrontmatter } =
+  Astro.props as Props
 ---
 
-<PageLayout
-  meta={{ articleDate, description, ogImage: socialImage, title }}
-  highlightColor={primaryColor}
-  back='/blog'
-  pagefindBody
-  contentType='Blog'
-  effectProfile='reading'
-  musicMode='compact'
+<ContentReadingPage
+  {headings}
+  {item}
+  pageKind='blog-detail'
+  {readingConfig}
+  {readingOverride}
+  {relatedItems}
+  {remarkPluginFrontmatter}
 >
-  {!!headings.length && <TOC {headings} slot='sidebar' />}
-
-  <Hero {data} {remarkPluginFrontmatter} slot='header'>
-    <Fragment slot='description'>
-      {!isDraft && commentsEnabled && enableComment && <PageInfo comment class='mt-1' />}
-    </Fragment>
-  </Hero>
-
   <slot />
-
-  <Signature />
-  {integ.mediumZoom.enable && <ArticleImageZoom selector={integ.mediumZoom.selector} />}
-  <Fragment slot='bottom'>
-    {/* Copyright */}
-    <Copyright {data} />
-    {/* Article recommend */}
-    <ArticleBottom collections={posts} {id} class='mt-3 sm:mt-6' />
-    {/* Comment */}
-    {!isDraft && commentsEnabled && enableComment && <Comment class='mt-3 sm:mt-6' />}
+  <Fragment slot='bottom-sidebar'>
+    <slot name='bottom-sidebar' />
   </Fragment>
-
-  <slot name='bottom-sidebar' slot='bottom-sidebar' />
-</PageLayout>
+</ContentReadingPage>

@@ -1,28 +1,54 @@
 ---
-import { render, type CollectionEntry } from 'astro:content'
+import { render } from 'astro:content'
+import {
+  buildDetailPageData,
+  getPageItems,
+  hydratePageItem,
+  hydratePageItems,
+  loadContentCatalog,
+  sortContentRecords,
+  type PageData
+} from '@/lib/content-layer'
 
-import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
 import PostLayout from '@/layouts/BlogPost.astro'
 
 export const prerender = true
 
 export async function getStaticPaths() {
-  const posts = sortMDByDate(await getBlogCollection())
-  return posts.map((post) => ({
-    params: { id: post.id },
-    props: { post, posts }
+  const contentCatalog = await loadContentCatalog()
+  const records = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
+
+  return records.map((record) => ({
+    params: { id: record.id },
+    props: {
+      pageData: buildDetailPageData('blog-detail', `/blog/${record.id}`, record, records, {
+        primaryMeaning: '当前 Blog 文章',
+        relatedGroupKey: 'posts',
+        relatedMeaning: '按 Blog 编辑日期排列的推荐条目',
+        relatedSectionMeaning: 'Blog 详情页底部推荐内容'
+      })
+    }
   }))
 }
 
 type Props = {
-  post: CollectionEntry<'blog'>
-  posts: CollectionEntry<'blog'>[]
+  pageData: PageData<'blog-detail'>
 }
 
-const { post, posts } = Astro.props
+const { pageData } = Astro.props as Props
+const postItem = getPageItems(pageData, 'article', 'primary')[0]
+if (!postItem) {
+  throw new Error('Blog detail page data is missing its Blog primary item')
+}
+const contentCatalog = await loadContentCatalog()
+const renderItem = hydratePageItem(postItem, contentCatalog)
+if (renderItem.record.kind !== 'blog') throw new Error('Blog detail page resolved a non-Blog item')
+const relatedItems = hydratePageItems(getPageItems(pageData, 'related', 'posts'), contentCatalog)
+const blogItem = renderItem as Extract<typeof renderItem, { record: { kind: 'blog' } }>
+const post = blogItem.source
 const { Content, headings, remarkPluginFrontmatter } = await render(post)
 ---
 
-<PostLayout {post} {posts} {headings} {remarkPluginFrontmatter}>
+<PostLayout {relatedItems} {headings} {remarkPluginFrontmatter} item={blogItem}>
   <Content />
 </PostLayout>

@@ -1,0 +1,39 @@
+---
+/**
+ * Generic fallback for the recommendation profile.
+ *
+ * Blog keeps astro-pure's mature ArticleBottom renderer in the baseline. If a
+ * build-time policy selects recommendations for Trace or Saying, those
+ * records still have a real shared rendering path instead of silently
+ * disappearing because ArticleBottom only accepts Blog collection entries.
+ */
+import type { RenderablePageItem } from '@/lib/content-layer/types'
+
+import ContentCard from '@/components/cards/ContentCard.astro'
+
+interface Props {
+  currentKey: string
+  items: readonly RenderablePageItem[]
+}
+
+const { currentKey, items } = Astro.props as Props
+const candidates = items.filter((item) => item.contentKey !== currentKey)
+---
+
+{
+  candidates.length > 0 && (
+    <section
+      class='reading-recommendations mt-3 sm:mt-6'
+      aria-labelledby='reading-recommendations-heading'
+    >
+      <h2 id='reading-recommendations-heading' class='mb-3 text-lg font-medium'>
+        Related
+      </h2>
+      <ul class='flex flex-col gap-y-3 text-start'>
+        {candidates.map((item) => (
+          <ContentCard item={item} />
+        ))}
+      </ul>
+    </section>
+  )
+}

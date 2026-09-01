@@ -1,6 +1,6 @@
 .residence-card {
   /* Historical geometry is retained; these variables are the only necessary
-     translation from the old project's tokens to Arthals/Pure tokens. */
+     translation from the historical map tokens to the current site theme. */
   --residence-accent: color-mix(in srgb, hsl(var(--primary)) 78%, #b75d72);
   container-type: inline-size;
   display: grid;
@@ -198,7 +198,8 @@
 }
 
 .map-label,
-.map-actions {
+.map-actions,
+.map-attribution {
   position: absolute;
   z-index: 18;
 }
@@ -219,9 +220,36 @@
   border: 1px solid rgb(255 255 255 / 42%);
   border-radius: 0.5rem;
   background: rgb(255 255 255 / 52%);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: clamp(0.86rem, 1.25vw, 1rem);
+  font-weight: 650;
   backdrop-filter: blur(16px);
+}
+
+.map-attribution {
+  right: 3.2rem;
+  bottom: 0.72rem;
+  display: inline-flex;
+  max-width: calc(100% - 8rem);
+  align-items: center;
+  gap: 0.2rem;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 0.3rem;
+  padding: 0.12rem 0.28rem;
+  background: rgb(255 255 255 / 22%);
+  color: rgb(21 32 45 / 62%);
+  font-size: 0.56rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(4px);
+}
+
+.map-attribution a {
+  overflow: hidden;
+  color: inherit;
+  text-overflow: ellipsis;
+  text-underline-offset: 0.16em;
 }
 
 .map-actions {
@@ -266,64 +294,7 @@
   background: rgb(255 255 255 / 88%);
 }
 
-.residence-card__body {
-  display: grid;
-  gap: 0.9rem;
-  padding: clamp(1.1rem, 3cqw, 1.8rem);
-}
-
-.residence-card__place,
-.place-title,
-.residence-card__meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.8rem;
-}
-
-.place-kicker {
-  color: hsl(var(--muted-foreground));
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.place-title {
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.place-heading {
-  margin: 0;
-  font-size: clamp(1.2rem, 3.6cqw, 1.7rem);
-}
-
-.place-title > span {
-  color: hsl(var(--muted-foreground));
-  font-size: 0.84rem;
-}
-
-.residence-card__caption {
-  max-width: 42rem;
-  margin: 0;
-  color: hsl(var(--muted-foreground));
-  font-size: 0.88rem;
-  line-height: 1.7;
-}
-
-.residence-card__meta {
-  align-items: center;
-  color: hsl(var(--muted-foreground));
-  font-size: 0.76rem;
-}
-
-.timezone {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.residence-card__meta a {
+.globe-dialog__attribution a {
   color: inherit;
   text-underline-offset: 0.2em;
 }
@@ -490,7 +461,15 @@ html.dark .globe-dialog__map::after {
   line-height: 1;
 }
 
-.globe-dialog__footer > span {
+.globe-dialog__footer-info {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.globe-dialog__footer-info > [data-globe-status] {
   max-width: min(70vw, 30rem);
   padding: 0.5rem 0.75rem;
   border-radius: 0.65rem;
@@ -498,6 +477,15 @@ html.dark .globe-dialog__map::after {
   color: #34465b;
   font-size: 0.78rem;
   backdrop-filter: blur(9px);
+}
+
+.globe-dialog__attribution {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgb(52 70 91 / 72%);
+  font-size: 0.64rem;
+  line-height: 1.35;
 }
 
 .globe-dialog__locate {
@@ -680,24 +668,12 @@ html.dark .globe-dialog__map::after {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .residence-scene:not([data-theme='light']) .map-label,
-  .residence-scene:not([data-theme='light']) .map-attribution {
-    color: rgb(244 247 250 / 76%);
-    text-shadow: 0 1px 0 rgb(10 19 30 / 60%);
-  }
-
-  .residence-flight__image--cloud {
-    opacity: 0.3;
-  }
-
-  .map-action,
-  .globe-dialog__close,
-  .globe-dialog__locate {
-    border-color: rgb(255 255 255 / 18%);
-    background: rgb(20 31 45 / 65%);
-    color: #f1f5f8;
-  }
+html.dark .map-action,
+html.dark .globe-dialog__close,
+html.dark .globe-dialog__locate {
+  border-color: rgb(255 255 255 / 18%);
+  background: rgb(20 31 45 / 65%);
+  color: #f1f5f8;
 }
 
 :root[data-theme='dark'] .residence-flight__image--cloud,
@@ -707,8 +683,10 @@ html.dark .residence-flight__image--cloud {
 
 :root[data-theme='dark'] .map-label,
 :root[data-theme='dark'] .map-attribution,
+:root[data-theme='dark'] .globe-dialog__attribution,
 html.dark .map-label,
-html.dark .map-attribution {
+html.dark .map-attribution,
+html.dark .globe-dialog__attribution {
   color: rgb(244 247 250 / 76%);
   text-shadow: 0 1px 0 rgb(10 19 30 / 60%);
 }
@@ -717,6 +695,13 @@ html.dark .map-attribution {
   .map-label--city {
     bottom: 0.75rem;
     left: 0.75rem;
+  }
+
+  .map-attribution {
+    right: 3rem;
+    bottom: 0.72rem;
+    max-width: calc(100% - 4.5rem);
+    font-size: 0.52rem;
   }
 
   .map-actions {

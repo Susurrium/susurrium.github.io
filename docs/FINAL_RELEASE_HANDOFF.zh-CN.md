@@ -1,8 +1,8 @@
 # 最终内容替换与 GitHub Pages 发布交接
 
-> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：所有页面、内容模型、组件和开发期审计已完成；这里只处理由站长亲自决定或提供的最终资料。
+> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：`codex/release-prep` 候选已完成本地整理，尚未上线；这里只处理由站长亲自决定或提供的最终资料。
 
-这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；替换资料时只改下表指定的入口，再通过既有门禁验证。
+这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前候选的 Blog/Trace 集合为空，旧内容已在仓库外快照中保留。后续替换资料时只改下表指定的入口，再通过既有门禁验证。
 
 ## 1. 必须由站长提供或确认的资料
 
@@ -10,13 +10,15 @@
 | --------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 站点身份  | 站名、作者名、简介、语言、Logo、favicon、社交链接、备案/页脚和友链申请资料 | `src/site.config.ts`                                                                                                |
 | 入口页    | 视频、poster、Typed 文案                                                   | `public/media/` 与 `src/data/entrance.ts`                                                                           |
-| Home 图库 | 六张 Hero 图、Saying 装饰图、无图 Trace 的回退图                           | `public/images/largeskull/` 与 `src/data/home-media.ts`                                                             |
-| 音乐      | 每日曲目名称、作者、说明、同源音频；可选本地封面                           | `public/media/music/` 与 `src/data/music.ts`                                                                        |
+| Home 图库 | 六张 Hero 图、Saying 装饰图、无图 Trace 的回退图                           | `public/images/home-media/` 与 `src/data/home-media.ts`（旧锁定图留在 `public/images/largeskull/` 供回归/回滚）       |
+| 音乐      | 公共网易云歌单、APlayer/MetingJS 播放器参数与临时歌单 ID                    | `src/data/music.ts` 与 `src/components/MusicPlayer.astro`                                                          |
 | 居住地    | 对外可公开的地点粒度、文案、坐标、头像和回退地图                           | `src/data/residence.ts` 与 `public/media/residence/`                                                                |
 | 正式内容  | Blog、Trace、Saying 的正文和元数据                                         | `src/content/blog/`、`src/content/traces/`、`src/content/sayings/`                                                  |
 | 静态页面  | About、Projects、Links 与本地友链快照                                      | `src/pages/about/index.astro`、`src/pages/projects/index.astro`、`src/pages/links/index.astro`、`public/links.json` |
 
-`src/site.config.ts` 仍有 Arthals 测试身份；这是当前严格门禁的故意阻断项。不要只改首页标题：配置中的 `theme.title`、`author`、`description`、`logo`、`footer`、`integ.links.applyTip` 需要一起换成最终资料。
+`src/site.config.ts` 已切换到当前站点身份（`Susurrium`）。后续若要更换最终身份资料，不要只改首页标题：配置中的 `theme.title`、`author`、`description`、`logo`、`footer`、`integ.links.applyTip` 需要一起更新，并重新运行构建与严格门禁。
+
+Home 图库已按当前候选清单完成一次本地化：源目录为 `E:\UserData\Desktop\blog_image`，54 张图片均已转为 `public/images/home-media/*.webp` 并登记在 `src/data/home-media.ts`。当前 Hero 顺序为 `1381117 → 43935854 → 949729 → 725406 → 986446 → 556375`；Saying 使用 34 张、Trace 无图回退使用 20 张。素材权利和公开范围仍须在上线前由站长确认。
 
 ## 2. 内容与卡片规则
 
@@ -24,25 +26,27 @@
 
 | 内容   | 目录                   | 必填元数据                            | 展示规则                                                                                                                                    |
 | ------ | ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Blog   | `src/content/blog/`    | `title`、`description`、`publishDate` | 默认 Arthals 无图文字卡；只有需要时再加 `heroImage`。只进入 RSS、Blog 标签与 Blog 时间线。                                                  |
-| Trace  | `src/content/traces/`  | `title`、`publishDate`                | 默认 LargeSkull 内容题图卡；添加 `cover` 时显示内容相关图片，省略时按稳定 hash 使用预先上传的回退图。设置 `cover` 时必须同时写 `coverAlt`。 |
-| Saying | `src/content/sayings/` | `text`、`publishDate`                 | 不进主导航；Home 随机展示，About 提供完整归档入口。卡片只使用 LargeSkull 装饰图，不把图片误当作短句内容题图。                               |
+| Blog   | `src/content/blog/`    | `title`、`description`、`publishDate` | 默认 `text` 无图文字卡；只有需要时再加 `heroImage`。只进入 RSS、Blog 标签与 Blog 时间线。                                                  |
+| Trace  | `src/content/traces/`  | `title`、`publishDate`                | 默认 Media 内容题图卡；添加 `cover` 时显示内容相关图片，省略时按稳定 hash 使用预先上传的回退图。设置 `cover` 时必须同时写 `coverAlt`。 |
+| Saying | `src/content/sayings/` | `text`                              | 可选 `originalText`、`author`、`source`；不记录日期、不设置 `sourceUrl`。不进主导航；Home 随机展示，About 提供完整归档入口。卡片只使用 Media 装饰图，不把图片误当作短句内容题图。 |
 
 每个 collection 的完整 schema 都在 `src/content.config.ts`。保留 `draft: true` 可在本地预览而不生成最终路由；发布前确认不再把需要公开的内容留在草稿状态。
 
-题图、正文图片、头像、音频和封面都应放入仓库内的 `public/` 或由 Astro 静态资源管线处理。不要在最终内容中保留 `https://` 图片、视频、音频、脚本或样式热链：严格门禁会拒绝这些运行时资源。普通的正文超链接和已确认的 CARTO 地图样式不受这条限制。
+题图、正文图片、头像、音频和封面默认应放入仓库内的 `public/` 或由 Astro 静态资源管线处理。最终内容中的远程正文图片、音频、视频、iframe、脚本和样式必须逐项检查：严格门禁会列出精确 URL 及出现页面，不能用“整域名白名单”一并放行。当前已确认并保留的运行时例外是 CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像；普通正文超链接不属于媒体资源扫描，已确认的 CARTO 地图样式也不受文章媒体规则限制。
+
+Links 的 Friend Circle 已关闭：页面不输出标题、空占位区、状态文案，也不会请求远程接口；相关历史代码可以保留，但不能重新挂载到页面。友链头像仍按现有 `public/links.json` 方案处理，不要求本次改成统一本地头像。
 
 ## 3. 入口、音乐和居住地的替换约束
 
 ### 入口
 
-`src/data/entrance.ts` 的所有媒体路径已按桌面/移动、WebM/MP4 与 poster 分开。替换时保持这些同源路径可访问；根路径 `/` 每次直达都会重新播放，并通过手动进入跳转到 `/home`，不要把 LargeSkull Hero 放回根入口。
+`src/data/entrance.ts` 的所有媒体路径已按桌面/移动、WebM/MP4 与 poster 分开。替换时保持这些同源路径可访问；根路径 `/` 每次直达都会重新播放，并通过手动进入跳转到 `/home`，不要把 Media Hero 放回根入口。
 
 ### 音乐
 
-把音频与可选封面放到 `public/media/music/`，然后在 `src/data/music.ts` 的每一个 `dailyMusic` 项目上填写同源绝对路径，例如 `/media/music/quiet-morning.ogg`。不要使用远程播放器、Meting、网易云或 CDN 音频。
+当前音乐暂使用参考站公共网易云歌单 `12812783625`。如需切换到第二个参考站，修改 `src/data/music.ts` 中的 `id` 和 `playlistUrl` 为 `8152976493`；如公共接口失效，再统一替换同文件中的 `api` 模板。发布前应确认播放器脚本、公共接口和歌单内容仍可访问，并评估版权与第三方服务稳定性。
 
-每日选择会轮换所有条目，因此每一首而不是只第一首都必须有可播放的 `audioSrc`。严格发布门禁会检查：没有占位曲目、曲目数与音频路径数一致、所有路径都是 `public/` 内的真实文件。封面是可选项。
+播放器会从公共歌单动态取得曲目、音频、封面和歌词，不需要在仓库中维护 `audioSrc`。严格发布门禁会检查歌单服务配置与已登记的 APlayer/MetingJS 资源；公共服务失效时，应替换 `src/data/music.ts` 中的 API 模板或歌单 ID。
 
 ### 居住地
 
@@ -50,10 +54,10 @@
 
 ## 4. 逐项替换顺序
 
-1. 先在新分支替换站点身份、静态页面和测试内容；删除不需要保留的上游文章、链接、作者资料和域名引用。Links 的 Friend Circle 要么换成已审核的本地快照，要么连同标题一起移除，不能保留“准备中”状态。
-2. 本地化所有最终媒体，并同时替换 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使暂时使用同一批图，也要保持独立，避免以后一次替换误伤另一种卡片策略。
-3. 填写居住地和所有每日音乐；确认音频不自动播放，只在用户点击后播放。
-4. 运行下方的完整验证。严格门禁的零失败不是可选项；不要把最终资料写入白名单，也不要删除检查来“通过”。
+1. 在 `codex/release-prep` 或其后继分支替换站点身份和静态页面；当前候选已经移除确认不公开的旧 Blog/Trace/Saying 与旧聚合路由，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料和二维码在上线前仍需逐项复核。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
+2. 本次图库已完成本地化；若后续继续替换，请在 `public/images/home-media/` 生成同源 WebP，并同步更新 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使复用同一批图，也要保持独立，避免一次替换误伤另一种卡片策略。Media 的装饰斜边参考由 `src/data/home-media.ts` 的 `cardCutSideByFilename` 按文件名固定，不要恢复按索引奇偶交替。图片源内容的保留侧不能再从斜边方向推断；请使用本地 `/tools/card-crop-review` 统一裁剪工作台逐张拖动/缩放与正式卡片同步的两个斜边框，确认后导出 JSON，并用 `scripts/apply-card-crops.mjs` 应用到 `src/data/card-crop-selections.generated.ts`。未确认的图继续使用安全回退。
+3. 填写居住地并确认公共音乐配置；确认音频不自动播放，只在用户点击后播放。
+4. 运行下方的完整验证。候选验证必须在干净 worktree 中执行 `bun run ci`、`bun run links:check:dry` 和 `bun run release:gate --strict`；不要把最终资料写入白名单，也不要删除检查来“通过”。
 5. 人工浏览 `/`、`/home`、Blog/Trace/Saying 详情、`/about`、`/links`、移动端和暗色主题，确认自己的图、文案、坐标和链接均符合预期。
 
 ## 5. 最终验证与发布
@@ -66,7 +70,7 @@ bun run capture:visual-baseline
 bun run release:gate
 ```
 
-`capture:visual-baseline` 生成的截图位于被 Git 忽略的 `artifacts/visual-baseline/`，用于人工确认新增资料没有破坏 Arthals 主体视觉或已登记的目标差异。`release:gate` 必须以 `0 failure(s)` 结束。
+`capture:visual-baseline` 生成的截图位于被 Git 忽略的 `artifacts/visual-baseline/`，用于人工确认新增资料没有破坏已锁定的主体视觉或已登记的目标差异。候选的 `release:gate --strict` 必须以 `0 failure(s)` 结束；素材权利、个人资料和内容授权仍由人工清单决定，不由脚本替代。
 
 只有这三项完成且站长明确授权上线后，才执行发布动作：
 

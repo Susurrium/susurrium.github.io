@@ -1,9 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
+import {
+  arthalsMarkerText,
+  stripAllowedArthalsFriend
+} from './release-marker-policy.mjs'
 
 const root = resolve(process.cwd())
 const dist = resolve(root, 'dist')
 const strict = process.argv.includes('--strict')
+const showExternalDetails = process.argv.includes('--external-details')
 const failures = []
 const warnings = []
 
@@ -66,22 +71,46 @@ function absoluteResourceExists(htmlPath, url) {
   return existsSync(file) || existsSync(resolve(file, 'index.html'))
 }
 
-/**
- * Music sources are assigned by the persistent client player rather than
- * emitted as static <audio src> markup. Check the declared catalogue against
- * public/ directly so the final release gate can still prove that every daily
- * selection has a real, same-origin file to play.
- */
-function localPublicAssetExists(url) {
-  const cleanUrl = url.split('#')[0]?.split('?')[0] ?? ''
-  if (!cleanUrl.startsWith('/') || cleanUrl.startsWith('//')) return false
+const allowedMusicRuntimePaths = new Set([
+  '/anzhiyu-theme-static@1.0.0/aplayer/APlayer.min.css',
+  '/anzhiyu-blog-static@1.0.1/js/APlayer.min.js',
+  '/hexo-anzhiyu-music@1.0.1/assets/js/Meting2.min.js'
+])
 
-  const publicDirectory = resolve(root, 'public')
-  const asset = resolve(publicDirectory, cleanUrl.replace(/^\/+/, ''))
-  const assetRelativePath = relative(publicDirectory, asset)
-  return (
-    !assetRelativePath.startsWith('..') && !assetRelativePath.includes(':') && existsSync(asset)
-  )
+const allowedUmamiRuntimePaths = new Set(['/script.js'])
+const allowedCodeTimeRuntimePaths = new Set(['/endpoint'])
+
+function isAllowedMusicRuntime(url) {
+  try {
+    const parsed = new URL(url)
+    return parsed.hostname === 'cdn.cbd.int' && allowedMusicRuntimePaths.has(parsed.pathname)
+  } catch {
+    return false
+  }
+}
+
+function isAllowedUmamiRuntime(url) {
+  try {
+    const parsed = new URL(url)
+    return parsed.hostname === 'cloud.umami.is' && allowedUmamiRuntimePaths.has(parsed.pathname)
+  } catch {
+    return false
+  }
+}
+
+function isAllowedCodeTimeRuntime(url) {
+  try {
+    const parsed = new URL(url)
+    return (
+      parsed.hostname === 'shields.jannchie.com' && allowedCodeTimeRuntimePaths.has(parsed.pathname)
+    )
+  } catch {
+    return false
+  }
+}
+
+function isAllowedExternalRuntime(url) {
+  return isAllowedMusicRuntime(url) || isAllowedUmamiRuntime(url) || isAllowedCodeTimeRuntime(url)
 }
 
 function firstPaths(paths) {
@@ -100,6 +129,63 @@ function resourceUrls(tag) {
     }
   }
   return [...new Set(urls)]
+}
+
+function decodeHtmlEntities(value) {
+  return value
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#38;|&#x26;/gi, '&')
+}
+
+/**
+ * Release content checks must describe what a visitor (including an assistive
+ * technology user) can receive from the rendered DOM. Do not scan source
+ * comments, CSS class names, or bundled JavaScript for editorial markers.
+ */
+function visibleText(html) {
+  return decodeHtmlEntities(
+    html
+      .replace(/<!--[^]*?-->/g, ' ')
+      .replace(/<(?:script|style|template)\b[^>]*>[^]*?<\/(?:script|style|template)>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function renderedAttributeText(html) {
+  const values = []
+  const tags = html.match(/<(?:a|img|audio|video|source|iframe|link|meta)\b[^>]*>/gi) ?? []
+  for (const tag of tags) {
+    for (const name of ['href', 'src', 'poster', 'alt', 'title', 'aria-label', 'content']) {
+      const value = attribute(tag, name)
+      if (value) values.push(value)
+    }
+  }
+  return decodeHtmlEntities(values.join(' '))
+}
+
+const allowedFriendAvatarUrls = new Set()
+let linksManifest = null
+try {
+  linksManifest = JSON.parse(readFileSync(resolve(root, 'public/links.json'), 'utf8'))
+  for (const group of linksManifest?.friends ?? []) {
+    for (const friend of group?.link_list ?? []) {
+      if (typeof friend?.avatar === 'string') allowedFriendAvatarUrls.add(friend.avatar)
+    }
+  }
+} catch {
+  // The links page has its own required-output check; an unreadable manifest
+  // should not turn the general resource audit into a parser error.
+}
+
+function isAllowedFriendAvatar(url) {
+  const normalized = decodeHtmlEntities(url)
+  return allowedFriendAvatarUrls.has(url) || allowedFriendAvatarUrls.has(normalized)
 }
 
 const requiredOutputs = [
@@ -163,9 +249,8 @@ expect(
 )
 expect(
   rss.includes('<rss') &&
-    rss.includes('https://susurrium.github.io/blog/') &&
     !/<(?:link|guid)[^>]*>https:\/\/susurrium\.github\.io\/traces\//i.test(rss),
-  'RSS remains a Blog-only feed with canonical URLs'
+  'RSS remains a valid Blog-only feed (including the empty-feed case)'
 )
 expect(
   !/(?:src|url)=(['"])(?:undefined|null)\1/i.test(rss),
@@ -180,9 +265,21 @@ const htmlEntries = htmlFiles.map((file) => ({
 }))
 
 const contentDetailPages = htmlEntries.filter(({ path }) =>
-  /^(?:blog|traces|sayings)\/(?!\d+\/)[^/]+\/index\.html$/.test(path)
+  /^(?:blog|traces|sayings)\/[^/]+\/index\.html$/.test(path) &&
+  !path.includes('/tags/')
 )
-const inaccessibleMobileTocs = contentDetailPages.filter(
+// A taxonomy result page has content cards too, but it is not a reading
+// document.  Require the reading-shell marker so pagination/taxonomy output
+// cannot be mistaken for an article and incorrectly fail the TOC audit.
+const readingDetailPages = contentDetailPages.filter(({ text }) =>
+  text.includes('data-pagefind-body')
+)
+// The reading shell intentionally omits the sidebar when an article has no
+// headings. Only pages that actually render a TOC need the mobile trigger
+// contract; treating heading-less pages as failures would reject their valid
+// compact layout.
+const tocDetailPages = readingDetailPages.filter(({ text }) => text.includes('id="sidebar"'))
+const inaccessibleMobileTocs = tocDetailPages.filter(
   ({ text }) =>
     !(
       text.includes('aria-controls="sidebar"') &&
@@ -193,11 +290,18 @@ const inaccessibleMobileTocs = contentDetailPages.filter(
 expect(
   inaccessibleMobileTocs.length === 0,
   inaccessibleMobileTocs.length === 0
-    ? 'detail pages expose an accessible mobile table-of-contents control contract'
-    : `${inaccessibleMobileTocs.length} detail page(s) lack the mobile table-of-contents accessibility contract (${firstPaths(
+    ? `detail pages with headings expose an accessible mobile table-of-contents control contract (${tocDetailPages.length} checked)`
+    : `${inaccessibleMobileTocs.length} detail page(s) with headings lack the mobile table-of-contents accessibility contract (${firstPaths(
         inaccessibleMobileTocs.map(({ path }) => path)
       )})`
 )
+expect(
+  !existsSync(resolve(dist, 'tags')),
+  'legacy aggregate /tags output is absent from the release build'
+)
+for (const path of ['blog/tags/index.html', 'traces/tags/index.html', 'sayings/tags/index.html']) {
+  expect(existsSync(resolve(dist, path)), `${path} scoped taxonomy index is present`)
+}
 expect(
   readFileSync(resolve(root, 'src/layouts/ContentLayout.astro'), 'utf8').includes(
     'prefers-reduced-motion'
@@ -213,7 +317,12 @@ expect(missingLanguage.length === 0, 'every static HTML document declares a docu
 const missingImageAlt = []
 const insecureBlankLinks = []
 const missingLocalResources = []
-const externalRuntimeResources = new Map()
+// Keep a bounded, actionable inventory for resources that still need an
+// individual release decision.  Grouping by tag/host keeps the gate readable;
+// retaining exact URLs and pages makes the warning useful for reviewing
+// article media one item at a time. Normal output shows a bounded sample;
+// `--external-details` prints the complete inventory for an audit pass.
+const externalRenderedResources = new Map()
 
 for (const entry of htmlEntries) {
   for (const tag of entry.text.match(/<img\b[^>]*>/gi) ?? []) {
@@ -239,17 +348,18 @@ for (const entry of htmlEntries) {
         const tagName = tag.match(/^<([a-z]+)/i)?.[1]?.toLowerCase()
         const hostname = new URL(url).hostname
         const sameOrigin = hostname === 'susurrium.github.io'
-        if (!sameOrigin && tagName !== 'link') {
+        const approvedFriendAvatar = tagName === 'img' && isAllowedFriendAvatar(url)
+        if (!sameOrigin && !isAllowedExternalRuntime(url) && !approvedFriendAvatar) {
           const key = `${tagName}:${hostname}`
-          externalRuntimeResources.set(key, (externalRuntimeResources.get(key) ?? 0) + 1)
-        }
-        if (
-          !sameOrigin &&
-          tagName === 'link' &&
-          /\brel\s*=\s*(['"])(?:stylesheet|preload)\1/i.test(tag)
-        ) {
-          const key = `${tagName}:${hostname}`
-          externalRuntimeResources.set(key, (externalRuntimeResources.get(key) ?? 0) + 1)
+          const record = externalRenderedResources.get(key) ?? {
+            count: 0,
+            pages: new Set(),
+            urls: new Set()
+          }
+          record.count += 1
+          record.urls.add(url)
+          record.pages.add(entry.path)
+          externalRenderedResources.set(key, record)
         }
       }
     }
@@ -272,11 +382,18 @@ releaseBlocker(
       ])})`
 )
 releaseBlocker(
-  externalRuntimeResources.size === 0,
-  externalRuntimeResources.size === 0
-    ? 'production HTML has no external script, style or media runtime resource'
-    : `production HTML still loads external runtime resources: ${[...externalRuntimeResources]
-        .map(([key, count]) => `${key} (${count})`)
+  externalRenderedResources.size === 0,
+  externalRenderedResources.size === 0
+    ? 'production HTML has no unapproved external rendered resource'
+    : `production HTML still loads unapproved external rendered resources: ${[
+        ...externalRenderedResources
+      ]
+        .map(([key, { count, pages, urls }]) => {
+          const shownUrls = showExternalDetails ? [...urls] : [...urls].slice(0, 8)
+          const shownPages = showExternalDetails ? [...pages] : [...pages].slice(0, 8)
+          const suffix = showExternalDetails ? '' : ' (use --external-details for all)'
+          return `${key} (${count}; urls: ${shownUrls.join(' | ')}; pages: ${shownPages.join(' | ')}${suffix})`
+        })
         .join(', ')}`
 )
 
@@ -294,19 +411,27 @@ const clientRuntimeEntries = [
     }))
   )
 ]
+const siteConfigSource = readFileSync(resolve(root, 'src/site.config.ts'), 'utf8')
+const walineEnabled = /waline:\s*{[\s\S]*?\benable:\s*true\b/.test(siteConfigSource)
+const walineServer =
+  siteConfigSource.match(/waline:\s*{[\s\S]*?\bserver:\s*['"]([^'"]+)['"]/)?.[1] ?? ''
 const forbiddenClientApis = [
   {
     label: 'GitHub repository-card runtime API',
     pattern: /api\.github\.com\/repos\//i
   },
   {
-    label: 'disabled Waline runtime endpoint',
+    label: 'legacy Waline runtime endpoint',
     pattern: /waline\.arthals\.ink/i
   },
-  {
-    label: 'disabled Waline pageview client runtime',
-    pattern: /@waline\/client(?:@|\/)|waline-pageview-count|waline-comment-count/i
-  }
+  ...(walineEnabled
+    ? []
+    : [
+        {
+          label: 'disabled Waline pageview client runtime',
+          pattern: /@waline\/client(?:@|\/)|waline-pageview-count|waline-comment-count/i
+        }
+      ])
 ]
 
 for (const { label, pattern } of forbiddenClientApis) {
@@ -318,6 +443,12 @@ for (const { label, pattern } of forbiddenClientApis) {
     matches.length === 0
       ? `${label} is absent from client-delivered production assets`
       : `${label} remains in ${matches.length} client-delivered file(s) (${firstPaths(matches)})`
+  )
+}
+if (walineEnabled) {
+  expect(
+    walineServer.length > 0 && clientRuntimeEntries.some(({ text }) => text.includes(walineServer)),
+    'enabled Waline runtime points to the configured server'
   )
 }
 
@@ -334,29 +465,19 @@ expect(
     residenceUrls.every((url) => new URL(url).hostname === 'basemaps.cartocdn.com'),
   'the only declared client map runtime is the allowlisted CARTO style service'
 )
-releaseBlocker(
-  !/位置占位/i.test(residenceSource),
-  'residence configuration no longer contains a temporary location label'
-)
 
 const musicSource = readFileSync(resolve(root, 'src/data/music.ts'), 'utf8')
-const musicCatalogueMatch = musicSource.match(/export const dailyMusic[^=]*=\s*\[([\s\S]*?)\n\]/)
-const musicCatalogue = musicCatalogueMatch?.[1] ?? ''
-const musicTrackIds = [...musicCatalogue.matchAll(/\bid\s*:\s*['"][^'"]+['"]/g)]
-const musicAudioSources = [...musicCatalogue.matchAll(/\baudioSrc\s*:\s*['"]([^'"]+)['"]/g)].map(
-  (match) => match[1]
-)
-const hasMusicFixture = /本地占位曲目|尚未配置可播放音频/.test(musicCatalogue)
 releaseBlocker(
-  musicTrackIds.length > 0 &&
-    musicAudioSources.length === musicTrackIds.length &&
-    musicAudioSources.every((source) => localPublicAssetExists(source)) &&
-    !hasMusicFixture,
-  'every daily music track has a non-placeholder same-origin audio file in public/'
+  /export const musicConfig/.test(musicSource) &&
+    /server:\s*['"]netease['"]/.test(musicSource) &&
+    /type:\s*['"]playlist['"]/.test(musicSource) &&
+    /api\.injahow\.cn\/meting\//.test(musicSource) &&
+    /id:\s*['"]12812783625['"]/.test(musicSource),
+  'music uses the temporary public NetEase Meting playlist'
 )
 
 const markerChecks = [
-  { label: 'temporary LargeSkull image descriptions', pattern: /LargeSkull temporary image/i },
+  { label: 'temporary Media image descriptions', pattern: /Media temporary image/i },
   { label: 'temporary Saying fixture text', pattern: /Temporary development saying/i },
   {
     label: 'Friend Circle local snapshot placeholder',
@@ -368,7 +489,22 @@ const markerChecks = [
 ]
 
 for (const { label, pattern } of markerChecks) {
-  const matches = htmlEntries.filter(({ text }) => pattern.test(text)).map(({ path }) => path)
+  const matches = htmlEntries
+    .filter(({ path, text }) =>
+      pattern.test(
+        label === 'Arthals identity/configuration' || label === 'upstream Arthals domain references'
+          ? stripAllowedArthalsFriend({
+              path,
+              markerText: arthalsMarkerText({
+                visibleText: visibleText(text),
+                renderedAttributeText: renderedAttributeText(text)
+              }),
+              linksManifest
+            })
+          : `${visibleText(text)} ${renderedAttributeText(text)}`
+      )
+    )
+    .map(({ path }) => path)
   releaseBlocker(
     matches.length === 0,
     matches.length === 0
@@ -376,6 +512,18 @@ for (const { label, pattern } of markerChecks) {
       : `${label} remains in ${matches.length} generated page(s) (${firstPaths(matches)})`
   )
 }
+
+const residencePlaceholderPages = htmlEntries
+  .filter(({ text }) => /位置占位/i.test(`${visibleText(text)} ${renderedAttributeText(text)}`))
+  .map(({ path }) => path)
+releaseBlocker(
+  residencePlaceholderPages.length === 0,
+  residencePlaceholderPages.length === 0
+    ? 'residence rendered output has no temporary location label'
+    : `residence rendered output still contains a temporary location label (${firstPaths(
+        residencePlaceholderPages
+      )})`
+)
 
 const deployWorkflow = readFileSync(resolve(root, '.github/workflows/deploy.yml'), 'utf8')
 const hasManualPagesTrigger = /^[ \t]*workflow_dispatch:[ \t]*$/m.test(deployWorkflow)

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
 const dist = resolve(root, 'dist')
@@ -32,6 +32,33 @@ function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex')
 }
 
+function firstGeneratedDetail(route) {
+  const base = resolve(dist, route)
+  if (!existsSync(base)) return undefined
+  let found
+  const walk = (current) => {
+    if (found) return
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const absolute = resolve(current, entry.name)
+      if (entry.isDirectory()) {
+        // Numeric children are Astro's archive pagination pages, not detail
+        // routes. Skip them so the reading-profile regression always targets
+        // a real Trace article after pagination is enabled. Taxonomy indexes
+        // under `tags/` are also archive utilities, never reading pages.
+        if (current === base && (/^\d+$/.test(entry.name) || entry.name === 'tags')) continue
+        walk(absolute)
+      } else if (entry.isFile() && entry.name === 'index.html' && current !== base) {
+        found = relative(dist, absolute).replace(/\\/g, '/')
+        return
+      }
+    }
+  }
+  walk(base)
+  return found
+}
+
+const traceDetailPath = firstGeneratedDetail('traces')
+
 const vendorAssets = [
   {
     path: 'vendor/pku/canvas-ribbon@1.1.3.min.js',
@@ -47,11 +74,11 @@ const vendorAssets = [
   },
   {
     path: 'vendor/george/sakura.js',
-    hash: '36795ed7d5ae4e34667615993287e59a2f33eff0dcb9dfbd2e4769789b430229'
+    hash: '4c82981d16b44ea6f7c25cea1700d9a3c4a708c453b10b93616c676cc79fd17a'
   },
   {
     path: 'vendor/george/fireworks.js',
-    hash: '5828f0a7f93a62920de3dce56a29f37658c30686932c5114faa06dcc5c79ebc8'
+    hash: 'd505e5aeeb885dc1f2a88b7464ad12677a456ceb70038f6db02ed1e29695ea42'
   },
   {
     path: 'vendor/george/tinycolor.min.js',
@@ -59,7 +86,7 @@ const vendorAssets = [
   },
   {
     path: 'vendor/george/anime.min.js',
-    hash: '455938d7e835eec1b7ec9b05b302be31730bb4d828abb4e9076be86de8cf3a5f'
+    hash: '5cbda29ea5096ac9404c59c77493a2f467d0eb4a27f16c750b61fc0d888dd716'
   }
 ]
 
@@ -95,33 +122,33 @@ expect(
   host.includes('mobile="false" zIndex="-1" alpha="0.6" size="150" data-click="false"') &&
     host.includes("'fluttering_ribbon'") &&
     host.includes("'canvas_nest'"),
-  'PKU iframe preserves the locked three-script order and source-page ribbon parameters'
+  'ambient canvas iframe preserves the locked three-script order and source-page ribbon parameters'
 )
 expect(
-  host.includes("'susurrium:pku-pointer'") &&
-    host.includes("'susurrium:pku-scroll'") &&
-    host.includes('pkuMobileQuery'),
-  'PKU iframe receives parent pointer and scroll context while remaining disabled on mobile'
+  host.includes("'susurrium:ambient-pointer'") &&
+    host.includes("'susurrium:ambient-scroll'") &&
+    host.includes('ambientMobileQuery'),
+  'ambient canvas iframe receives parent pointer and scroll context while remaining disabled on mobile'
 )
 expect(
-  host.includes('georgeSakura') &&
-    host.includes('georgeTinycolor') &&
-    host.includes('georgeAnime') &&
-    host.includes('georgeFireworks') &&
+  host.includes('petalRuntime') &&
+    host.includes('colorRuntime') &&
+    host.includes('clickBurstAnime') &&
+    host.includes('clickBurstRuntime') &&
     host.includes('numberOfParticles = 20') === false,
-  'George runtime keeps the original local source files rather than reimplementing its particle algorithm'
+  'click-burst runtime keeps the original local source files rather than reimplementing its particle algorithm'
 )
 expect(
-  host.includes("'susurrium:george-fireworks'") &&
+  host.includes("'susurrium:click-burst'") &&
     host.includes("'[data-click-burst-zone]'") &&
     host.includes("'[data-no-click-burst]'") &&
     host.includes('\'[class*="card"]\''),
   'click relay only accepts blank, noninteractive page areas'
 )
 expect(
-  /standard:[\s\S]*?click: true[\s\S]*?pkuBackdrop: true/.test(profilePolicy) &&
-    /reading:[\s\S]*?click: false[\s\S]*?pkuBackdrop: false/.test(profilePolicy) &&
-    /links:[\s\S]*?click: true[\s\S]*?petals: true[\s\S]*?pkuBackdrop: false/.test(profilePolicy),
+  /standard:[\s\S]*?click: true[\s\S]*?ambientBackdrop: true/.test(profilePolicy) &&
+    /reading:[\s\S]*?click: false[\s\S]*?ambientBackdrop: false/.test(profilePolicy) &&
+    /links:[\s\S]*?click: true[\s\S]*?petals: true[\s\S]*?ambientBackdrop: false/.test(profilePolicy),
   'route effect policy keeps standard, reading and Links profiles explicit'
 )
 expect(
@@ -138,23 +165,27 @@ const outputProfiles = [
   {
     path: 'home/index.html',
     profile: 'standard',
-    attributes: ['data-pku-backdrop="true"', 'data-petals="false"', 'data-click="true"']
+    attributes: ['data-ambient-backdrop="true"', 'data-petals="false"', 'data-click="true"']
   },
   {
     path: 'links/index.html',
     profile: 'links',
-    attributes: ['data-pku-backdrop="false"', 'data-petals="true"', 'data-click="true"']
+    attributes: ['data-ambient-backdrop="false"', 'data-petals="true"', 'data-click="true"']
   },
   {
     path: 'about/index.html',
     profile: 'about',
-    attributes: ['data-pku-backdrop="true"', 'data-petals="false"', 'data-click="true"']
+    attributes: ['data-ambient-backdrop="true"', 'data-petals="false"', 'data-click="true"']
   },
-  {
-    path: 'traces/fourth-field-note/index.html',
-    profile: 'reading',
-    attributes: ['data-pku-backdrop="false"', 'data-petals="false"', 'data-click="false"']
-  }
+  ...(traceDetailPath
+    ? [
+        {
+          path: traceDetailPath,
+          profile: 'reading',
+          attributes: ['data-ambient-backdrop="false"', 'data-petals="false"', 'data-click="false"']
+        }
+      ]
+    : [])
 ]
 
 for (const page of outputProfiles) {
@@ -184,7 +215,7 @@ if (existsSync(resolve(dist, 'index.html'))) {
   )
 }
 
-const allBuiltHtml = ['home/index.html', 'links/index.html', 'traces/fourth-field-note/index.html']
+const allBuiltHtml = ['home/index.html', 'links/index.html', ...(traceDetailPath ? [traceDetailPath] : [])]
   .filter((path) => existsSync(resolve(dist, path)))
   .map(output)
   .join('\n')
@@ -192,7 +223,7 @@ expect(
   !/cdn\.cbd\.int\/butterfly-extsrc|george-blog\.top\/wp-content\/themes\/argon\/George\/(?:sakura|fireworks)|(?:cdn\.jsdelivr\.net|unpkg\.com).*?(?:anime|tinycolor)/i.test(
     allBuiltHtml
   ),
-  'production pages do not hotlink PKU or George effect runtimes'
+  'production pages do not hotlink remote effect runtimes'
 )
 
 console.log(`Phase 4 verification complete: ${failures.length} failure(s).`)

@@ -1,0 +1,142 @@
+---
+/** Quote-oriented semantic recipe.  It is not tied to the Saying collection. */
+import type { ReadingHeaderData } from '@/lib/content-layer/reading-data'
+import {
+  isReadingFeatureVisible,
+  type ReadingHeaderConfig
+} from '@/lib/content-layer/reading-policy'
+
+import ReadingDescription from '../capabilities/ReadingDescription.astro'
+import ReadingDivider from '../capabilities/ReadingDivider.astro'
+import ReadingEngagement from '../capabilities/ReadingEngagement.astro'
+import ReadingMeta from '../capabilities/ReadingMeta.astro'
+import ReadingOpeningMedia from '../capabilities/ReadingOpeningMedia.astro'
+import ReadingTags from '../capabilities/ReadingTags.astro'
+
+interface Props {
+  config: ReadingHeaderConfig
+  data: ReadingHeaderData
+}
+
+const { config, data } = Astro.props as Props
+const quote = data.quote
+const showMedia = isReadingFeatureVisible(config.openingMedia.mode, Boolean(data.openingMedia))
+const showDraft = isReadingFeatureVisible(config.draft, data.draft)
+const showOriginal = isReadingFeatureVisible(config.quoteOriginal, Boolean(quote?.originalText))
+const showAttribution = isReadingFeatureVisible(
+  config.quoteAttribution,
+  Boolean(quote?.author || quote?.source)
+)
+const showSourceLink = isReadingFeatureVisible(config.quoteSourceLink, Boolean(quote?.sourceUrl))
+const showCommentInfo = isReadingFeatureVisible(config.commentInfo, data.commentInfo)
+const showDescription = isReadingFeatureVisible(config.description.mode, Boolean(data.description))
+const showMeta =
+  config.publishedDate !== 'off' ||
+  config.updatedDate !== 'off' ||
+  config.readingTime !== 'off' ||
+  config.language !== 'off'
+---
+
+<div data-reading-header data-reading-profile={config.layout}>
+  <h1 class='sr-only'>{data.accessibleTitle}</h1>
+  {
+    showMedia && data.openingMedia && (
+      <ReadingOpeningMedia
+        backdrop={config.openingMedia.backdrop}
+        data={data.openingMedia}
+        variant={config.openingMedia.variant}
+      />
+    )
+  }
+  {showDraft && <span class='text-red-500'>(Draft)</span>}
+  <p class='text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground'>
+    {data.eyebrow ?? 'Quote'}
+  </p>
+
+  {
+    showOriginal && quote?.originalText && (
+      <div class='mt-4 text-sm leading-relaxed text-muted-foreground sm:mt-6'>
+        <p class='text-xs font-medium uppercase tracking-[0.12em]'>Original</p>
+        <p class='mt-2'>{quote.originalText}</p>
+      </div>
+    )
+  }
+
+  {
+    showOriginal && (
+      <p class='mt-4 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground sm:mt-6'>
+        Translation
+      </p>
+    )
+  }
+
+  <blockquote class='mt-4 text-2xl font-medium leading-relaxed sm:mt-6 sm:text-3xl'>
+    <q>{quote?.text ?? data.title}</q>
+  </blockquote>
+
+  {
+    showAttribution && quote && (
+      <div class='mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground'>
+        {quote.author && <span>{quote.author}</span>}
+        {quote.source && (
+          <>
+            {quote.author && <span aria-hidden='true'>·</span>}
+            <span>{quote.source}</span>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  {
+    showDescription || showCommentInfo ? (
+      <div class='mt-3'>
+        <ReadingDescription
+          mode={config.description.mode}
+          text={data.description}
+          variant={config.description.variant}
+        />
+        {showCommentInfo && (
+          <ReadingEngagement
+            available={data.commentInfo}
+            comment
+            mode={config.commentInfo}
+            class='mt-1'
+          />
+        )}
+      </div>
+    ) : null
+  }
+
+  {
+    showMeta && (
+      <ReadingMeta
+        data={data.meta}
+        languageMode={config.language}
+        publishedDateMode={config.publishedDate}
+        readingTimeMode={config.readingTime}
+        tags={[]}
+        tagMode='hidden'
+        updatedDateMode={config.updatedDate}
+        variant={config.metadataVariant}
+      />
+    )
+  }
+
+  <ReadingTags data={data.tags} mode={config.tags} scopeLabel={data.eyebrow} />
+
+  {
+    showSourceLink && quote?.sourceUrl && (
+      <a
+        class='mt-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline'
+        href={quote.sourceUrl}
+        rel='noreferrer'
+        target='_blank'
+      >
+        Source
+      </a>
+    )
+  }
+
+  <ReadingDivider mode={config.divider} />
+</div>

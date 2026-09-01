@@ -1,0 +1,102 @@
+---
+/**
+ * The single composition root for Blog, Trace and Saying detail pages.
+ * Content-specific semantics are selected through build-time profiles; the
+ * reading frame, TOC, body, copyright, related area and comments have one
+ * lifecycle and one slot contract.
+ */
+import type { MarkdownHeading } from 'astro'
+import { readingHighlightColor } from '@/lib/content'
+import {
+  resolveReadingPageConfig,
+  toReadingBackgroundData,
+  toReadingCommentPolicy,
+  toReadingFrameData,
+  toReadingHeaderData,
+  type ReadingDetailPageKind,
+  type ReadingPageConfig,
+  type ReadingPageConfigOverride,
+  type RenderablePageItem
+} from '@/lib/content-layer'
+
+import ReadingFooter from '@/components/reading/ReadingFooter.astro'
+import ReadingHeader from '@/components/reading/ReadingHeader.astro'
+import { integ } from '@/site-config'
+
+import ContentReadingShell from './ContentReadingShell.astro'
+
+interface Props {
+  item: RenderablePageItem
+  relatedItems: readonly RenderablePageItem[]
+  headings: MarkdownHeading[]
+  pageKind?: ReadingDetailPageKind
+  readingConfig?: ReadingPageConfig
+  readingOverride?: ReadingPageConfigOverride
+  remarkPluginFrontmatter?: Record<string, unknown>
+  highlightColor?: string
+  signature?: boolean
+  imageZoom?: boolean
+}
+
+const {
+  headings,
+  highlightColor,
+  imageZoom,
+  item,
+  pageKind,
+  readingConfig,
+  readingOverride,
+  relatedItems,
+  remarkPluginFrontmatter = {},
+  signature
+} = Astro.props as Props
+const frame = toReadingFrameData(item.record)
+const resolvedReadingConfig =
+  readingConfig ??
+  resolveReadingPageConfig(pageKind, item.record.kind, {
+    override: readingOverride
+  })
+const commentPolicy = toReadingCommentPolicy(
+  item.record,
+  Boolean(integ.waline.enable),
+  resolvedReadingConfig.footer.comments
+)
+const rawReadingTime = remarkPluginFrontmatter.minutesRead
+const readingTime =
+  typeof rawReadingTime === 'string' || typeof rawReadingTime === 'number'
+    ? rawReadingTime
+    : undefined
+const headerData = toReadingHeaderData(item, {
+  commentInfo: commentPolicy.showPageInfo,
+  readingTime
+})
+const backgroundData = toReadingBackgroundData(headerData, readingHighlightColor, highlightColor)
+const resolvedImageZoom = imageZoom ?? resolvedReadingConfig.body.imageZoom !== 'off'
+const resolvedSignature = signature ?? resolvedReadingConfig.body.signature !== 'off'
+---
+
+<ContentReadingShell
+  {headings}
+  background={resolvedReadingConfig.background}
+  meta={frame.meta}
+  highlightColor={backgroundData.color}
+  back={frame.backHref}
+  pagefindBody
+  contentType={frame.contentTypeLabel}
+  effectProfile='reading'
+  imageZoom={resolvedImageZoom && integ.mediumZoom.enable}
+  musicMode='compact'
+  signature={resolvedSignature}
+>
+  <ReadingHeader config={resolvedReadingConfig.header} data={headerData} slot='header' />
+
+  <slot />
+
+  <Fragment slot='bottom'>
+    <ReadingFooter config={resolvedReadingConfig.footer} {item} {relatedItems} />
+  </Fragment>
+
+  <Fragment slot='bottom-sidebar'>
+    <slot name='bottom-sidebar' />
+  </Fragment>
+</ContentReadingShell>

@@ -12,19 +12,19 @@ describe('Phase 4 route visual-effect policy', () => {
       click: true,
       companion: false,
       petals: false,
-      pkuBackdrop: true
+      ambientBackdrop: true
     })
     expect(effectProfiles.reading).toEqual({
       click: false,
       companion: false,
       petals: false,
-      pkuBackdrop: false
+      ambientBackdrop: false
     })
     expect(effectProfiles.links).toEqual({
       click: true,
       companion: false,
       petals: true,
-      pkuBackdrop: false
+      ambientBackdrop: false
     })
   })
 
@@ -33,7 +33,7 @@ describe('Phase 4 route visual-effect policy', () => {
       click: true,
       companion: true,
       petals: false,
-      pkuBackdrop: true
+      ambientBackdrop: true
     })
   })
 

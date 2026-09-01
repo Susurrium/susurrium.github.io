@@ -9,9 +9,14 @@ import PageLayout from '@/layouts/BaseLayout.astro'
 import { integ } from '@/site-config'
 
 interface Props {
-  meta: SiteMeta
+  meta: SiteMeta & {
+    noindex?: boolean
+    articleModifiedDate?: string
+  }
   highlightColor?: string
   back?: string
+  /** Render the sidebar controls only when the page supplied a TOC. */
+  sidebar?: boolean
   pagefindBody?: boolean
   contentType?: string
   effectProfile?: EffectProfile
@@ -22,39 +27,56 @@ const {
   meta,
   highlightColor,
   back = '/home',
+  sidebar = false,
   pagefindBody = false,
   contentType,
   effectProfile,
   musicMode,
   ...props
 } = Astro.props
+const hasPageBackground = Astro.slots.has('page-background')
 ---
 
 <PageLayout {meta} {highlightColor} {effectProfile} {musicMode} {...props}>
+  {
+    hasPageBackground && (
+      <Fragment slot='page-background'>
+        <slot name='page-background' />
+      </Fragment>
+    )
+  }
+
   <Button title='Back' href={back} variant='back' />
   <main class='mt-6 items-start gap-x-10 md:flex'>
     {/* Sidebar */}
-    <aside
-      class='animate top-20 min-w-48 basis-60 overflow-y-scroll max-md:hidden z-40 fixed md:sticky md:order-2 lg:shrink-0 max-md:border max-md:px-4 max-md:py-3 max-md:bg-muted max-md:rounded-xl'
-      style='height:calc(100vh - 7rem);'
-      id='sidebar'
-      aria-label='Table of contents'
-      tabindex='-1'
-    >
-      <slot name='sidebar' />
-    </aside>
-    <button
-      type='button'
-      id='sidebar-shade'
-      class='fixed top-0 start-0 h-full w-full border-0 p-0'
-      style='display:none;background-color:#00000091;z-index:31'
-      aria-label='Close table of contents'
-    ></button>
+    {
+      sidebar && (
+        <>
+          <aside
+            class='animate top-20 min-w-48 basis-60 overflow-y-scroll max-md:hidden z-40 fixed md:sticky md:order-2 lg:shrink-0 max-md:border max-md:px-4 max-md:py-3 max-md:bg-muted max-md:rounded-xl'
+            style='height:calc(100vh - 7rem);'
+            id='sidebar'
+            aria-label='Table of contents'
+            tabindex='-1'
+          >
+            <slot name='sidebar' />
+          </aside>
+          <button
+            type='button'
+            id='sidebar-shade'
+            class='fixed top-0 start-0 h-full w-full border-0 p-0'
+            style='display:none;background-color:#00000091;z-index:31'
+            aria-label='Close table of contents'
+          />
+        </>
+      )
+    }
 
     <article
       class='min-w-0 grow'
       data-pagefind-body={pagefindBody ? '' : undefined}
       data-pagefind-meta={contentType ? `content-type:${contentType}` : undefined}
+      data-pagefind-filter={contentType ? `content-type:${contentType}` : undefined}
     >
       {/* Content header */}
       <div id='content-header' class='animate'>
@@ -79,22 +101,31 @@ const {
     <div class='flex-1 text-muted-foreground md:min-w-[50ch]'>
       <slot name='bottom' />
     </div>
-    <div class='min-w-48 basis-60'>
-      <slot name='bottom-sidebar' />
-    </div>
+    {
+      sidebar && (
+        <div class='min-w-48 basis-60'>
+          <slot name='bottom-sidebar' />
+        </div>
+      )
+    }
   </div>
 
   <BackToTop header='content-header' content='content'>
-    <button
-      slot='other-icons'
-      aria-label='Toggle sidebar'
-      aria-controls='sidebar'
-      aria-expanded='false'
-      class='size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 md:hidden sm:size-12'
-      id='sidebar-btn'
-    >
-      <Icon name='list' />
-    </button>
+    {
+      sidebar && (
+        <button
+          slot='other-icons'
+          aria-label='Toggle sidebar'
+          aria-controls='sidebar'
+          aria-expanded='false'
+          class='size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 md:hidden sm:size-12'
+          id='sidebar-btn'
+          type='button'
+        >
+          <Icon name='list' />
+        </button>
+      )
+    }
   </BackToTop>
 </PageLayout>
 
@@ -117,7 +148,7 @@ const {
     const controller = new AbortController()
     Reflect.set(window, controllerKey, controller)
     const { signal } = controller
-    const mobileQuery = window.matchMedia('(max-width: 768px)')
+    const mobileQuery = window.matchMedia('(max-width: 767px)')
     let lastFocusedElement = null
 
     const focusableSelector =
@@ -195,12 +226,12 @@ const {
   })()
 </script>
 <style>
-  @media (min-width: 769px) {
+  @media (min-width: 768px) {
     #sidebar-shade {
       display: none !important;
     }
   }
-  @media (max-width: 769px) {
+  @media (max-width: 767px) {
     aside.show {
       display: block !important;
       opacity: 1;
@@ -241,17 +272,15 @@ const {
       animation: 300ms fade-in;
     }
   }
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     aside {
       min-width: 55vw !important;
     }
   }
-  @media (prefers-reduced-motion: reduce) {
-    @media (max-width: 769px) {
-      aside,
-      #sidebar-shade {
-        animation: none !important;
-      }
+  @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+    aside,
+    #sidebar-shade {
+      animation: none !important;
     }
   }
 </style>

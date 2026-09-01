@@ -4,8 +4,8 @@ import { effectProfiles, resolveEffectProfile, type EffectProfile } from '@/data
 
 import { ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
+import Footer from '@/components/layout/SiteFooter.astro'
 import BaseHead from '@/components/BaseHead.astro'
-import Footer from '@/components/arthals/Footer.astro'
 import ScrollCompanion from '@/components/effects/ScrollCompanion.astro'
 import VisualEffectsHost from '@/components/effects/VisualEffectsHost.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
@@ -21,18 +21,27 @@ interface Props {
   meta: SiteMeta & {
     /** Forward route-specific indexing policy to the shared document head. */
     noindex?: boolean
+    /** Preserve publication and editorial timestamps for article metadata. */
+    articleModifiedDate?: string
   }
   highlightColor?: string
-  /** Home overlays the initial transparent header on the LargeSkull Hero. */
+  /** Home overlays the initial transparent header on the Media Hero. */
   pageKind?: 'home'
-  /** Route-level owner for PKU, petals and click-particle policy. */
+  /** Route-level owner for ambient, petal and click-particle policy. */
   effectProfile?: EffectProfile
   /** Article detail views use the compact persistent music treatment. */
   musicMode?: 'full' | 'compact'
 }
 
 const {
-  meta: { articleDate, description = config.description, noindex = false, ogImage, title },
+  meta: {
+    articleDate,
+    articleModifiedDate,
+    description = config.description,
+    noindex = false,
+    ogImage,
+    title
+  },
   highlightColor,
   pageKind,
   effectProfile: effectProfileInput,
@@ -40,14 +49,102 @@ const {
   ...props
 } = Astro.props
 const effectProfile = resolveEffectProfile(effectProfileInput)
+const hasPageBackground = Astro.slots.has('page-background')
 ---
 
 <html lang={config.locale.lang}>
   <head>
-    <BaseHead {articleDate} {description} {noindex} {ogImage} {title} />
+    <BaseHead
+      {articleDate}
+      {articleModifiedDate}
+      {description}
+      {noindex}
+      {ogImage}
+      {title}
+    />
     <ThemeProvider />
+    <Fragment set:html={`<script src="/theme-handoff.js" data-theme-role="write"></script>`} />
+    <script is:inline>
+      // ThemeProvider owns the `dark` class, while a few site-specific visual
+      // layers consume the explicit data attribute. Keep those two contracts
+      // synchronized on first paint, ClientRouter swaps, and theme changes.
+      ;(() => {
+        const installKey = '__susurriumThemeAttributeSyncInstalled'
+        if (window[installKey]) return
+        window[installKey] = true
+
+        const root = document.documentElement
+        const syncThemeAttribute = () => {
+          root.dataset.theme = root.classList.contains('dark') ? 'dark' : 'light'
+        }
+
+        syncThemeAttribute()
+        document.addEventListener('astro:page-load', syncThemeAttribute)
+        new MutationObserver(syncThemeAttribute).observe(root, {
+          attributeFilter: ['class'],
+          attributes: true
+        })
+      })()
+    </script>
+    <script is:inline>
+      if (window.location.hash === '#from-entrance' && window.location.pathname === '/home') {
+        document.documentElement.dataset.homeHandoff = 'pending'
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }
+    </script>
     <ViewTransitionRejectionGuard />
     <ClientRouter />
+    <style is:inline>
+      @view-transition {
+        navigation: auto;
+      }
+
+      /* Critical first-paint rules are duplicated here because this style is
+         emitted in the head before the shared stylesheet finishes loading. */
+      .home-entry-handoff {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        pointer-events: none;
+        background: var(--document-handoff-surface, rgb(246 245 242));
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      html[data-home-handoff='pending'] .home-entry-handoff {
+        pointer-events: auto;
+        opacity: 1;
+        visibility: visible;
+      }
+    </style>
+    {
+      pageKind === 'home' && (
+        <link
+          rel='preload'
+          as='image'
+          href='/images/home-media/thumb-1920-1381117.webp'
+          fetchpriority='high'
+        />
+      )
+    }
+    <!-- APlayer/MetingJS runtime follows the reference sites' public-player
+         contract. They are loaded once in the shared layout; the native DOM
+         wrapper below persists across ClientRouter swaps. -->
+    <link
+      rel='stylesheet'
+      href='https://cdn.cbd.int/anzhiyu-theme-static@1.0.0/aplayer/APlayer.min.css'
+      data-music-runtime='aplayer'
+    />
+    <script
+      is:inline
+      defer
+      src='https://cdn.cbd.int/anzhiyu-blog-static@1.0.1/js/APlayer.min.js'
+      data-music-runtime='aplayer'></script>
+    <script
+      is:inline
+      defer
+      src='https://cdn.cbd.int/hexo-anzhiyu-music@1.0.1/assets/js/Meting2.min.js'
+      data-music-runtime='meting'></script>
   </head>
 
   <body
@@ -57,15 +154,26 @@ const effectProfile = resolveEffectProfile(effectProfileInput)
     data-music-mode={musicMode}
     {...props}
   >
+    {pageKind === 'home' && (
+      <div class='document-handoff home-entry-handoff' data-home-entry-handoff aria-hidden='true'></div>
+    )}
     <VisualEffectsHost profile={effectProfile} />
     {effectProfiles[effectProfile].companion && <ScrollCompanion />}
     {
-      highlightColor && (
-        <div
-          id='highlight-gradient'
-          class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
-          style={`background-image:linear-gradient(${highlightColor},transparent)`}
-        />
+      hasPageBackground ? (
+        /* Reading pages supply their selected background through this root-level
+           host. Keeping the slot here preserves the old stacking position while
+           allowing future reading background variants. */
+        <slot name='page-background' />
+      ) : (
+        /* Preserve the legacy BaseLayout contract for non-reading callers. */
+        highlightColor && (
+          <div
+            id='highlight-gradient'
+            class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
+            style={`background-image:linear-gradient(${highlightColor},transparent)`}
+          />
+        )
       )
     }
     <div
@@ -115,8 +223,8 @@ const effectProfile = resolveEffectProfile(effectProfileInput)
 </html>
 
 <style is:global>
-  /* Home starts beneath the transparent Arthals header, matching the source
-     Hero's fixed brand area while preserving normal sticky behaviour later. */
+  /* Home starts beneath the transparent site header, matching the Hero's fixed
+     brand area while preserving normal sticky behaviour later. */
   body[data-page-kind='home'] header-component:not(.not-top) {
     position: absolute;
     top: 1rem;
@@ -148,7 +256,7 @@ const effectProfile = resolveEffectProfile(effectProfileInput)
     margin-inline: 0;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     body[data-page-kind='home'] header-component.not-top {
       right: 1rem;
       left: 1rem;

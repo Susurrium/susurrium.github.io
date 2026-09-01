@@ -1,9 +1,9 @@
 ---
 /**
- * TNXG's current About-side companion, hosted by the historical Astro
- * lifecycle shell.  The current source formula is deliberately small:
- * progress 0→.35 maps to rotate 0→42°, x 0→140%; opacity is 1 until .25
- * then fades to 0 by .35.  No historical breathing/click behaviour remains.
+ * About's right-side companion, hosted by the historical Astro lifecycle
+ * shell. The project-owned Tracer artwork uses a bounded, continuous drift
+ * and a long-tail fade that are both driven by About's actual scroll distance.
+ * No historical breathing/click behaviour remains.
  */
 interface Props {
   class?: string
@@ -14,10 +14,11 @@ interface Props {
 const {
   class: className,
   minWidth = 1440,
-  src = '/media/effects/tnxg-background-aijo-karen.webp'
+  src = '/media/effects/tracer-companion.webp'
 } = Astro.props
 const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
-const resolvedSrc = /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? src : `${basePath}${src}`
+const resolvedSrc =
+  /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? src : `${basePath}${src}`
 ---
 
 <scroll-companion
@@ -41,6 +42,20 @@ const resolvedSrc = /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? sr
 </scroll-companion>
 
 <script>
+  // Keep the companion present through most of the readable About content,
+  // then let it leave before the very bottom instead of staying resident.
+  const COMPANION_EXIT_SHARE = 0.88
+  // The replacement artwork is right-heavy on a transparent canvas. A small
+  // bounded drift keeps the figure visible inside the narrow right rail.
+  const COMPANION_MAX_X = 22
+  const COMPANION_MAX_ROTATE = 10
+  const COMPANION_FADE_START = 0.68
+  const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
+  const smoothstep = (value: number) => {
+    const t = clamp01(value)
+    return t * t * (3 - 2 * t)
+  }
+
   class ScrollCompanionElement extends HTMLElement {
     private controller: AbortController | null = null
     private frame = 0
@@ -158,13 +173,24 @@ const resolvedSrc = /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? sr
 
       this.activateImage()
       const scrollable = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
-      const progress = scrollable > 0 ? Math.min(1, Math.max(0, window.scrollY / scrollable)) : 0
-      const travel = Math.min(1, progress / 0.35)
-      const opacity = progress <= 0.25 ? 1 : Math.max(0, 1 - (progress - 0.25) / 0.1)
+      const progress = scrollable > 0 ? clamp01(window.scrollY / scrollable) : 0
+      // Use the real scrollable distance as the animation's clock. The
+      // companion starts moving with the first scroll and exits at 88% of the
+      // page, regardless of the document's absolute pixel height.
+      const exitDistance = Math.max(1, scrollable * COMPANION_EXIT_SHARE)
+      const timeline = scrollable > 0 ? clamp01(window.scrollY / exitDistance) : 0
+      // Position is intentionally linear (the CSS transition smooths frame
+      // updates), while opacity gets a separate smooth tail near the end.
+      const travel = timeline
+      const fade = smoothstep((timeline - COMPANION_FADE_START) / (1 - COMPANION_FADE_START))
+      const opacity = 1 - fade
 
-      this.dataset.visible = String(opacity > 0)
-      this.style.setProperty('--companion-x', `${(travel * 140).toFixed(2)}%`)
-      this.style.setProperty('--companion-rotate', `${(travel * 42).toFixed(2)}deg`)
+      this.dataset.visible = String(opacity > 0.01)
+      this.style.setProperty('--companion-x', `${(travel * COMPANION_MAX_X).toFixed(2)}%`)
+      this.style.setProperty(
+        '--companion-rotate',
+        `${(travel * COMPANION_MAX_ROTATE).toFixed(2)}deg`
+      )
       this.style.setProperty('--companion-opacity', opacity.toFixed(3))
       this.dataset.progress = progress.toFixed(4)
     }
@@ -204,8 +230,8 @@ const resolvedSrc = /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? sr
     transform: translateX(var(--companion-x, 0%)) rotate(var(--companion-rotate, 0deg));
     transform-origin: 72% 50%;
     transition:
-      transform 120ms cubic-bezier(0.2, 0.75, 0.25, 1),
-      opacity 120ms linear;
+      transform 160ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      opacity 180ms linear;
     will-change: transform, opacity;
   }
 

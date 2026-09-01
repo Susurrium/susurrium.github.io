@@ -6,10 +6,18 @@ interface Props {
   startDelay?: number
   typeSpeed?: number
   backSpeed?: number
+  backDelay?: number
   loop?: boolean
 }
 
-const { words, startDelay = 300, typeSpeed = 150, backSpeed = 50, loop = true } = Astro.props
+const {
+  words,
+  startDelay = 300,
+  typeSpeed = 150,
+  backSpeed = 50,
+  backDelay = 700,
+  loop = true
+} = Astro.props
 const normalizedWords = words.map((word) => word.trim()).filter(Boolean)
 const fallback = normalizedWords[0] ?? ''
 const accessibleLabel = normalizedWords.join(' · ')
@@ -21,6 +29,7 @@ const accessibleLabel = normalizedWords.join(' · ')
   data-start-delay={startDelay}
   data-type-speed={typeSpeed}
   data-back-speed={backSpeed}
+  data-back-delay={backDelay}
   data-loop={String(loop)}
   data-motion-state='static'
   aria-label={accessibleLabel}
@@ -95,6 +104,7 @@ const accessibleLabel = normalizedWords.join(' · ')
         startDelay: this.numberFrom('startDelay', 300),
         typeSpeed: this.numberFrom('typeSpeed', 150),
         backSpeed: this.numberFrom('backSpeed', 50),
+        backDelay: this.numberFrom('backDelay', 700),
         loop: this.dataset.loop !== 'false',
         contentType: 'null',
         autoInsertCss: false
@@ -144,13 +154,16 @@ const accessibleLabel = normalizedWords.join(' · ')
 
   .entrance-typed-text :global(.typed-cursor) {
     display: inline-block;
-    width: 0.09em;
-    height: 0.95em;
-    margin-left: 0.1em;
+    width: 0.1em;
+    height: 0.94em;
+    margin-left: 0.12em;
     border-radius: 999px;
-    background: currentColor;
+    background: #f6ead5;
+    box-shadow:
+      0 0 0.42em rgb(255 229 183 / 0.72),
+      0 0 0.1em rgb(255 249 237 / 0.8);
     color: transparent;
-    transform: translateY(0.12em);
+    transform: translateY(0.08em);
     animation: entrance-typed-cursor 0.85s steps(1, end) infinite;
   }
 

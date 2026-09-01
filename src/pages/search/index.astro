@@ -1,34 +1,95 @@
 ---
-import { PFSearch } from 'astro-pure/components/pages'
+import { getContentTagBrowserEntries, loadContentCatalog } from '@/lib/content-layer'
+
 import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/BaseLayout.astro'
+import PFSearch from '@/components/search/PFSearch.astro'
 import { integ } from '@/site-config'
 
+const contentCatalog = await loadContentCatalog()
+const tagBrowserEntries = getContentTagBrowserEntries(contentCatalog)
 const meta = {
-  description: 'Search relative posts of the whole blog',
+  description: 'Search posts, traces, and sayings.',
   noindex: true,
   title: 'Search'
 }
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href='/blog' variant='back' />
+  <Button
+    title='Back'
+    href='/home'
+    variant='back'
+    data-history-back
+    aria-label='Return to the previous page'
+  />
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
-      <h1 class='mb-6 text-3xl font-medium'>Search</h1>
+      <h1 id='search-heading' class='mb-6 text-3xl font-medium'>Search</h1>
     </div>
 
-    <div id='content' class='animate'>
-      {
-        integ.pagefind ? (
-          <>
-            <p>输入关键字以搜索 Blog、Trace 和 Saying。</p>
-            <PFSearch />
-          </>
-        ) : (
-          <p>Pagefind is disabled.</p>
-        )
-      }
-    </div>
+    <section id='content' class='animate' aria-labelledby='search-heading'>
+      <p class='search-intro'>搜索 Blog、Trace 和 Saying 的标题、正文与标签文字。</p>
+      <div class='search-workspace' data-search-workspace>
+        {
+          integ.pagefind ? (
+            <PFSearch browserEntries={tagBrowserEntries} />
+          ) : (
+            <p class='site-empty-state'>Pagefind is disabled.</p>
+          )
+        }
+      </div>
+    </section>
   </main>
 </PageLayout>
+
+<script is:inline data-astro-rerun>
+  // Search can be entered from any page. Traverse Astro's internal history
+  // when one exists, while keeping the anchor's /home destination as a safe
+  // no-JavaScript/direct-entry fallback.
+  ;(() => {
+    const backLink = document.querySelector('[data-history-back]')
+    if (!(backLink instanceof HTMLAnchorElement)) return
+
+    backLink.addEventListener('click', (event) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+
+      const historyIndex = history.state?.index
+      const sameOriginReferrer = (() => {
+        if (!document.referrer) return false
+        try {
+          return new URL(document.referrer).origin === location.origin
+        } catch {
+          return false
+        }
+      })()
+      const hasInternalPreviousPage =
+        history.length > 1 &&
+        ((Number.isInteger(historyIndex) && historyIndex >= 1) || sameOriginReferrer)
+      if (!hasInternalPreviousPage) return
+
+      event.preventDefault()
+      history.back()
+    })
+  })()
+</script>
+
+<style>
+  .search-intro {
+    max-width: 48rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .search-workspace {
+    margin-top: 1.25rem;
+  }
+</style>

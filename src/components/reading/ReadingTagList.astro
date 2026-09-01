@@ -1,0 +1,18 @@
+---
+/** Compatibility facade for older header callers. */
+import { isContentSurfaceEnabled } from '@/lib/content-layer/policy'
+import { contentTagPath } from '@/lib/content-layer/registry'
+import type { ContentKind } from '@/lib/content-layer/types'
+
+import ReadingTags from './capabilities/ReadingTags.astro'
+
+interface Props {
+  kind: ContentKind
+  tags: readonly string[]
+}
+
+const { kind, tags } = Astro.props as Props
+const data = tags.map((label) => ({ href: contentTagPath(kind, label), label }))
+---
+
+<ReadingTags data={data} mode={isContentSurfaceEnabled(kind, 'tags') ? 'links' : 'hidden'} />

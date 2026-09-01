@@ -1,0 +1,32 @@
+---
+/**
+ * Optional dynamic engagement metrics for a reading header. The Waline
+ * provider remains unchanged; this adapter only applies the reading policy
+ * and keeps the capability independent from the comment form in the footer.
+ */
+import {
+  isReadingFeatureVisible,
+  type ReadingFeatureMode
+} from '@/lib/content-layer/reading-policy'
+
+import { PageInfo } from '@/components/waline'
+
+interface Props {
+  available?: boolean
+  class?: string
+  comment?: boolean
+  mode?: ReadingFeatureMode
+  view?: boolean
+}
+
+const {
+  available = true,
+  class: className,
+  comment = true,
+  mode = 'on',
+  view = false
+} = Astro.props as Props
+const shouldRender = isReadingFeatureVisible(mode, available)
+---
+
+{shouldRender && <PageInfo {comment} {view} class={className} data-reading-engagement />}

@@ -1,0 +1,64 @@
+---
+/**
+ * Shared metadata row.  It accepts capability modes instead of a content-kind
+ * discriminant; the projection layer has already supplied type-scoped links
+ * and optional values.
+ */
+import type { ReadingHeaderData, ReadingTagData } from '@/lib/content-layer/reading-data'
+import {
+  isReadingFeatureVisible,
+  type ReadingFeatureMode,
+  type ReadingMetadataVariant,
+  type ReadingStatsConfig,
+  type ReadingTagMode
+} from '@/lib/content-layer/reading-policy'
+
+import ReadingStats from './ReadingStats.astro'
+import ReadingTags from './ReadingTags.astro'
+
+interface Props {
+  data: ReadingHeaderData['meta']
+  languageMode?: ReadingFeatureMode
+  publishedDateMode?: ReadingFeatureMode
+  readingTimeMode?: ReadingFeatureMode
+  tags?: readonly ReadingTagData[]
+  tagMode?: ReadingTagMode
+  tagScopeLabel?: string
+  updatedDateMode?: ReadingFeatureMode
+  variant?: ReadingMetadataVariant
+}
+
+const {
+  data,
+  languageMode = 'off',
+  publishedDateMode = 'auto',
+  readingTimeMode = 'off',
+  tags = [],
+  tagMode = 'links',
+  tagScopeLabel,
+  updatedDateMode = 'auto',
+  variant = 'article'
+} = Astro.props as Props
+
+const showPublishedDate = isReadingFeatureVisible(publishedDateMode, Boolean(data.publishedAt))
+const showUpdatedDate = isReadingFeatureVisible(updatedDateMode, Boolean(data.updatedAt))
+const showReadingTime = isReadingFeatureVisible(readingTimeMode, Boolean(data.readingTime))
+const showLanguage = isReadingFeatureVisible(languageMode, Boolean(data.language))
+const showTags = tagMode !== 'hidden' && tags.length > 0
+const showStats = showPublishedDate || showUpdatedDate || showReadingTime || showLanguage
+const showMeta = showStats || showTags
+const statsConfig: ReadingStatsConfig = {
+  language: languageMode,
+  publishedDate: publishedDateMode,
+  readingTime: readingTimeMode,
+  updatedDate: updatedDateMode
+}
+---
+
+{
+  showMeta && (
+    <ReadingStats data={data} config={statsConfig} variant={variant}>
+      <ReadingTags data={tags} mode={tagMode} scopeLabel={tagScopeLabel} />
+    </ReadingStats>
+  )
+}

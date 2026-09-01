@@ -1,0 +1,95 @@
+---
+/**
+ * Shared article-reading orchestration for Blog, Trace and Saying.
+ *
+ * ContentLayout remains the low-level frame (sidebar, prose container,
+ * BackToTop and its ClientRouter lifecycle).  This shell owns the article-only
+ * capabilities that used to be repeated by every detail layout, while the
+ * caller supplies the semantic header and footer policy through slots.
+ */
+import type { MarkdownHeading } from 'astro'
+
+import 'katex/dist/katex.min.css'
+
+import type { EffectProfile } from '@/data/effects'
+import { readingHighlightColor } from '@/lib/content'
+import type { ReadingBackgroundConfig } from '@/lib/content-layer/reading-policy'
+
+import { TOC } from 'astro-pure/components/pages'
+import type { SiteMeta } from 'astro-pure/types'
+import ContentLayout from '@/layouts/ContentLayout.astro'
+import ArticleImageZoom from '@/components/reading/ArticleImageZoom.astro'
+import Signature from '@/components/shared/Signature.astro'
+import ReadingBackground from '@/components/reading/capabilities/ReadingBackground.astro'
+import ReadingOpeningMediaRuntime from '@/components/reading/capabilities/ReadingOpeningMediaRuntime.astro'
+import { integ, siteFeatures } from '@/site-config'
+
+interface Props {
+  back?: string
+  background?: ReadingBackgroundConfig
+  contentType?: string
+  effectProfile?: EffectProfile
+  headings: MarkdownHeading[]
+  highlightColor?: string
+  imageZoom?: boolean
+  meta: SiteMeta
+  musicMode?: 'compact' | 'full'
+  pagefindBody?: boolean
+  signature?: boolean
+}
+
+const {
+  back,
+  background = { mode: 'on', variant: 'gradient' },
+  contentType,
+  effectProfile,
+  headings,
+  highlightColor,
+  imageZoom = false,
+  meta,
+  musicMode,
+  pagefindBody,
+  signature = false
+} = Astro.props as Props
+---
+
+<ReadingOpeningMediaRuntime />
+
+<ContentLayout
+  {back}
+  {contentType}
+  {effectProfile}
+  {highlightColor}
+  {meta}
+  {musicMode}
+  {pagefindBody}
+  sidebar={headings.length > 0}
+>
+  <Fragment slot='page-background'>
+    <ReadingBackground color={highlightColor ?? readingHighlightColor} config={background} />
+  </Fragment>
+
+  {!!headings.length && <TOC {headings} slot='sidebar' />}
+
+  <Fragment slot='header'>
+    <slot name='header' />
+  </Fragment>
+
+  <slot />
+
+  {signature && siteFeatures.signature.enabled && <Signature />}
+
+  {
+    imageZoom && integ.mediumZoom.enable && (
+      <ArticleImageZoom selector={integ.mediumZoom.selector} />
+    )
+  }
+
+  <Fragment slot='bottom'>
+    <slot name='bottom' />
+  </Fragment>
+
+  <Fragment slot='bottom-sidebar'>
+    <slot name='bottom-sidebar' />
+  </Fragment>
+</ContentLayout>

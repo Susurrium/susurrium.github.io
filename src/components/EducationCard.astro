@@ -1,0 +1,51 @@
+---
+import { educationEntries, type EducationEntry } from '@/data/education'
+import { formatProfilePeriod } from '@/data/profile-timeline'
+import '@/assets/styles/profile-card.css'
+
+interface Props {
+  class?: string
+  entries?: readonly EducationEntry[]
+}
+
+const { class: className, entries = educationEntries } = Astro.props as Props
+---
+
+<div class:list={['education-cards', className]} data-education-cards>
+  {
+    entries.map((entry) => (
+      <a
+        class='profile-card profile-card--has-image education-card site-card-surface site-card-surface--interactive group border'
+        href={entry.href}
+        target='_blank'
+        rel='noopener noreferrer'
+        aria-label={`${entry.school}：${entry.field}（${formatProfilePeriod(entry)}）`}
+      >
+        <img
+          class='profile-card__image education-card__image'
+          src={entry.image}
+          alt={entry.imageAlt}
+          width='640'
+          height='360'
+          loading='lazy'
+          decoding='async'
+        />
+        <span class='profile-card__content education-card__content'>
+          <span class='profile-card__title education-card__school'>{entry.school}</span>
+          <span class='profile-card__subtitle education-card__field'>{entry.field}</span>
+          <time class='profile-card__date education-card__date' datetime={entry.startDate}>
+            {formatProfilePeriod(entry)}
+          </time>
+        </span>
+      </a>
+    ))
+  }
+</div>
+
+<style>
+  .education-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+</style>

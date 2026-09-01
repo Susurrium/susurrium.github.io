@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import {
   getSayingDecorativeImage,
+  getCardCutSide,
   getTraceCardImage,
+  cardCutSideByFilename,
   resolvePresentation,
   selectRandom,
   stableContentHash,
@@ -9,16 +11,30 @@ import {
   sayingDecorativeImages,
   traceFallbackImages
 } from '../src/data/home-media'
-import { sortByDate } from '../src/lib/content'
+import { sortByDate, sortById } from '../src/lib/content'
+import { normalizeContentPresentation } from '../src/lib/compatibility/content-presentation'
 
 describe('Phase 2 presentation policy', () => {
   test('uses page override, then content default, then a safe fallback', () => {
-    expect(resolvePresentation('trace')).toBe('large-skull-content')
-    expect(resolvePresentation('saying')).toBe('large-skull-decorative')
-    expect(resolvePresentation('blog')).toBe('arthals-text')
-    expect(resolvePresentation('trace', 'arthals-text')).toBe('arthals-text')
-    expect(resolvePresentation('unknown')).toBe('arthals-text')
-    expect(resolvePresentation('trace', 'not-a-presentation')).toBe('large-skull-content')
+    expect(resolvePresentation('trace')).toBe('media-content')
+    expect(resolvePresentation('saying')).toBe('media-decorative')
+    expect(resolvePresentation('blog')).toBe('text')
+    expect(resolvePresentation('trace', 'text')).toBe('text')
+    expect(resolvePresentation('unknown')).toBe('text')
+    expect(resolvePresentation('trace', 'not-a-presentation')).toBe('media-content')
+    expect(resolvePresentation('trace', 'large-skull-content')).toBe('media-content')
+    expect(resolvePresentation('saying', 'large-skull-decorative')).toBe('media-decorative')
+    expect(resolvePresentation('blog', 'arthals-text')).toBe('text')
+  })
+
+  test('normalizes historical values only at the compatibility boundary', () => {
+    expect(normalizeContentPresentation('text')).toBe('text')
+    expect(normalizeContentPresentation('large-skull-content')).toBe('media-content')
+    expect(normalizeContentPresentation('large-skull-decorative')).toBe('media-decorative')
+    expect(normalizeContentPresentation('arthals-text')).toBe('text')
+    expect(normalizeContentPresentation('  large-skull-content  ')).toBe('media-content')
+    expect(normalizeContentPresentation('unknown', 'media-content')).toBe('media-content')
+    expect(normalizeContentPresentation(null, 'media-decorative')).toBe('media-decorative')
   })
 
   test('keeps recently sorted collections independently capped at three', () => {
@@ -36,6 +52,11 @@ describe('Phase 2 presentation policy', () => {
     ]
 
     expect(sortByDate(entries).map((entry) => entry.id)).toEqual(['alpha', 'middle', 'zeta'])
+  })
+
+  test('keeps undated Saying archives in a stable ID order', () => {
+    const entries = [{ id: 'zeta' }, { id: 'alpha' }, { id: 'middle' }]
+    expect(sortById(entries).map((entry) => entry.id)).toEqual(['alpha', 'middle', 'zeta'])
   })
 })
 
@@ -61,6 +82,18 @@ describe('Phase 2 Saying selection', () => {
     expect(first.alt).toBe('')
     expect(last.key).toBe(sayingDecorativeImages.at(-1)?.key)
     expect(wrapped.key).toBe(first.key)
+  })
+
+  test('keeps one editorial cut side per supplied local file', () => {
+    const catalogFilenames = new Set(
+      [...sayingDecorativeImages, ...traceFallbackImages].map((asset) => asset.src.split('/').pop())
+    )
+
+    expect(catalogFilenames.size).toBe(54)
+    expect(Object.keys(cardCutSideByFilename).sort()).toEqual([...catalogFilenames].sort())
+    expect(getCardCutSide({ src: '/images/home-media/thumb-1920-695454.webp' })).toBe('left')
+    expect(getCardCutSide({ src: '/images/home-media/thumb-1920-704341.webp' })).toBe('right')
+    expect(getCardCutSide({ src: '/images/other-cover.webp' })).toBe('right')
   })
 })
 

@@ -29,8 +29,14 @@
     "verify:phase6:browser": "node scripts/verify-phase6-browser.mjs",
     "verify:browser:lifecycle": "node scripts/verify-browser-lifecycle.mjs",
     "capture:visual-baseline": "node scripts/capture-visual-baseline.mjs",
+    "generate:social-card": "node scripts/generate-social-card.mjs",
+    "card-crops:apply": "node scripts/apply-card-crops.mjs",
+    "card-preview:generate": "bun scripts/generate-card-preview-content.ts",
+    "hero-crops:apply": "node scripts/apply-hero-crops.mjs",
     "release:gate": "bun scripts/verify-phase6.mjs --strict",
+    "test:all": "bun test test",
     "test:phase2": "bun test test/phase2-strategies.test.ts",
+    "test:content-layer": "bun test test/content-layer.test.ts",
     "test:phase4": "bun test test/phase4-effects.test.ts",
     "test:phase5": "bun test test/phase5-specialty.test.ts",
     "check:assets": "bun scripts/check-asset-budget.mjs",
@@ -44,7 +50,9 @@
     "yijiansilian": "bun lint && bun sync && bun check && bun format",
     "clean": "bun scripts/clean.mjs",
     "date": "tsx scripts/updateBlogDates.ts",
-    "cache:avatars": "tsx scripts/cacheAvatars.ts"
+    "cache:avatars": "tsx scripts/cacheAvatars.ts",
+    "links:check": "node scripts/check-links.mjs",
+    "links:check:dry": "node scripts/check-links.mjs --dry-run"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",

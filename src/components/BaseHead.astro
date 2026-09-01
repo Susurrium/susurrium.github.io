@@ -6,13 +6,26 @@ import config from '@/site-config'
 type Props = SiteMeta & {
   /** Utility/error pages should not become standalone search results. */
   noindex?: boolean
+  /** The last editorial update, distinct from the publication timestamp. */
+  articleModifiedDate?: string
 }
 
-const { articleDate, description, noindex = false, ogImage, title } = Astro.props
+const {
+  articleDate,
+  articleModifiedDate,
+  description,
+  noindex = false,
+  ogImage,
+  title
+} = Astro.props
 
-const siteTitle = `${title} ${config.titleDelimiter} ${config.title}`
+const isBlogIndex = /^\/blog\/?$/.test(Astro.url.pathname)
+const siteTitle = isBlogIndex ? config.title : `${title} ${config.titleDelimiter} ${config.title}`
+const socialTitle = isBlogIndex ? config.title : title
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
-const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', Astro.url).href
+const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.webp', Astro.url).href
+const umamiScriptUrl = 'https://cloud.umami.is/script.js'
+const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 ---
 
 <meta charset='utf-8' />
@@ -22,6 +35,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 {noindex && <meta name='robots' content='noindex, follow' />}
 
 {/* Icons / Favicon */}
+<link rel='icon' href={config.favicon} />
 <link rel='apple-touch-icon' sizes='180x180' href='/favicon/apple-touch-icon.png' />
 <link rel='icon' type='image/png' sizes='32x32' href='/favicon/favicon-32x32.png' />
 <link rel='icon' type='image/png' sizes='16x16' href='/favicon/favicon-16x16.png' />
@@ -50,7 +64,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 
 {/* Open Graph / Facebook */}
 <meta content={articleDate ? 'article' : 'website'} property='og:type' />
-<meta content={title} property='og:title' />
+<meta content={socialTitle} property='og:title' />
 <meta content={description} property='og:description' />
 <meta content={canonicalURL} property='og:url' />
 <meta content={config.title} property='og:site_name' />
@@ -63,6 +77,9 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
     <>
       <meta content={config.author} property='article:author' />
       <meta content={articleDate} property='article:published_time' />
+      {articleModifiedDate && (
+        <meta content={articleModifiedDate} property='article:modified_time' />
+      )}
     </>
   )
 }
@@ -70,7 +87,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 {/* Twitter */}
 <meta content='summary_large_image' property='twitter:card' />
 <meta content={canonicalURL} property='twitter:url' />
-<meta content={title} property='twitter:title' />
+<meta content={socialTitle} property='twitter:title' />
 <meta content={description} property='twitter:description' />
 <meta content={socialImageURL} property='twitter:image' />
 
@@ -91,14 +108,15 @@ const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.png', As
 <link rel='stylesheet' href='/styles/global.css' />
 
 {
-  /* User script*/
   prod && (
-    <script>
-      console.log( '%c Astro Theme Pure %c https://github.com/cworld1/astro-theme-pure/',
-      'color:#fff;background:linear-gradient(90deg,#448bff,#44e9ff);padding:5px 0;',
-      'color:#000;background:linear-gradient(90deg,#44e9ff,#ffffff);padding:5px 10px 5px 0px;' )
-    </script>
+    <script
+      is:inline
+      defer
+      src={umamiScriptUrl}
+      data-website-id={umamiWebsiteId}
+      data-domains='susurrium.github.io'
+    ></script>
   )
 }
 
-<!-- Analytics intentionally disabled during development. -->
+<!-- Umami is enabled only for the production site. -->

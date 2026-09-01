@@ -1,57 +1,46 @@
 ---
-import type { CollectionEntry } from 'astro:content'
-import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
-import {
-  getTraceCardImage,
-  type ContentImageInput,
-  type ContentPresentation
-} from '@/data/home-media'
+/**
+ * Trace's content adapter for the Media visual primitive.
+ *
+ * The adapter receives a canonical card projection; it does not read Trace
+ * frontmatter or choose a source collection.  The visual primitive below is
+ * intentionally unchanged so this data-layer migration has no styling
+ * responsibility.
+ */
+import MediaCard from '@/components/cards/MediaCard.astro'
+import type { ContentPresentation, MediaCardData } from '@/lib/content-layer/types'
 
 interface Props {
   actionLabel?: string
   class?: string
+  data: MediaCardData
   headingLevel?: 2 | 3 | 4 | 5 | 6
   index?: number
   presentation?: ContentPresentation
-  trace: CollectionEntry<'trace'>
 }
 
 const {
-  actionLabel = 'Read Trace',
+  actionLabel = 'Read',
   class: className,
+  data,
   headingLevel,
   index = 0,
-  presentation = 'large-skull-content',
-  trace
+  presentation = 'media-content'
 } = Astro.props
-
-function asContentImage(
-  cover: unknown,
-  alt: string | undefined,
-  contentId: string
-): ContentImageInput | undefined {
-  if (!cover || typeof cover !== 'object' || !('src' in cover)) return undefined
-  const src = (cover as { src?: unknown }).src
-  if (typeof src !== 'string') return undefined
-  return { alt, key: `content-${contentId}`, src }
-}
-
-const image = getTraceCardImage(trace.id, asContentImage(trace.data.cover, trace.data.coverAlt, trace.id))
-const footerText = trace.data.tags.length > 0 ? trace.data.tags.map((tag) => `#${tag}`).join(' ') : 'Trace'
 ---
 
-<LargeSkullCard
+<MediaCard
   actionLabel={actionLabel}
   class={className}
-  contentId={trace.id}
-  contentType='trace'
-  date={trace.data.publishDate}
-  description={trace.data.description}
-  footerText={footerText}
+  contentId={data.contentId}
+  contentType={data.contentType}
+  date={data.date}
+  description={data.description}
+  footerText={data.footerText}
   {headingLevel}
-  href={`/traces/${trace.id}`}
-  {image}
+  href={data.href}
+  image={data.image}
   index={index}
   {presentation}
-  title={trace.data.title}
+  title={data.title}
 />

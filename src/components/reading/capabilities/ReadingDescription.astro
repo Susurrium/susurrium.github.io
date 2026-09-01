@@ -1,0 +1,27 @@
+---
+import {
+  isReadingFeatureVisible,
+  type ReadingDescriptionVariant,
+  type ReadingFeatureMode
+} from '@/lib/content-layer/reading-policy'
+
+interface Props {
+  mode?: ReadingFeatureMode
+  text?: string
+  variant?: ReadingDescriptionVariant
+}
+
+const { mode = 'auto', text, variant = 'quoted' } = Astro.props as Props
+const visible = isReadingFeatureVisible(mode, Boolean(text))
+---
+
+{
+  visible &&
+    (variant === 'quoted' ? (
+      <blockquote class='text-sm italic text-muted-foreground'>
+        <q>{text}</q>
+      </blockquote>
+    ) : (
+      <p class='text-sm text-muted-foreground'>{text}</p>
+    ))
+}

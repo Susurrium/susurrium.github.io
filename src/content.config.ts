@@ -57,8 +57,10 @@ const docs = defineCollection({
     })
 })
 
-// Trace is deliberately separate from Blog: it is a short-form record with its
-// own list/detail route and is not included in the Blog tag, archive or RSS views.
+// Trace is deliberately separate from Blog: it is a short-to-medium record
+// with its own list/detail route and is not included in the Blog tag, archive
+// or RSS views. A description and cover are optional conveniences for cards;
+// the Markdown/MDX body remains the source of truth for the record itself.
 const trace = defineCollection({
   loader: glob({ base: './src/content/traces', pattern: '**/*.{md,mdx}' }),
   schema: ({ image }) =>
@@ -83,24 +85,22 @@ const trace = defineCollection({
       })
 })
 
-// Sayings are a third content type, not a shortened Blog or Trace. Their tags
-// remain local metadata until a future product decision explicitly exposes them.
+// Saying is a third content type, not a shortened Blog or Trace. The required
+// text is the primary quote; originalText, author and source are deliberately
+// small optional attribution fields. Its taxonomy is local to Saying and is
+// never merged into Blog or Trace.
 const saying = defineCollection({
   loader: glob({ base: './src/content/sayings', pattern: '**/*.{md,mdx}' }),
   schema: () =>
     z
       .object({
         text: z.string().min(1).max(500),
+        originalText: z.string().min(1).max(500).optional(),
         author: z.string().min(1).max(80).optional(),
         source: z.string().min(1).max(160).optional(),
         sourceUrl: z.url().optional(),
-        publishDate: z.coerce.date(),
         tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
         draft: z.boolean().default(false)
-      })
-      .refine((entry) => !entry.sourceUrl || Boolean(entry.source), {
-        message: 'source is required when sourceUrl is set',
-        path: ['source']
       })
 })
 

@@ -1,0 +1,47 @@
+---
+interface Props {
+  class?: string
+}
+
+const { class: className } = Astro.props as Props
+const badgeSource =
+  'https://shields.jannchie.com/endpoint?style=flat&color=0284c7&url=https%3A%2F%2Fcodetime.dev%2Fv3%2Fusers%2Fshield%3Fuid%3D37606'
+---
+
+<a
+  class:list={['codetime-badge', className]}
+  href='https://codetime.dev/'
+  target='_blank'
+  rel='noopener noreferrer'
+  data-codetime-card
+  aria-label='Open CodeTime'
+>
+  <img
+    class='codetime-badge__image'
+    src={badgeSource}
+    alt='CodeTime Badge'
+    width='125'
+    height='20'
+    loading='lazy'
+    decoding='async'
+  />
+</a>
+
+<style>
+  .codetime-badge {
+    display: inline-flex;
+    width: 125px;
+    max-width: 100%;
+    min-height: 20px;
+    align-items: center;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .codetime-badge__image {
+    display: block;
+    width: 125px;
+    max-width: 100%;
+    height: 20px;
+  }
+</style>

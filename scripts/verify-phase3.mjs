@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
 const dist = resolve(root, 'dist')
@@ -36,31 +36,69 @@ function count(html, expression) {
   return [...html.matchAll(expression)].length
 }
 
+function firstGeneratedDetail(route) {
+  const base = resolve(dist, route)
+  if (!existsSync(base)) return undefined
+  let found
+  const walk = (current) => {
+    if (found) return
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const absolute = resolve(current, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name !== route) walk(absolute)
+        continue
+      }
+      if (entry.isFile() && entry.name === 'index.html' && current !== base) {
+        // Blog pagination pages live under numeric directories; a detail page
+        // has the BlogPost hero/copyright contract instead.
+        if (route === 'blog') {
+          const html = readFileSync(absolute, 'utf8')
+          if (
+            !/\bdata-reading-opening-media-variant=["']layered-blur["']/.test(html) &&
+            !html.includes('article-copyright')
+          )
+            continue
+        }
+        found = relative(dist, absolute).replace(/\\/g, '/')
+        return
+      }
+    }
+  }
+  walk(base)
+  return found
+}
+
+const blogDetailPath = firstGeneratedDetail('blog')
+
 const media = [
   {
-    path: 'media/entrance-loop.webm',
-    hash: '62e20114b0f068c2e377a16d6f673697c16a2917880e979c893044cf21e5e76c'
+    path: 'media/entrance-loop-waterfall.webm',
+    hash: 'ff6488f821cb87d4cbd77770701d8895eba61d8d6f23f52f3ee8709da11f3598'
   },
   {
-    path: 'media/entrance-loop.mp4',
-    hash: '23cd4d3a0c314e728674d7fb8f7f171eaa7332f07ed7ebfb77b9b8b48baf113f'
+    path: 'media/entrance-loop-waterfall.mp4',
+    hash: '991e7e350af89c3550f206411a1be46a56042badf05e60ac40b2da5e5c1d59c7'
   },
   {
-    path: 'media/entrance-loop-mobile.webm',
-    hash: '3699a27675e04c0a4c3c292e3de7834c8751e7e447749f7a340d9a32040f47b4'
+    path: 'media/entrance-loop-waterfall-mobile.webm',
+    hash: 'a0d777e8446c1b3ff9e5a0ff969de5b11a91596d8b46bc46f8e2f59995b3fae2'
   },
   {
-    path: 'media/entrance-loop-mobile.mp4',
-    hash: 'e29903028da61f379a0beb320a9ae2727bcbe73cc34cc9642466aed8656ec539'
+    path: 'media/entrance-loop-waterfall-mobile.mp4',
+    hash: '706182ed35e8ad6064aeabb2d9e3c3dceffc68fc9b15a8014ae4b29df770dec6'
   },
   {
-    path: 'media/entrance-poster.webp',
-    hash: '8f8e5695d882653c58f4884bacb384be35448bbe19cabc1af16668376f0e9c02'
+    path: 'media/entrance-waterfall-poster.webp',
+    hash: '39d7ee3b42f3fb48d4d546973418bf564061c67a9549e6a98b738494febfd2a4'
+  },
+  {
+    path: 'media/entrance-waterfall-poster-mobile.webp',
+    hash: 'f946e566bfd85df014f7f8dc6a202d9f9832fb1bc7a734109cb6780e2ceafabf'
   }
 ]
 
 expect(existsSync(dist), 'production dist exists')
-for (const path of ['index.html', 'home/index.html', 'blog/xv6-os-lab-part8/index.html']) {
+for (const path of ['index.html', 'home/index.html', ...(blogDetailPath ? [blogDetailPath] : [])]) {
   expect(existsSync(resolve(dist, path)), `${path} exists`)
 }
 
@@ -113,9 +151,10 @@ if (existsSync(resolve(dist, 'index.html'))) {
 const entranceData = source('src/data/entrance.ts')
 const typedSource = source('src/components/entrance/EntranceTypedText.astro')
 const sceneSource = source('src/components/entrance/EntranceScene.astro')
-expect(entranceData.includes('startDelay: 300'), 'Typed.js start delay is locked to 300 ms')
-expect(entranceData.includes('typeSpeed: 150'), 'Typed.js type speed is locked to 150')
-expect(entranceData.includes('backSpeed: 50'), 'Typed.js back speed is locked to 50')
+expect(entranceData.includes('startDelay: 600'), 'Typed.js start delay is locked to 600 ms')
+expect(entranceData.includes('typeSpeed: 52'), 'Typed.js type speed is locked to 52')
+expect(entranceData.includes('backSpeed: 28'), 'Typed.js back speed is locked to 28')
+expect(entranceData.includes('backDelay: 1500'), 'Typed.js back delay is locked to 1500 ms')
 expect(entranceData.includes('loop: true'), 'Typed.js loops its text sequence')
 expect(typedSource.includes("import Typed from 'typed.js'"), 'Typed.js is bundled locally')
 expect(
@@ -134,23 +173,31 @@ expect(
 
 const musicData = source('src/data/music.ts')
 const musicSource = source('src/components/MusicPlayer.astro')
-const articleImageZoom = source('src/components/arthals/ArticleImageZoom.astro')
-const copyrightSource = source('src/components/arthals/Copyright.astro')
+const articleImageZoom = source('src/components/reading/ArticleImageZoom.astro')
+const copyrightSource = source('src/components/reading/ContentCopyright.astro')
+const contentReadingPage = source('src/layouts/ContentReadingPage.astro')
+const contentReadingShell = source('src/layouts/ContentReadingShell.astro')
+const readingFooter = source('src/components/reading/ReadingFooter.astro')
 const baseLayout = source('src/layouts/BaseLayout.astro')
 const transitionGuardSource = source('src/components/ViewTransitionRejectionGuard.astro')
-const blogPost = source('src/layouts/BlogPost.astro')
-const signatureSource = source('src/components/arthals/Signature.astro')
+const signatureSource = source('src/components/shared/Signature.astro')
+const siteConfigSource = source('src/site.config.ts')
+const readingPolicySource = source('src/lib/content-layer/reading-policy.ts')
 const randomSayingSource = source('src/components/home/RandomSayingCard.astro')
 const linksSource = source('src/pages/links/index.astro')
 const packageManifest = JSON.parse(source('package.json'))
-expect(!/https?:\/\//.test(musicData), 'music catalogue contains no remote URL')
+expect(musicData.includes('export const musicConfig'), 'music config exposes one provider contract')
 expect(
-  !/audioSrc\s*:/.test(musicData),
-  'fixture catalogue intentionally ships without audio sources'
+  /server:\s*['"]netease['"]/.test(musicData) && /type:\s*['"]playlist['"]/.test(musicData),
+  'music config targets a NetEase playlist'
 )
 expect(
-  musicData.includes('coverSrc?: string'),
-  'music catalogue reserves a local-only cover path for final media'
+  musicData.includes('api.injahow.cn/meting/'),
+  'music config uses the declared public Meting endpoint'
+)
+expect(
+  musicData.includes("id: '12812783625'"),
+  'music config keeps the temporary reference playlist'
 )
 expect(
   musicSource.includes('data-global-music-player'),
@@ -164,17 +211,19 @@ expect(
   packageManifest.dependencies.qrcodejs === '1.0.0',
   'QRCode renderer is pinned to the locally bundled qrcodejs 1.0.0 release'
 )
-expect(musicSource.includes('data-music-audio'), 'music player exposes its single audio contract')
-expect(musicSource.includes('data-music-cover'), 'music player exposes its local cover contract')
 expect(
-  count(musicSource, /<audio\b/g) === 1,
-  'music player source declares exactly one audio element'
+  musicSource.includes('<meting-js') && musicSource.includes('data-music-meting'),
+  'music player mounts one MetingJS custom element'
+)
+expect(musicSource.includes('candidate.audio.autoplay = false'), 'music player disables autoplay')
+expect(
+  musicSource.includes('this.meting.lock = true'),
+  'music player protects the persistent MetingJS instance during swaps'
 )
 expect(
-  musicSource.includes('resolved.origin === window.location.origin'),
-  'music player rejects remote audio paths'
+  musicSource.includes("candidate.audio.dataset.musicAudio = 'true'"),
+  'music player marks the APlayer-owned audio element for runtime audits'
 )
-expect(musicSource.includes('this.audio.autoplay = false'), 'music player disables autoplay')
 expect(
   musicSource.includes("'astro:after-swap'"),
   'music player resynchronizes after ClientRouter swaps'
@@ -215,14 +264,15 @@ expect(
   'article image zoom releases current images across ClientRouter navigation'
 )
 expect(
-  blogPost.includes("import ArticleImageZoom from '@/components/arthals/ArticleImageZoom.astro'") &&
-    !blogPost.includes("from 'astro-pure/advanced'"),
-  "Blog posts use the local image zoom controller rather than Pure's CDN wrapper"
+  contentReadingShell.includes(
+    "import ArticleImageZoom from '@/components/reading/ArticleImageZoom.astro'"
+  ) && !contentReadingShell.includes("from 'astro-pure/advanced'"),
+  "Reading pages use the local image zoom controller rather than Pure's CDN wrapper"
 )
 expect(
-  blogPost.includes("import Copyright from '@/components/arthals/Copyright.astro'") &&
-    !blogPost.includes('Copyright, Hero'),
-  "Blog posts use the local Copyright component rather than Pure's CDN QR wrapper"
+  readingFooter.includes("import Copyright from '@/components/reading/ContentCopyright.astro'") &&
+    !readingFooter.includes('Copyright, Hero'),
+  "Reading pages use the local Copyright component rather than Pure's CDN QR wrapper"
 )
 expect(
   copyrightSource.includes("import qrcodeScriptUrl from 'qrcodejs/qrcode.min.js?url'") &&
@@ -243,6 +293,23 @@ expect(
   'signature drawing does not perform global document scans after navigation'
 )
 expect(
+  /signature:\s*\{[\s\S]*?enabled:\s*false/.test(siteConfigSource),
+  'signature visibility is disabled by the site-wide feature switch'
+)
+expect(
+  readingPolicySource.includes("'blog-detail': {") &&
+    readingPolicySource.includes("body: { signature: 'off' }"),
+  'Blog detail pages default to a hidden signature policy'
+)
+expect(
+  contentReadingShell.includes('siteFeatures.signature.enabled'),
+  'reading pages keep signature rendering behind the site-wide switch'
+)
+expect(
+  linksSource.includes('siteFeatures.signature.enabled'),
+  'Links keeps signature rendering reversible behind the site-wide switch'
+)
+expect(
   randomSayingSource.includes("'astro:page-load'") &&
     randomSayingSource.includes('AbortController') &&
     randomSayingSource.includes('disconnectedCallback') &&
@@ -252,15 +319,16 @@ expect(
 expect(
   !linksSource.includes('friends.arthals.ink') &&
     !linksSource.includes('import FriendCircle') &&
-    linksSource.includes("data-friend-circle-status='deferred'"),
-  'Links defers the non-allowlisted Friend Circle runtime to a future local snapshot'
+    !linksSource.includes('friend-circle-lite-root') &&
+    !linksSource.includes("text: 'Friend Circle'"),
+  'Links keeps Friend Circle code available but does not render or request it'
 )
 expect(
   linksSource.includes('<site-info-copy') && !linksSource.includes('onclick={script}'),
   'Links uses a local copy control instead of interpolating values into inline handlers'
 )
 
-for (const path of ['home/index.html', 'blog/xv6-os-lab-part8/index.html']) {
+for (const path of ['home/index.html', ...(blogDetailPath ? [blogDetailPath] : [])]) {
   if (!existsSync(resolve(dist, path))) continue
   const html = output(path)
   expect(html.includes('ClientRouter.astro_astro'), `${path} emits ClientRouter runtime`)
@@ -269,8 +337,8 @@ for (const path of ['home/index.html', 'blog/xv6-os-lab-part8/index.html']) {
     `${path} emits exactly one persistent music wrapper`
   )
   expect(count(html, /<music-player\b/g) === 1, `${path} emits exactly one music player`)
-  expect(count(html, /<audio\b/g) === 1, `${path} emits exactly one audio element`)
-  expect(!/<audio\b[^>]*\bsrc="https?:\/\//i.test(html), `${path} has no remote audio source`)
+  expect(count(html, /<meting-js\b/g) === 1, `${path} emits exactly one MetingJS element`)
+  expect(html.includes('data-provider="netease"'), `${path} declares the NetEase provider`)
   expect(
     html.includes('__susurriumViewTransitionRejectionGuard'),
     `${path} emits the native View Transition rejection guard`
@@ -285,8 +353,8 @@ if (existsSync(resolve(dist, 'home/index.html'))) {
   )
 }
 
-if (existsSync(resolve(dist, 'blog/xv6-os-lab-part8/index.html'))) {
-  const detail = output('blog/xv6-os-lab-part8/index.html')
+if (blogDetailPath && existsSync(resolve(dist, blogDetailPath))) {
+  const detail = output(blogDetailPath)
   expect(
     /<body\b[^>]*data-music-mode="compact"/.test(detail),
     'Blog detail exposes compact music presentation mode'
@@ -305,8 +373,10 @@ if (existsSync(resolve(dist, 'blog/xv6-os-lab-part8/index.html'))) {
 if (existsSync(resolve(dist, 'links/index.html'))) {
   const links = output('links/index.html')
   expect(
-    links.includes('data-friend-circle-status="deferred"'),
-    'Links emits the local Friend Circle deferred state'
+    !links.includes('friend-circle-lite-root') &&
+      !links.includes('data-friend-circle-status') &&
+      !links.includes('Friend Circle'),
+    'Links emits no Friend Circle heading, placeholder, or status'
   )
   expect(!links.includes('friends.arthals.ink'), 'Links emits no Friend Circle remote endpoint')
   expect(
@@ -317,13 +387,10 @@ if (existsSync(resolve(dist, 'links/index.html'))) {
   )
 }
 
-for (const path of [
-  'src/layouts/BlogPost.astro',
-  'src/layouts/TracePost.astro',
-  'src/layouts/SayingPost.astro'
-]) {
-  expect(source(path).includes("musicMode='compact'"), `${path} opts into compact music mode`)
-}
+expect(
+  contentReadingPage.includes("musicMode='compact'"),
+  'Shared reading composition opts all detail pages into compact music mode'
+)
 
 const headerSource = source('src/components/layout/SiteHeader.astro')
 expect(headerSource.includes('AbortController'), 'header owns abortable ClientRouter listeners')

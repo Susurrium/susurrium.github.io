@@ -5,67 +5,62 @@
  * fresh published Saying on every Home visit. Do not move that selection into
  * Astro frontmatter: Home is statically generated.
  */
-import type { CollectionEntry } from 'astro:content'
-import { getSayingDecorativeImage } from '@/data/home-media'
-import { formatContentDate } from '@/lib/content'
+import { getCardCutSide } from '@/data/home-media'
+import type { CardCutSide } from '@/data/home-media'
+import { resolveMediaImage } from '@/lib/content-layer/page-data'
+import type { RenderablePageItem, SayingRecord } from '@/lib/content-layer/types'
 
+import { Button } from 'astro-pure/user'
 import ContentCard from '@/components/cards/ContentCard.astro'
-import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
 
 interface Props {
-  sayings: readonly CollectionEntry<'saying'>[]
+  items: readonly RenderablePageItem[]
 }
 
 type SayingCatalogItem = {
-  author: string
-  date: string
-  dateLabel: string
+  description: string
   footer: string
   href: string
   id: string
-  image: ReturnType<typeof getSayingDecorativeImage>
+  image: ReturnType<typeof resolveMediaImage>
+  cutSide: CardCutSide
   text: string
 }
 
-const { sayings } = Astro.props
-const catalog: SayingCatalogItem[] = sayings.map((saying, archiveIndex) => ({
-  author: saying.data.author ? `— ${saying.data.author}` : 'Collected saying',
-  date: saying.data.publishDate.toISOString(),
-  dateLabel: formatContentDate(saying.data.publishDate),
-  footer: saying.data.source ?? 'Saying',
-  href: `/sayings/${saying.id}`,
-  id: saying.id,
-  image: getSayingDecorativeImage(archiveIndex),
-  text: saying.data.text
-}))
-const fallbackEntry = sayings[0]
+const { items } = Astro.props
+const sayingItems = items.filter(
+  (item): item is RenderablePageItem & { record: SayingRecord } => item.record.kind === 'saying'
+)
+const catalog: SayingCatalogItem[] = sayingItems.map((item) => {
+  const image = resolveMediaImage(item)
+  return {
+    description: item.card.description ?? '',
+    footer: item.card.footerText,
+    href: item.card.href,
+    id: item.record.id,
+    image,
+    cutSide: getCardCutSide(image),
+    text: item.record.title
+  }
+})
+const fallbackItem = sayingItems[0]
 const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
 ---
 
-<section
-  class='home-random-saying'
-  aria-labelledby='home-random-saying-heading'
-  data-home-random-saying
->
-  <div class='home-section-heading'>
-    <div>
-      <p class='home-section-heading__eyebrow'>A line to keep</p>
-      <h2 id='home-random-saying-heading'>Saying</h2>
-    </div>
-    <a href='/sayings' data-astro-prefetch>View archive →</a>
-  </div>
+<!-- The custom element owns this page visit's selection. It is not persisted,
+     so returning to /home through ClientRouter selects again. -->{
+  fallbackItem ? (
+    <section
+      class='home-random-saying'
+      aria-labelledby='home-random-saying-heading'
+      data-home-random-saying
+    >
+      <h2 id='home-random-saying-heading' class='sr-only'>
+        Saying
+      </h2>
 
-  <!-- The custom element owns this page visit's selection. It is not
-       persisted, so returning to /home through ClientRouter selects again. -->
-  {
-    fallbackEntry ? (
-      <saying-random-card data-random-saying data-saying-id={fallbackEntry.id}>
-        <ContentCard
-          actionLabel='View complete saying'
-          contentKind='saying'
-          entry={fallbackEntry}
-          index={0}
-        />
+      <saying-random-card data-random-saying data-saying-id={fallbackItem.record.id}>
+        <ContentCard class='home-saying-card' item={fallbackItem} />
         <script
           is:inline
           type='application/json'
@@ -73,34 +68,39 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
           set:html={serializedCatalog}
         />
       </saying-random-card>
-    ) : (
-      <LargeSkullCard
-        contentType='saying'
-        description='A future saying will appear here without shifting the rest of Home.'
-        footerText='Saying archive'
-        image={getSayingDecorativeImage(0)}
-        index={0}
-        presentation='large-skull-decorative'
-        title='Sayings are being prepared.'
-      />
-    )
-  }
-</section>
+
+      <div class='home-random-saying__actions' data-home-saying-actions>
+        <Button
+          title='View all'
+          href='/sayings'
+          variant='ahead'
+          aria-label='View all Sayings'
+          data-home-action='ahead'
+          class='home-random-saying__more w-fit self-end'
+        />
+      </div>
+    </section>
+  ) : null
+}
 
 <script>
   import { selectRandom } from '@/data/home-media'
 
   type ClientCatalogItem = {
-    author: string
-    date: string
-    dateLabel: string
+    description: string
     footer: string
     href: string
     id: string
+    cutSide: 'left' | 'right'
     image: {
       alt: string
       decorative: boolean
       key?: string
+      crop?: {
+        fit: 'cover' | 'contain'
+        frame: 'diagonal-left' | 'diagonal-right'
+        transform: { x: number; y: number; zoom: number }
+      }
       source: string
       src?: string
     }
@@ -162,36 +162,97 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
       this.#lastVisitKey = visitKey
       this.dataset.sayingId = selected.id
 
-      const card = this.querySelector<HTMLElement>('[data-largeskull-card]')
+      const card = this.querySelector<HTMLElement>('[data-media-card]')
       if (!card) return
+      const cutSide = selected.cutSide === 'left' ? 'left' : 'right'
+      const crop = selected.image.crop
+      // A confirmed crop frame is authoritative for this runtime selection;
+      // the catalogue cut side is only the no-crop fallback. Keep the shared
+      // CardMediaFrame in sync because its SSR custom properties are otherwise
+      // immutable when a random Saying swaps the image in place.
+      const frame = crop?.frame ?? (cutSide === 'left' ? 'diagonal-left' : 'diagonal-right')
+      const renderedCutSide = frame === 'diagonal-left' ? 'left' : 'right'
+      const position = crop ? `${crop.transform.x}% ${crop.transform.y}%` : '50% 50%'
       card.dataset.contentId = selected.id
       card.dataset.imageKey = selected.image.key ?? ''
+      card.dataset.imageFile = selected.image.src?.split(/[/?#]/).pop() ?? ''
       card.dataset.imageSource = selected.image.source
+      card.dataset.cardCutSide = renderedCutSide
+      card.dataset.cardImageSide = renderedCutSide === 'left' ? 'right' : 'left'
+      card.dataset.cardLayoutVariant =
+        renderedCutSide === 'left' ? 'image-right-diagonal-left' : 'image-left-diagonal-right'
+      card.classList.toggle('is-cut-left', renderedCutSide === 'left')
+      if (crop) {
+        card.dataset.cardCropFrame = crop.frame
+        card.dataset.cardImageFit = crop.fit
+        card.dataset.cardImagePosition = `${crop.transform.x}% ${crop.transform.y}%`
+        card.dataset.cardImageZoom = String(crop.transform.zoom)
+        card.dataset.cardImageOrigin = `${crop.transform.x}% ${crop.transform.y}%`
+        card.style.setProperty('--media-card-image-fit', crop.fit)
+        card.style.setProperty(
+          '--media-card-image-position',
+          `${crop.transform.x}% ${crop.transform.y}%`
+        )
+        card.style.setProperty('--media-card-image-zoom', String(crop.transform.zoom))
+        card.style.setProperty(
+          '--media-card-image-origin',
+          `${crop.transform.x}% ${crop.transform.y}%`
+        )
+      } else {
+        delete card.dataset.cardCropFrame
+        card.dataset.cardImageFit = 'cover'
+        card.dataset.cardImagePosition = '50% 50%'
+        card.dataset.cardImageZoom = '1'
+        card.dataset.cardImageOrigin = '50% 50%'
+        card.style.setProperty('--media-card-image-fit', 'cover')
+        card.style.setProperty('--media-card-image-position', '50% 50%')
+        card.style.setProperty('--media-card-image-zoom', '1')
+        card.style.setProperty('--media-card-image-origin', '50% 50%')
+      }
 
-      const link = card.querySelector<HTMLAnchorElement>('.large-skull-card__link')
+      const mediaFrame = card.querySelector<HTMLElement>('[data-card-media-frame]')
+      if (mediaFrame) {
+        mediaFrame.dataset.frame = frame
+        mediaFrame.dataset.mediaFrame = frame
+        mediaFrame.dataset.mediaMask = renderedCutSide
+        mediaFrame.dataset.fit = crop?.fit ?? 'cover'
+        mediaFrame.style.setProperty('--card-media-fit', crop?.fit ?? 'cover')
+        mediaFrame.style.setProperty('--card-media-position', position)
+        mediaFrame.style.setProperty('--card-media-origin', position)
+        mediaFrame.style.setProperty('--card-media-zoom', String(crop?.transform.zoom ?? 1))
+        mediaFrame.classList.toggle('card-media-frame--left', renderedCutSide === 'left')
+        mediaFrame.classList.toggle('card-media-frame--right', renderedCutSide === 'right')
+      }
+
+      const link = card.querySelector<HTMLAnchorElement>('.media-card__link')
       if (link) link.href = selected.href
 
       const title = card.querySelector<HTMLElement>('[data-card-title]')
-      if (title) title.textContent = `“${selected.text}”`
+      if (title) {
+        title.textContent = `“${selected.text}”`
+        // The server-rendered fallback and the client-selected Saying can be
+        // different records. Keep the article outline and accessible name in
+        // sync when the identity changes in place.
+        title.id = `media-card-${selected.id}`
+        card.setAttribute('aria-labelledby', title.id)
+      }
 
       const description = card.querySelector<HTMLElement>('[data-card-description]')
-      if (description) description.textContent = selected.author
+      if (description) {
+        description.textContent = selected.description
+        description.hidden = !selected.description
+      }
 
       const footer = card.querySelector<HTMLElement>('[data-card-footer]')
       if (footer) footer.textContent = selected.footer
-
-      const date = card.querySelector<HTMLTimeElement>('[data-card-date]')
-      if (date) {
-        date.dateTime = selected.date
-        date.textContent = selected.dateLabel
-      }
 
       const image = card.querySelector<HTMLImageElement>('[data-card-image]')
       if (image && selected.image.src) {
         image.src = selected.image.src
         image.alt = selected.image.alt
         image.setAttribute('data-image-key', selected.image.key ?? '')
-        image.setAttribute('aria-hidden', String(selected.image.decorative))
+        const cover = card.querySelector<HTMLElement>('.media-card__cover')
+        cover?.toggleAttribute('aria-hidden', selected.image.decorative)
       }
     }
   }
@@ -204,42 +265,29 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
 <style>
   .home-random-saying {
     display: flex;
+    width: 100%;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.9rem;
   }
 
-  .home-section-heading {
+  .home-random-saying__actions {
     display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .home-section-heading h2,
-  .home-section-heading p {
-    margin: 0;
-  }
-
-  .home-section-heading h2 {
-    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
-    font-weight: 600;
-  }
-
-  .home-section-heading__eyebrow {
-    margin-bottom: 0.25rem !important;
-    color: hsl(var(--muted-foreground));
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .home-section-heading > a {
-    color: hsl(var(--muted-foreground));
-    font-size: 0.8rem;
+    width: 100%;
+    justify-content: flex-end;
   }
 
   saying-random-card {
     display: block;
+  }
+
+  /* Media's archive card deliberately keeps a 1rem breathing room. On
+     Home the card and its external CTA belong to the outer content rail, so
+     remove only the horizontal part of that margin while preserving the
+     vertical rhythm and slanted-card presentation. */
+  .home-random-saying :global(.media-card.home-saying-card) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 100%;
+    margin-inline: 0;
   }
 </style>

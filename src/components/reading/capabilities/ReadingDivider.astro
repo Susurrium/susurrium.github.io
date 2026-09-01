@@ -1,0 +1,18 @@
+---
+import {
+  isReadingFeatureVisible,
+  type ReadingFeatureMode
+} from '@/lib/content-layer/reading-policy'
+
+interface Props {
+  mode?: ReadingFeatureMode
+}
+
+const { mode = 'on' } = Astro.props as Props
+---
+
+{
+  isReadingFeatureVisible(mode, true) && (
+    <div class='mt-4 w-1/2 border-t max-md:mx-auto sm:mt-6 sm:w-1/3' />
+  )
+}

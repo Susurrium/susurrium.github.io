@@ -1,0 +1,152 @@
+---
+/**
+ * The single renderer for the text-card visual family.
+ *
+ * Blog's richer metadata and tag region are supplied by the view model.  The
+ * renderer never reads a collection entry, so another content type can use the
+ * same visual grammar without creating another card implementation.
+ */
+import type { TextCardMeta, TextCardTag, TextCardViewData } from '@/lib/content-layer/card-data'
+
+import { Button, FormattedDate, Icon } from 'astro-pure/user'
+import { cn } from 'astro-pure/utils'
+
+interface Props {
+  as?: 'article' | 'li'
+  class?: string
+  data: TextCardViewData
+  detailed?: boolean
+}
+
+const { as = 'article', class: className, data, detailed = false } = Astro.props as Props
+const Root = as
+const isBlog = data.skin === 'blog'
+const rootClass = isBlog ? 'blog-text-card' : 'text-card'
+const surfaceClass = isBlog
+  ? 'blog-text-card__surface site-card-surface site-card-surface--interactive group relative w-full rounded-2xl border px-5 py-2.5 hover:text-primary'
+  : 'text-card__surface site-card-surface site-card-surface--interactive group relative w-full rounded-2xl border px-5 py-2.5 hover:text-primary'
+const linkClass = isBlog
+  ? 'blog-text-card__post-link block rounded-md focus:outline-none'
+  : 'text-card__post-link block rounded-md focus:outline-none'
+const redirectClass = isBlog ? 'blog-text-card__redirect' : 'text-card__redirect'
+---
+
+<Root
+  class={cn(rootClass, className)}
+  data-content-id={data.contentId}
+  data-content-type={data.contentType}
+  data-image-source='none'
+  data-presentation='text'
+>
+  <div class={cn(surfaceClass, detailed && 'max-sm:px-4 sm:py-5')}>
+    <a class={linkClass} href={data.href} data-astro-prefetch>
+      <div class={cn('relative flex flex-col gap-1', !detailed && 'sm:flex-row sm:items-center')}>
+        {data.date && <FormattedDate class='min-w-[95px] text-xs' date={data.date} />}
+
+        <div class='flex flex-grow justify-between gap-x-3'>
+          <div class={detailed ? 'font-medium' : undefined}>
+            {data.draft && <span class='text-red-500'>(Draft) </span>}
+            {data.title}
+          </div>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            width='16'
+            height='16'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke-width='2.5'
+            stroke-linecap='round'
+            stroke-linejoin='round'
+            class={cn(redirectClass, 'my-1 shrink-0 stroke-muted-foreground')}
+            aria-hidden='true'
+            ><line
+              x1='5'
+              y1='12'
+              x2='19'
+              y2='12'
+              class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover:translate-x-1 group-hover:scale-x-100 group-focus-within:translate-x-1 group-focus-within:scale-x-100'
+            ></line><polyline
+              points='12 5 19 12 12 19'
+              class='translate-x-0 transition-all duration-300 ease-in-out group-hover:translate-x-1 group-focus-within:translate-x-1'
+            ></polyline></svg
+          >
+        </div>
+
+        {
+          detailed && data.description && (
+            <p class='line-clamp-3 text-sm text-muted-foreground'>{data.description}</p>
+          )
+        }
+
+        {
+          detailed && data.metadata.length > 0 && (
+            <div class='flex items-center gap-2 py-2 text-sm italic leading-4 text-muted-foreground'>
+              {data.metadata.map((meta: TextCardMeta) => (
+                <span class='flex items-center gap-1'>
+                  <Icon name={meta.icon} class='size-4' />
+                  {meta.value}
+                </span>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </a>
+
+    {
+      detailed && data.tags.length > 0 && (
+        <nav class='mt-3' aria-label={`Tags for ${data.title}`}>
+          <ul class='tag-list flex flex-wrap gap-2'>
+            {data.tags.map((tag: TextCardTag) => (
+              <li>
+                <Button
+                  as='a'
+                  title={tag.label}
+                  href={tag.href}
+                  variant='pill'
+                  aria-label={
+                    isBlog
+                      ? `View more blogs with the tag ${tag.label}`
+                      : `View posts tagged #${tag.label}`
+                  }
+                  data-pagefind-filter='tag'
+                />
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+  </div>
+</Root>
+
+<style>
+  .blog-text-card__surface:focus-within,
+  .text-card__surface:focus-within {
+    background-color: var(--site-card-background-hover);
+    color: hsl(var(--primary) / var(--un-text-opacity, 1));
+  }
+
+  .blog-text-card__post-link:focus-visible,
+  .text-card__post-link:focus-visible {
+    outline: 2px solid hsl(var(--primary) / var(--un-text-opacity, 1));
+    outline-offset: 4px;
+  }
+
+  .blog-text-card__surface:hover .blog-text-card__redirect,
+  .blog-text-card__surface:focus-within .blog-text-card__redirect,
+  .text-card__surface:hover .text-card__redirect,
+  .text-card__surface:focus-within .text-card__redirect {
+    stroke: hsl(var(--primary));
+  }
+
+  .blog-text-card__surface:hover .tag-list a,
+  .blog-text-card__surface:focus-within .tag-list a {
+    background-color: hsl(var(--muted) / var(--un-bg-opacity, 1)) !important;
+  }
+
+  .blog-text-card__surface:hover .tag-list a:hover,
+  .blog-text-card__surface:focus-within .tag-list a:focus-visible {
+    color: hsl(var(--primary) / var(--un-text-opacity, 1)) !important;
+  }
+</style>

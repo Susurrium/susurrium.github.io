@@ -1,15 +1,21 @@
-import { spawnSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { spawn } from 'node:child_process'
 
 const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
-const astroCli = resolve(process.cwd(), 'node_modules/astro/bin/astro.mjs')
+// The project is pinned to Bun and astro-pure currently exposes TypeScript
+// entrypoints. Running Astro through Node, or asking Bun to execute Astro's
+// entry file directly, can stall while loading the integration on Windows.
+// The package script is the same stable boundary developers and CI use from
+// the command line, so keep the wrapper on that path as well. Use the async
+// child-process API below: on Windows, spawnSync can leave Bun's Astro child
+// waiting after "Building static entrypoints" even though the same command
+// completes normally when launched asynchronously.
 const node = process.execPath
 const buildSequence = [
-  // `astro build` owns the required content sync.  Checking its resulting
-  // generated types avoids Astro 6's intermittent second sync deadlock on
-  // Windows while keeping a full type/diagnostic gate in every build.
-  [node, [astroCli, 'build']],
-  [node, [astroCli, 'check', '--noSync']]
+  // `astro build` owns the required content sync. Checking its resulting
+  // generated types avoids a second content sync while keeping a full
+  // type/diagnostic gate in every build.
+  [bun, ['run', 'astro', '--', 'build']],
+  [bun, ['run', 'astro', '--', 'check', '--noSync']]
 ]
 
 const sequences = {
@@ -24,11 +30,17 @@ const sequences = {
     ...buildSequence,
     [bun, ['run', 'verify:phase1']],
     [bun, ['run', 'test:phase2']],
+    [bun, ['run', 'test:content-layer']],
     [bun, ['run', 'verify:phase2']],
     [bun, ['run', 'verify:phase3']],
     [bun, ['run', 'test:phase4']],
     [bun, ['run', 'verify:phase4']],
     [bun, ['run', 'test:phase5']],
+    // Keep the phase-specific checks above readable while also making every
+    // repository test part of the authoritative CI contract. This catches
+    // editor, content-layer and release-policy regressions that are not tied
+    // to one numbered phase.
+    [bun, ['run', 'test:all']],
     [bun, ['run', 'verify:phase5']],
     [bun, ['run', 'verify:phase6']],
     [bun, ['run', 'check:assets']]
@@ -47,19 +59,24 @@ if (!sequence) {
   process.exit(1)
 }
 
-for (const [command, args] of sequence) {
-  const result = spawnSync(command, args, {
-    cwd: process.cwd(),
-    // Keep Astro's output on the caller's console rather than buffering a
-    // second process stream during the Windows build sequence.
-    stdio: 'inherit',
-    shell: false
+const runCommand = ([command, args]) =>
+  new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: process.cwd(),
+      // Keep Astro's output on the caller's console rather than buffering a
+      // second process stream during the Windows build sequence.
+      stdio: 'inherit',
+      shell: false
+    })
+
+    child.once('error', (error) => {
+      console.error(`Unable to run ${command} ${args.join(' ')}: ${error.message}`)
+      resolve(1)
+    })
+    child.once('close', (status) => resolve(status ?? 1))
   })
 
-  if (result.error) {
-    console.error(`Unable to run ${command} ${args.join(' ')}: ${result.error.message}`)
-    process.exit(1)
-  }
-
-  if (result.status !== 0) process.exit(result.status ?? 1)
+for (const command of sequence) {
+  const status = await runCommand(command)
+  if (status !== 0) process.exit(status)
 }

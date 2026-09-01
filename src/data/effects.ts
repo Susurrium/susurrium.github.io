@@ -11,7 +11,7 @@ export type EffectProfileConfig = {
   click: boolean
   companion: boolean
   petals: boolean
-  pkuBackdrop: boolean
+  ambientBackdrop: boolean
 }
 
 export const effectProfiles = {
@@ -19,19 +19,19 @@ export const effectProfiles = {
     click: true,
     companion: false,
     petals: false,
-    pkuBackdrop: true
+    ambientBackdrop: true
   },
   reading: {
     click: false,
     companion: false,
     petals: false,
-    pkuBackdrop: false
+    ambientBackdrop: false
   },
   links: {
     click: true,
     companion: false,
     petals: true,
-    pkuBackdrop: false
+    ambientBackdrop: false
   },
   // The companion is implemented in Phase 5.  Its route policy is already
   // explicit so About does not need a later architecture change.
@@ -39,7 +39,7 @@ export const effectProfiles = {
     click: true,
     companion: true,
     petals: false,
-    pkuBackdrop: true
+    ambientBackdrop: true
   }
 } as const satisfies Record<EffectProfile, EffectProfileConfig>
 

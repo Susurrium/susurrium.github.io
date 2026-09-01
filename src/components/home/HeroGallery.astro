@@ -1,0 +1,607 @@
+---
+/**
+ * Visual source: Media/Media.github.io@9599a54f23cdfc4606f2f5edc07e8138e050205b
+ * (`index.html:54-113`, `css/app.css:2076-2250`, `2419-2485`).
+ *
+ * The original fixed image layer used z-index -9. The surrounding Pure body
+ * paints an opaque background, so this Astro integration keeps the same fixed
+ * geometry at z-index 0 and places all readable Home sections above it.
+ */
+import { getHeroCropTransform } from '@/data/hero-crops'
+import { heroSlides } from '@/data/home-media'
+import type { HeroCropTransform } from '@/lib/hero-crop/types'
+
+import HeroMediaFrame from '@/components/home/HeroMediaFrame.astro'
+import config from '@/site-config'
+
+interface HeroPreviewSlide {
+  readonly description: string
+  readonly key: string
+  readonly src: string
+}
+
+interface Props {
+  /** Runtime renders the full six-slide Home Hero; editor renders one controlled slide. */
+  mode?: 'runtime' | 'editor'
+  motion?: 'runtime' | 'static' | 'preview'
+  previewMobileTransform?: HeroCropTransform
+  previewSlide?: HeroPreviewSlide
+  previewTransform?: HeroCropTransform
+}
+
+const {
+  mode = 'runtime',
+  motion = mode === 'editor' ? 'static' : 'runtime',
+  previewMobileTransform,
+  previewSlide,
+  previewTransform
+} = Astro.props as Props
+const isEditor = mode === 'editor'
+const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
+---
+
+<section
+  class:list={['hero-gallery', isEditor && 'hero-gallery--editor']}
+  data-hero-mode={mode}
+  data-hero-motion={motion}
+  data-home-hero={isEditor ? undefined : ''}
+  data-home-hero-boundary={isEditor ? undefined : ''}
+  data-hero-phase='hero'
+>
+  <div
+    class='hero-gallery__media'
+    aria-hidden='true'
+    data-home-hero-media={isEditor ? undefined : ''}
+    data-hero-editor-media={isEditor ? '' : undefined}
+    data-first-slide-src={slides[0]?.src}
+    data-scroll-mode='fixed'
+    data-media-covered='false'
+  >
+    {
+      slides.map((slide, index) => (
+        <div
+          class='hero-gallery__slide'
+          data-slide-index={index}
+          data-slide-key={slide.key}
+          data-editor-slide={isEditor ? '' : undefined}
+          title={slide.description}
+        >
+          <HeroMediaFrame
+            class='hero-gallery__image-frame'
+            imageClass={isEditor ? 'hero-crop-editor__image' : 'hero-gallery__image'}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            src={slide.src}
+            transform={isEditor ? previewTransform : getHeroCropTransform(slide.src, 'desktop')}
+            mobileTransform={
+              isEditor
+                ? (previewMobileTransform ?? previewTransform)
+                : getHeroCropTransform(slide.src, 'mobile')
+            }
+            dataAttributes={isEditor ? { 'data-hero-editor-frame': '' } : undefined}
+          />
+        </div>
+      ))
+    }
+  </div>
+
+  <div class='hero-gallery__stage' data-home-hero-stage>
+    <div class='hero-gallery__brand' data-home-hero-brand>
+      <div class='hero-gallery__brand-pjax'>
+        {
+          isEditor ? (
+            <div class='hero-gallery__logo'>
+              <p class='hero-gallery__artboard'>{config.author}</p>
+              <h1 class='hero-gallery__title'>{config.title}</h1>
+            </div>
+          ) : (
+            <a class='hero-gallery__logo' href='/home' rel='start' data-astro-prefetch>
+              <p class='hero-gallery__artboard'>{config.author}</p>
+              <h1 class='hero-gallery__title'>{config.title}</h1>
+            </a>
+          )
+        }
+      </div>
+    </div>
+  </div>
+
+  <div
+    class='hero-gallery__waves'
+    data-home-waves={isEditor ? undefined : ''}
+    data-hero-editor-waves={isEditor ? '' : undefined}
+    data-home-wave-boundary={isEditor ? undefined : ''}
+  >
+    <svg
+      class='hero-gallery__wave-svg'
+      xmlns='http://www.w3.org/2000/svg'
+      viewBox='0 24 150 28'
+      preserveAspectRatio='none'
+      shape-rendering='auto'
+    >
+      <defs>
+        <path
+          id='gentle-wave'
+          d='M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z'></path>
+      </defs>
+      <g class='hero-gallery__parallax'>
+        <use href='#gentle-wave' x='48' y='0'></use>
+        <use href='#gentle-wave' x='48' y='3'></use>
+        <use href='#gentle-wave' x='48' y='5'></use>
+        <use href='#gentle-wave' x='48' y='7'></use>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<script>
+  declare global {
+    interface Window {
+      __heroGalleryCleanup?: () => void
+    }
+  }
+
+  const initializeHeroGallery = () => {
+    // The editor renders this component too, but it must not install the
+    // document-level fixed-media/scroll controller.  Requiring the runtime
+    // mode keeps the two instances completely independent during Astro
+    // client-side navigation.
+    const hero = document.querySelector<HTMLElement>(
+      '[data-home-hero-boundary][data-hero-mode="runtime"]'
+    )
+    const media = hero?.querySelector<HTMLElement>('[data-home-hero-media]')
+    if (!hero || !media) return
+
+    window.__heroGalleryCleanup?.()
+
+    const controller = new AbortController()
+    const { signal } = controller
+    let frame = 0
+
+    const sync = () => {
+      frame = 0
+
+      // The Hero's bottom is the point at which the wave has completely
+      // passed over the fixed image. Keep the decision tied to layout rather
+      // than a hard-coded pixel value so mobile and resized viewports behave
+      // identically.
+      const covered = hero.getBoundingClientRect().bottom <= 0
+      media.dataset.mediaCovered = String(covered)
+      media.dataset.scrollMode = covered ? 'flow' : 'fixed'
+      hero.dataset.heroPhase = covered ? 'released' : 'hero'
+    }
+
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(sync)
+    }
+
+    const resizeObserver = new ResizeObserver(schedule)
+    resizeObserver.observe(hero)
+
+    const cleanup = () => {
+      controller.abort()
+      resizeObserver.disconnect()
+      if (frame) window.cancelAnimationFrame(frame)
+      frame = 0
+      if (window.__heroGalleryCleanup === cleanup) delete window.__heroGalleryCleanup
+    }
+
+    window.__heroGalleryCleanup = cleanup
+    window.addEventListener('scroll', schedule, { passive: true, signal })
+    window.addEventListener('resize', schedule, { passive: true, signal })
+    document.addEventListener('astro:before-swap', cleanup, { once: true, signal })
+    sync()
+  }
+
+  initializeHeroGallery()
+  document.addEventListener('astro:page-load', initializeHeroGallery)
+</script>
+
+<style>
+  .hero-gallery {
+    /* Inherit the Home shell's first-paint geometry. The fallback keeps this
+       component safe if it is rendered outside the Home page. */
+    --hero-gallery-image-height: var(--home-hero-height, clamp(25rem, 70vh, 52rem));
+    --hero-gallery-wave-height: clamp(4.8rem, 13vh, 9.375rem);
+    position: relative;
+    width: 100vw;
+    min-height: var(--hero-gallery-image-height);
+    margin-left: calc(50% - 50vw);
+    overflow: visible;
+    color: #fff;
+    text-shadow: 0 0.2rem 0.3rem rgb(0 0 0 / 0.5);
+  }
+
+  .hero-gallery__media {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100%;
+    height: var(--hero-gallery-image-height);
+    min-height: 25rem;
+    overflow: hidden;
+    background-color: #363636;
+    pointer-events: none;
+    transition:
+      opacity 180ms ease,
+      visibility 0s linear 0s;
+  }
+
+  /* Once the wave has reached the top of the viewport, release the media
+     from fixed positioning. The Hero's stage remains as a layout spacer, so
+     this transition cannot pull the following content upward. The normal
+     page background takes over after the wave; no second Hero image remains
+     behind the page content. */
+  .hero-gallery__media[data-scroll-mode='flow'] {
+    position: absolute;
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .hero-gallery__media::before {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    background-color: rgb(0 0 0 / 0.2);
+    content: '';
+    transition: all 0.2s ease-in-out 0s;
+  }
+
+  :global(.dark) .hero-gallery__media::before {
+    background-color: rgb(0 0 0 / 0.5);
+  }
+
+  .hero-gallery__slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    animation: hero-gallery-image-animation 36s linear infinite 0s;
+  }
+
+  .hero-gallery__image-frame {
+    z-index: 0;
+  }
+
+  .hero-gallery__image {
+    display: block;
+  }
+
+  /* The source animation spends its first 2% fading in. On a full document
+     navigation that creates a blank Hero while the entrance is already gone;
+     start the first frame at the end of that fade so Home has a real visual
+     anchor on its first paint. */
+  .hero-gallery__slide:first-child {
+    opacity: 1;
+    animation-delay: -0.72s;
+  }
+
+  .hero-gallery__slide:nth-child(2) {
+    animation-delay: 6s;
+  }
+
+  .hero-gallery__slide:nth-child(3) {
+    animation-delay: 12s;
+  }
+
+  .hero-gallery__slide:nth-child(4) {
+    animation-delay: 18s;
+  }
+
+  .hero-gallery__slide:nth-child(5) {
+    animation-delay: 24s;
+  }
+
+  .hero-gallery__slide:nth-child(6) {
+    animation-delay: 30s;
+  }
+
+  .hero-gallery__stage {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    min-height: var(--hero-gallery-image-height);
+    height: var(--hero-gallery-image-height);
+    padding: 3rem 5rem 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-gallery__brand {
+    min-height: 10rem;
+    max-width: min(42rem, 100%);
+    text-align: center;
+  }
+
+  .hero-gallery__brand,
+  .hero-gallery__brand-pjax {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-gallery__logo {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Direct Media `#brand` typography: artboard → title → meta. */
+  .hero-gallery__artboard {
+    margin: 0;
+    font-family: 'Fredericka the Great', 'Times New Roman', serif;
+    font-size: 3.5em;
+    line-height: 1.2;
+  }
+
+  .hero-gallery__title {
+    margin: 0.625rem 0;
+    font-size: 2.5em;
+    font-weight: 700;
+    letter-spacing: 0.125rem;
+  }
+
+  .hero-gallery__waves {
+    position: absolute;
+    top: calc(var(--hero-gallery-image-height) - var(--hero-gallery-wave-height));
+    right: 0;
+    left: 0;
+    z-index: 2;
+    height: var(--hero-gallery-wave-height);
+    min-height: 3.125rem;
+    max-height: 9.375rem;
+    pointer-events: none;
+  }
+
+  .hero-gallery__wave-svg {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hero-gallery__parallax > use {
+    animation: hero-gallery-wave 25s cubic-bezier(0.55, 0.5, 0.45, 0.5) infinite;
+  }
+
+  .hero-gallery__parallax > use:nth-child(1) {
+    fill: hsl(var(--background) / 0.7);
+    animation-delay: -2s;
+    animation-duration: 7s;
+  }
+
+  .hero-gallery__parallax > use:nth-child(2) {
+    fill: hsl(var(--background) / 0.5);
+    animation-delay: -3s;
+    animation-duration: 10s;
+  }
+
+  .hero-gallery__parallax > use:nth-child(3) {
+    fill: hsl(var(--background) / 0.3);
+    animation-delay: -4s;
+    animation-duration: 13s;
+  }
+
+  .hero-gallery__parallax > use:nth-child(4) {
+    fill: hsl(var(--background));
+    animation-delay: -5s;
+    animation-duration: 20s;
+  }
+
+  @keyframes hero-gallery-image-animation {
+    0% {
+      opacity: 0;
+      transform: scale(1);
+      animation-timing-function: ease-in;
+    }
+
+    2% {
+      opacity: 1;
+    }
+
+    8% {
+      opacity: 1;
+      transform: scale(1.05);
+      animation-timing-function: ease-out;
+    }
+
+    17% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    25% {
+      opacity: 0;
+      transform: scale(1.1);
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes hero-gallery-wave {
+    0% {
+      transform: translate3d(-90px, 0, 0);
+    }
+
+    100% {
+      transform: translate3d(85px, 0, 0);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .hero-gallery {
+      --hero-gallery-image-height: var(--home-hero-height, clamp(24rem, 62vh, 34rem));
+      --hero-gallery-wave-height: 10vh;
+    }
+
+    .hero-gallery__stage {
+      padding-inline: 0.5rem;
+    }
+
+    .hero-gallery__title {
+      font-size: 1.5em;
+    }
+  }
+
+  @media (max-width: 413px) {
+    .hero-gallery__artboard {
+      font-size: 2.5em;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-gallery__slide,
+    .hero-gallery__parallax > use {
+      animation: none;
+    }
+
+    .hero-gallery__slide {
+      opacity: 0;
+    }
+
+    .hero-gallery__slide:first-child {
+      opacity: 1;
+    }
+  }
+
+  /*
+   * The crop workbench uses this same component in a bounded stage.  Keeping
+   * the complete media/brand/wave stack here prevents the editor from
+   * becoming a second, approximate Hero implementation.  The editor's
+   * parent supplies the actual scaled viewport ratio; this mode only changes
+   * fixed positioning into a contained stage and makes the selected slide
+   * controllable.
+   */
+  .hero-gallery--editor {
+    --hero-gallery-image-height: 100%;
+    --hero-gallery-wave-height: clamp(3rem, 13vh, 6rem);
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-height: 0;
+    margin-left: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .hero-gallery--editor .hero-gallery__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .hero-gallery--editor .hero-gallery__slide {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
+
+  .hero-gallery--editor .hero-gallery__slide:not(:first-child) {
+    display: none;
+  }
+
+  .hero-gallery--editor .hero-gallery__stage {
+    width: 100%;
+    min-height: 100%;
+    height: 100%;
+    padding: 3rem 5rem 0;
+  }
+
+  /* The editor can show either target viewport while the host page remains
+     desktop (or vice versa).  These explicit selectors keep responsive rules
+     from the host browser from changing the selected Hero target behind the
+     user's back. */
+  .hero-gallery--editor[data-hero-viewport='desktop'] .hero-gallery__stage {
+    padding: 3rem 5rem 0;
+  }
+
+  .hero-gallery--editor[data-hero-viewport='mobile'] .hero-gallery__stage {
+    padding-inline: 0.5rem;
+  }
+
+  /* Responsive typography belongs to the target Hero viewport, not to the
+     browser window that happens to host the workbench.  Without these
+     overrides, a desktop editor showing the phone target keeps desktop-sized
+     branding, while a phone editor showing the desktop target shrinks it. */
+  .hero-gallery--editor[data-hero-viewport='desktop'] .hero-gallery__artboard {
+    font-size: 3.5em;
+  }
+
+  .hero-gallery--editor[data-hero-viewport='desktop'] .hero-gallery__title {
+    font-size: 2.5em;
+  }
+
+  .hero-gallery--editor[data-hero-viewport='mobile'] .hero-gallery__artboard {
+    font-size: 2.5em;
+  }
+
+  .hero-gallery--editor[data-hero-viewport='mobile'] .hero-gallery__title {
+    font-size: 1.5em;
+  }
+
+  .hero-gallery--editor .hero-gallery__waves {
+    top: calc(100% - var(--hero-gallery-wave-height));
+  }
+
+  .hero-gallery--editor .hero-gallery__parallax > use {
+    animation: none;
+    transform: none;
+  }
+
+  .hero-gallery--editor[data-hero-motion='runtime'] .hero-gallery__slide,
+  .hero-gallery--editor[data-hero-motion='preview'] .hero-gallery__slide {
+    display: block;
+    /* Only the selected slide is mounted in editor mode.  Reusing the
+       six-slide fade keyframes here would make that one image disappear for
+       most of the 36-second cycle.  This single-slide diagnostic animation
+       keeps the same 1→1.1 motion envelope without a blank interval. */
+    animation: hero-gallery-editor-image-animation 12s ease-in-out infinite;
+    animation-delay: -0.72s;
+  }
+
+  .hero-gallery--editor[data-hero-motion='preview'] .hero-gallery__slide {
+    animation-play-state: paused;
+  }
+
+  .hero-gallery--editor[data-hero-motion='runtime'] .hero-gallery__slide {
+    animation-play-state: running;
+  }
+
+  @keyframes hero-gallery-editor-image-animation {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .hero-gallery--editor .hero-gallery__stage {
+      padding-inline: 0.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-gallery--editor .hero-gallery__slide,
+    .hero-gallery--editor[data-hero-motion='runtime'] .hero-gallery__slide,
+    .hero-gallery--editor[data-hero-motion='preview'] .hero-gallery__slide {
+      display: block;
+      opacity: 1;
+      animation: none;
+    }
+  }
+</style>

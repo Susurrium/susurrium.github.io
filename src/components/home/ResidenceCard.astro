@@ -39,11 +39,6 @@ const {
   city = residence.city,
   region = residence.region,
   displayName = residence.displayName,
-  timezone = residence.timezone,
-  headingLevel = 2,
-  caption = residence.caption,
-  href,
-  linkLabel = '了解这里',
   latitude = residence.latitude,
   longitude = residence.longitude,
   mapStyle = residence.mapStyle,
@@ -66,7 +61,6 @@ const safeLongitude = Math.min(180, Math.max(-180, longitude));
 const safeMarkerX = Math.min(90, Math.max(10, markerX));
 const safeMarkerY = Math.min(86, Math.max(14, markerY));
 const markerStyle = `--marker-x:${safeMarkerX}%;--marker-y:${safeMarkerY}%`;
-const Heading = headingLevel === 4 ? 'h4' : headingLevel === 3 ? 'h3' : 'h2';
 const residenceLabel = displayName || `${displayCity}${displayRegion ? ` · ${displayRegion}` : ''}`;
 const dialogSlug = displayCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'map';
 const dialogId = `residence-globe-${dialogSlug}`;
@@ -121,6 +115,14 @@ const withBase = (path: string) => (/^[a-z][a-z\d+.-]*:/i.test(path) || path.sta
           <span data-residence-label>{residenceLabel}</span>
         </div>
 
+        <div class="map-attribution" aria-label="地图数据来源">
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+            © OpenStreetMap contributors
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">© CARTO</a>
+        </div>
+
         <div class="map-actions" aria-label="地图操作">
           <button
             type="button"
@@ -135,31 +137,6 @@ const withBase = (path: string) => (/^[a-z][a-z\d+.-]*:/i.test(path) || path.sta
           >
             <span aria-hidden="true">⛶</span>
           </button>
-        </div>
-      </div>
-
-      <div class="residence-card__body">
-        <div class="residence-card__place">
-          <span class="place-kicker">居住地</span>
-          <div class="place-title">
-            <Heading class="place-heading">{displayCity}</Heading>
-            {displayRegion && <span>{displayRegion}</span>}
-          </div>
-        </div>
-        <p class="residence-card__caption">{caption}</p>
-        <div class="residence-card__meta">
-          {timezone && (
-            <span class="timezone">
-              <Icon name='time' class='size-3.5' aria-hidden='true' />
-              {timezone}
-            </span>
-          )}
-          {href && (
-            <a href={withBase(href)}>
-              {linkLabel}
-              <span aria-hidden="true">↗</span>
-            </a>
-          )}
         </div>
       </div>
 
@@ -178,7 +155,16 @@ const withBase = (path: string) => (/^[a-z][a-z\d+.-]*:/i.test(path) || path.sta
             <div class="globe-dialog__loading" data-globe-loading>地图正在展开…</div>
           </div>
           <footer class="globe-dialog__footer">
-            <span data-globe-status aria-live="polite">居住地：{residenceLabel}</span>
+            <div class="globe-dialog__footer-info">
+              <span data-globe-status aria-live="polite">居住地：{residenceLabel}</span>
+              <span class="globe-dialog__attribution" aria-label="地图数据来源">
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+                  © OpenStreetMap contributors
+                </a>
+                <span aria-hidden="true">·</span>
+                <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">© CARTO</a>
+              </span>
+            </div>
             <button type="button" class="globe-dialog__locate focus-ring" data-visitor-location aria-label="Retry location">↻</button>
           </footer>
         </div>

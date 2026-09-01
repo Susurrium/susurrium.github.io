@@ -2,7 +2,7 @@
 
 Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongde/Arthals-Ink) 的真实 Fork 开发。站点主体延续 Arthals 的视觉与架构，并在独立开发阶段接入已确认的入口动画、三类内容、三类卡片和装饰效果。
 
-当前状态：Phase 0–5 与 Phase 6 的本地实现、审计和浏览器回归已完成。测试内容和人工发布保护仍保留，因此尚未对外正式上线。
+当前状态：`codex/release-prep` 正在固化为可审计的本地候选基线。当前候选可在空 Blog/Trace 集合下构建，尚未对外上线；素材权利、个人资料和最终内容仍需站长单独确认。
 
 ## 锁定基线
 
@@ -29,7 +29,7 @@ bun run dev
 bun run ci
 ```
 
-`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、发布就绪审计和资源体积检查。最终替换个人资料后，再运行 `bun run release:gate`；它会把测试内容、旧身份和外部媒体等发布阻断项视为失败。
+`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、全部 `test/` 测试、发布就绪审计和资源体积检查。当前候选的 Blog/Trace 目录可以为空，旧上游文章已从候选树移除并保存在仓库外快照中。`bun run release:gate --strict` 必须在新构建后运行；它按最终渲染 DOM 检查 SEO、资源、旧身份和未登记外部媒体。
 
 ## 分支
 
@@ -37,8 +37,8 @@ bun run ci
 - `develop`：首版集成分支。
 - 功能分支：从 `develop` 创建。
 
-当前部署工作流只允许手动触发，不监听 `main` push，也没有定时任务；并且在上传 Pages 产物前强制执行 `release:gate`，测试内容无法被手动误发。最终发布清单通过且获得你的上线确认后，才启用自动发布并在 GitHub Pages 中完成实际部署设置。
+当前部署工作流只允许手动触发，不监听 `main` push，也没有定时任务；上传 Pages 产物前强制执行 `release:gate`。链接健康检查仅作为人工 `links:check:dry` 工具，候选不包含会自动 commit/push 的 workflow。最终发布清单通过且获得你的上线确认后，才启用自动发布并在 GitHub Pages 中完成实际部署设置。
 
 ## 许可与来源
 
-仓库代码继续保留上游 Apache-2.0 许可证。外部参考实现、历史项目代码和素材的精确来源、版本、复用方式及必要调整统一记录在[来源台账](./docs/SOURCE_LEDGER.md)；文章测试内容暂沿用上游，正式发布前再替换。
+仓库代码继续保留上游 Apache-2.0 许可证。外部参考实现、历史项目代码和素材的精确来源、版本、复用方式及必要调整统一记录在[来源台账](./docs/SOURCE_LEDGER.md)；第三方字体、图片、视频和二维码的权利边界见 [third-party notices](./docs/THIRD_PARTY_NOTICES.md)，不由项目许可证自动覆盖。

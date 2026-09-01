@@ -39,7 +39,27 @@ old_blog
 ignore.*
 bunfig.toml
 /src/content/blog/test.*
-/test/
 
 backup/
 artifacts/
+
+# Release-prep and local browser/preview scratch files. Keep these patterns
+# root-scoped so production media under public/ and src/assets/ remains
+# visible to Git and can be reviewed explicitly.
+/.chrome-profile-temp/
+/.edge-profile-temp/
+/.tmp-*/
+/.tmp-*.log
+/.tmp-*.html
+/.avatar-*.jpg
+/browser-diagnosis.png
+/entrance-mobile-preview.png
+/timeline-compact-test.png
+/shot*.png
+/tmp-*.png
+/scripts/link-health.json
+/src/content/sayings/card-preview-*.md
+/src/content/sayings/card-preview-*.mdx
+/src/content/traces/card-preview-*.md
+/src/content/traces/card-preview-*.mdx
+/public/avatars/

@@ -1,0 +1,43 @@
+---
+/** Render already-normalized, type-scoped tag links. */
+import type { ReadingTagData } from '@/lib/content-layer/reading-data'
+import type { ReadingTagMode } from '@/lib/content-layer/reading-policy'
+
+import { Icon } from 'astro-pure/user'
+
+interface Props {
+  data: readonly ReadingTagData[]
+  mode?: ReadingTagMode
+  scopeLabel?: string
+}
+
+const { data, mode = 'links', scopeLabel = 'posts' } = Astro.props as Props
+const visible = mode !== 'hidden' && data.length > 0
+const ariaLabel = (label: string) => `View ${scopeLabel.toLowerCase()} entries tagged #${label}`
+---
+
+{
+  visible && (
+    <span class='flex flex-wrap items-center gap-x-1 gap-y-1'>
+      <Icon name='hashtag' class='size-5' />
+      {data.map((tag, index) => (
+        <span class='inline-flex items-center'>
+          {mode === 'links' ? (
+            <a
+              aria-label={ariaLabel(tag.label)}
+              class='hover:underline hover:underline-offset-4'
+              data-pagefind-filter='tag'
+              href={tag.href}
+              data-astro-prefetch
+            >
+              {tag.label}
+            </a>
+          ) : (
+            <span>{tag.label}</span>
+          )}
+          {index < data.length - 1 && <span aria-hidden='true'>&nbsp;/&nbsp;</span>}
+        </span>
+      ))}
+    </span>
+  )
+}

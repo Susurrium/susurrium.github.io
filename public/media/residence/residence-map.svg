@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
-  <title id="title">北京海淀浅色地图占位插画</title>
-  <desc id="desc">一幅原创的低饱和北京地图插画，突出海淀位置，包含道路、行政边界和城市标签，可替换为自有地图。</desc>
+  <title id="title">北京城市级浅色地图插画</title>
+  <desc id="desc">一幅原创的低饱和北京城市级地图插画，包含道路、行政边界和城市标签，不表示具体居住位置。</desc>
   <defs>
     <linearGradient id="land" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#f8f8f5"/>
@@ -56,7 +56,7 @@
     <text x="551" y="300">朝阳区</text>
     <text x="697" y="437">大兴区</text>
     <text x="906" y="483">房山区</text>
-    <text x="251" y="512" fill="#7f6e78" font-weight="700">海淀区</text>
+    <text x="251" y="512" fill="#7f6e78" font-weight="700">北京市</text>
     <text x="393" y="579">丰台区</text>
     <text x="70" y="571">西城区</text>
   </g>

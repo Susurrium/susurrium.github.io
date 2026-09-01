@@ -1,245 +1,98 @@
 ---
 /**
- * Persistent, local-only music shell.
+ * Persistent APlayer/MetingJS music shell.
  *
- * Sources: `HIST-MUSIC` in the fixed historical snapshot provides the daily
- * selection, localStorage and media lifecycle model. `XYX-MUSIC-UI` is locked
- * to xyx404/xyx404.github.io@d4e1efc; its isolated `#nav-music` pill/record/
- * hover visual is adapted below. Its Meting/APlayer/NetEase runtime is not
- * transferable because this static site permits only local media.
+ * The visual contract follows the bottom-left `#nav-music` player used by the
+ * reference sites. APlayer owns the actual audio element, playlist, lyrics,
+ * volume and playback state; this wrapper only owns Astro persistence,
+ * accessibility state and the compact detail-page presentation.
  */
-import { dailyMusic } from '@/data/music'
-
-const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
+import { musicConfig } from '@/data/music'
 ---
 
 <music-player
   id='global-music-player'
   data-global-music-player
-  data-music-compact='false'
   data-music-player
-  data-placeholder='true'
-  data-playback-state='paused'
-  data-time-zone='Asia/Shanghai'
-  data-tracks={serializedTracks}
+  data-playback-state='loading'
+  data-provider={musicConfig.server}
+  data-playlist-id={musicConfig.id}
 >
-  <button
-    class='music-player__toggle focus-ring'
-    type='button'
-    data-music-toggle
-    aria-controls='music-player-panel'
-    aria-expanded='false'
-    aria-label='打开音乐播放器'
-    title='Music'
-  >
-    <!--
-      This is the isolated, local equivalent of XYX404's `#nav-music`
-      APlayer shell: a compact rotating record, truncated title, hover prompt,
-      and a subtle playback bar.  It deliberately contains no Meting/APlayer
-      runtime or remote playlist request.
-    -->
-    <span class='music-player__aplayer'>
-      <span class='music-player__body'>
-        <span class='music-player__pic' aria-hidden='true'>
-          <img class='music-player__cover' data-music-cover alt='' hidden />
-          <span class='music-player__pic-grooves'></span>
-          <span class='music-player__pic-hole'></span>
-        </span>
-        <span class='music-player__info'>
-          <span class='music-player__music'>
-            <span class='music-player__toggle-copy' data-music-pill-title>本地音乐准备中</span>
-          </span>
-          <span class='music-player__controller' aria-hidden='true'>
-            <span class='music-player__bar'>
-              <span class='music-player__played'></span>
-            </span>
-          </span>
-        </span>
-      </span>
-    </span>
-    <span class='music-player__hover-tip' aria-hidden='true'>播放音乐</span>
-  </button>
-
-  <section
-    id='music-player-panel'
-    class='music-player__panel'
-    data-music-panel
-    aria-label='每日音乐播放器'
-    hidden
-  >
-    <header class='music-player__header'>
-      <div class='music-player__identity'>
-        <span class='music-player__mini-disc' aria-hidden='true'>♪</span>
-        <div>
-          <p class='music-player__eyebrow'>Today’s sound</p>
-          <h2 data-music-title>本地音乐准备中</h2>
-          <p data-music-artist>本地占位曲目</p>
-        </div>
-      </div>
-      <button
-        class='music-player__close focus-ring'
-        type='button'
-        data-music-close
-        aria-label='关闭音乐面板'
-      >
-        <span aria-hidden='true'>×</span>
-      </button>
-    </header>
-
-    <p class='music-player__reason' data-music-reason>等待一段能留在今天的声音。</p>
-    <p class='music-player__context' data-music-context></p>
-
-    <p class='music-player__placeholder' data-music-placeholder-notice>
-      当前是本地占位条目，尚未加载音频。之后只需放入本站静态文件并配置同源路径即可启用播放。
-    </p>
-
-    <div class='music-player__controls' aria-label='音乐控制'>
-      <button
-        class='music-player__control focus-ring'
-        type='button'
-        data-music-prev
-        aria-label='上一首'
-      >
-        <span aria-hidden='true'>‹‹</span>
-      </button>
-      <button
-        class='music-player__play focus-ring'
-        type='button'
-        data-music-play
-        aria-describedby='music-player-status'
-        aria-label='播放'
-        disabled
-      >
-        <span data-music-play-icon aria-hidden='true'>▶</span>
-      </button>
-      <button
-        class='music-player__control focus-ring'
-        type='button'
-        data-music-next
-        aria-label='下一首'
-      >
-        <span aria-hidden='true'>››</span>
-      </button>
-      <label class='music-player__volume'>
-        <span class='sr-only'>音量</span>
-        <span class='music-player__volume-icon' aria-hidden='true'>◔</span>
-        <input data-music-volume type='range' min='0' max='1' step='0.05' value='0.8' />
-      </label>
-    </div>
-
-    <p id='music-player-status' class='music-player__status' data-music-status aria-live='polite'>
-      当前仅有占位条目，未加载音频。
-    </p>
-  </section>
-
-  <!-- Exactly one media element. It receives a source only for future local paths. -->
-  <audio data-music-audio preload='none'></audio>
+  <div id='nav-music' data-music-nav>
+    <button
+      id='nav-music-hoverTips'
+      class='focus-ring'
+      type='button'
+      data-music-toggle
+      aria-label='播放音乐'
+      title='播放音乐'>播放音乐</button
+    >
+    <meting-js
+      id={musicConfig.id}
+      server={musicConfig.server}
+      type={musicConfig.type}
+      api={musicConfig.api}
+      mutex={String(musicConfig.mutex)}
+      autoplay='false'
+      preload={musicConfig.preload}
+      theme='hsl(var(--primary))'
+      data-lrctype={String(musicConfig.lrcType)}
+      order={musicConfig.order}
+      volume={String(musicConfig.volume)}
+      data-music-meting></meting-js>
+  </div>
+  <p class='sr-only' data-music-status aria-live='polite'>正在加载网易云歌单。</p>
 </music-player>
 
 <script>
-  type MusicTrack = {
-    id: string
-    title: string
-    artist?: string
-    audioSrc?: string
-    coverSrc?: string
-    reason?: string
-    context?: string
-    tags?: readonly string[]
-    licenseNote?: string
+  type APlayerLike = {
+    audio?: HTMLAudioElement
+    paused?: boolean
+    on?: (event: string, callback: (payload?: unknown) => void) => void
+    toggle?: () => void
+    play?: () => void
   }
 
-  const storagePrefix = 'susurrium:music:v1'
+  type MetingElement = HTMLElement & { aplayer?: APlayerLike; lock?: boolean }
 
   class MusicPlayerElement extends HTMLElement {
     private controller: AbortController | null = null
+    private playerObserver: MutationObserver | null = null
     private modeObserver: MutationObserver | null = null
-    private tracks: MusicTrack[] = []
-    private index = 0
-    private audio: HTMLAudioElement | null = null
-    private panel: HTMLElement | null = null
+    private meting: MetingElement | null = null
+    private nav: HTMLElement | null = null
     private toggle: HTMLButtonElement | null = null
-    private playButton: HTMLButtonElement | null = null
-    private titleElement: HTMLElement | null = null
-    private artistElement: HTMLElement | null = null
-    private reasonElement: HTMLElement | null = null
-    private contextElement: HTMLElement | null = null
-    private placeholderElement: HTMLElement | null = null
-    private statusElement: HTMLElement | null = null
-    private playIcon: HTMLElement | null = null
-    private pillTitleElement: HTMLElement | null = null
-    private coverElement: HTMLImageElement | null = null
-    private userActivated = false
+    private player: APlayerLike | null = null
+    private playerContainer: HTMLElement | null = null
 
     connectedCallback() {
       this.disconnect()
 
-      this.audio = this.querySelector<HTMLAudioElement>('[data-music-audio]')
-      this.panel = this.querySelector<HTMLElement>('[data-music-panel]')
+      this.meting = this.querySelector<MetingElement>('[data-music-meting]')
+      this.nav = this.querySelector<HTMLElement>('[data-music-nav]')
       this.toggle = this.querySelector<HTMLButtonElement>('[data-music-toggle]')
-      this.playButton = this.querySelector<HTMLButtonElement>('[data-music-play]')
-      this.titleElement = this.querySelector<HTMLElement>('[data-music-title]')
-      this.artistElement = this.querySelector<HTMLElement>('[data-music-artist]')
-      this.reasonElement = this.querySelector<HTMLElement>('[data-music-reason]')
-      this.contextElement = this.querySelector<HTMLElement>('[data-music-context]')
-      this.placeholderElement = this.querySelector<HTMLElement>('[data-music-placeholder-notice]')
-      this.statusElement = this.querySelector<HTMLElement>('[data-music-status]')
-      this.playIcon = this.querySelector<HTMLElement>('[data-music-play-icon]')
-      this.pillTitleElement = this.querySelector<HTMLElement>('[data-music-pill-title]')
-      this.coverElement = this.querySelector<HTMLImageElement>('[data-music-cover]')
+      if (!this.meting || !this.nav || !this.toggle) return
 
-      try {
-        const candidate: unknown = JSON.parse(this.dataset.tracks ?? '[]')
-        this.tracks = Array.isArray(candidate) ? (candidate as MusicTrack[]) : []
-      } catch {
-        this.tracks = []
-      }
-
-      if (!this.audio || !this.panel || !this.toggle || !this.playButton) return
+      // MetingJS 2.0.1 calls `this.aplayer.destroy()` from its native
+      // disconnectedCallback without checking whether APlayer finished
+      // initialization. Astro may temporarily detach persistent DOM during a
+      // ClientRouter swap, so keep this deliberately persistent instance alive
+      // instead of letting the third-party callback tear it down.
+      this.meting.lock = true
 
       this.controller = new AbortController()
       const { signal } = this.controller
-      this.audio.autoplay = false
-      this.index = this.restoreDailySelection()
-      this.audio.volume = this.clampUnit(this.storageGet('volume'), 0.8)
-      const volumeInput = this.querySelector<HTMLInputElement>('[data-music-volume]')
-      if (volumeInput) volumeInput.value = String(this.audio.volume)
 
-      this.toggle.addEventListener('click', this.togglePanel, { signal })
-      this.querySelector<HTMLButtonElement>('[data-music-close]')?.addEventListener(
-        'click',
-        this.closePanel,
-        { signal }
-      )
-      this.playButton.addEventListener('click', this.togglePlayback, { signal })
-      this.querySelector<HTMLButtonElement>('[data-music-prev]')?.addEventListener(
-        'click',
-        () => this.select(-1),
-        { signal }
-      )
-      this.querySelector<HTMLButtonElement>('[data-music-next]')?.addEventListener(
-        'click',
-        () => this.select(1),
-        { signal }
-      )
-      volumeInput?.addEventListener('input', this.changeVolume, { signal })
-      this.audio.addEventListener('play', this.syncPlayback, { signal })
-      this.audio.addEventListener('pause', this.syncPlayback, { signal })
-      this.audio.addEventListener('ended', this.handleEnded, { signal })
-      this.audio.addEventListener('error', this.handleError, { signal })
-      this.audio.addEventListener('loadedmetadata', this.restorePosition, { signal })
-      this.audio.addEventListener('timeupdate', this.persistPosition, { signal })
-      window.addEventListener('beforeunload', this.persistPosition, { signal })
-      document.addEventListener('visibilitychange', this.handleVisibility, { signal })
-      document.addEventListener('keydown', this.handleKeydown, { signal })
-      // `astro:after-swap` is the router update moment; `astro:page-load`
-      // also runs after a full load and after an Astro client-side visit.
+      this.toggle.addEventListener('click', this.togglePlayback, { signal })
       document.addEventListener('astro:after-swap', this.handleNavigationUpdate, { signal })
       document.addEventListener('astro:page-load', this.handleNavigationUpdate, { signal })
 
-      this.render()
+      this.playerObserver = new MutationObserver(this.attachPlayer)
+      this.playerObserver.observe(this.meting, { childList: true, subtree: true })
       this.observePresentationMode()
+      this.attachPlayer()
       this.syncPresentationMode()
+      this.setStatus('正在加载网易云歌单。')
     }
 
     disconnectedCallback() {
@@ -247,241 +100,89 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
     }
 
     private disconnect() {
-      this.persistPosition()
       this.controller?.abort()
       this.controller = null
+      this.playerObserver?.disconnect()
+      this.playerObserver = null
       this.modeObserver?.disconnect()
       this.modeObserver = null
+      this.player = null
+      this.playerContainer = null
     }
 
-    private restoreDailySelection() {
-      if (this.tracks.length === 0) return 0
-
-      const today = this.dayKey()
-      const storedDate = this.storageGet('selection-date')
-      const storedIndex = Number(this.storageGet('selection-index'))
-      if (storedDate === today && Number.isInteger(storedIndex) && storedIndex >= 0) {
-        return storedIndex % this.tracks.length
-      }
-
-      const index = this.dailyIndex(today)
-      this.storageSet('selection-date', today)
-      this.storageSet('selection-index', String(index))
-      return index
-    }
-
-    private dayKey() {
-      try {
-        return new Intl.DateTimeFormat('en-CA', {
-          timeZone: this.dataset.timeZone || 'Asia/Shanghai',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        }).format(new Date())
-      } catch {
-        return new Date().toISOString().slice(0, 10)
-      }
-    }
-
-    private dailyIndex(key: string) {
-      let hash = 2166136261
-      for (const character of key) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619)
-      return (hash >>> 0) % this.tracks.length
-    }
-
-    private current() {
-      return this.tracks[this.index]
-    }
-
-    private render() {
-      const track = this.current()
-      if (!track || !this.audio || !this.playButton) {
-        this.dataset.placeholder = 'true'
-        this.setStatus('音乐目录尚未准备好。')
+    private attachPlayer = () => {
+      const candidate = this.meting?.aplayer
+      if (!candidate) {
+        this.dataset.playbackState = 'loading'
         return
       }
 
-      const localSource = this.localAudioSource(track.audioSrc)
-      const localCover = this.localAudioSource(track.coverSrc)
-      const sourceChanged = (this.audio.getAttribute('src') ?? '') !== (localSource ?? '')
-      if (sourceChanged) {
-        this.audio.pause()
-        if (localSource) this.audio.src = localSource
-        else this.audio.removeAttribute('src')
-        this.audio.load()
+      if (candidate !== this.player) {
+        this.player = candidate
+        this.playerContainer = this.meting?.querySelector<HTMLElement>('.aplayer') ?? null
+
+        if (candidate.audio) {
+          candidate.audio.autoplay = false
+          candidate.audio.dataset.musicAudio = 'true'
+        }
+
+        candidate.on?.('play', this.syncPlayback)
+        candidate.on?.('pause', this.syncPlayback)
+        candidate.on?.('ended', this.syncPlayback)
+        candidate.on?.('listswitch', this.syncMetadata)
+        candidate.on?.('error', this.handlePlaybackError)
       }
 
-      if (this.titleElement) this.titleElement.textContent = track.title
-      if (this.pillTitleElement) this.pillTitleElement.textContent = track.title
-      if (this.coverElement) {
-        this.coverElement.hidden = !localCover
-        if (localCover) this.coverElement.src = localCover
-        else this.coverElement.removeAttribute('src')
-      }
-      if (this.artistElement) this.artistElement.textContent = track.artist || '本站本地音乐'
-      if (this.reasonElement)
-        this.reasonElement.textContent = track.reason || '把喜欢的声音留在今天。'
-      if (this.contextElement) this.contextElement.textContent = track.context || ''
-      if (this.placeholderElement) this.placeholderElement.hidden = Boolean(localSource)
-      this.playButton.disabled = !localSource
-      this.playButton.setAttribute('aria-disabled', String(!localSource))
-      this.dataset.placeholder = localSource ? 'false' : 'true'
-      this.dataset.cover = localCover ? 'true' : 'false'
-      this.persistSelection()
-      this.setStatus(
-        localSource
-          ? track.licenseNote || '本地音频已准备好；点击播放以启用声音。'
-          : track.licenseNote || '当前仅有本地占位条目，未加载音频。'
-      )
+      this.syncMetadata()
       this.syncPlayback()
-    }
-
-    private togglePanel = () => {
-      if (!this.panel || !this.toggle) return
-      if (this.isCompactMode()) {
-        // In the compact reading state the persistent pill remains a direct
-        // play/pause control; the larger panel stays folded and audio is never
-        // paused merely because navigation entered a detail page.
-        this.togglePlayback()
-        return
-      }
-
-      const willOpen = this.panel.hidden
-      this.panel.hidden = !willOpen
-      this.toggle.setAttribute('aria-expanded', String(willOpen))
-      if (willOpen)
-        this.querySelector<HTMLButtonElement>('[data-music-close]')?.focus({ preventScroll: true })
-    }
-
-    private closePanel = () => {
-      if (!this.panel || !this.toggle) return
-      this.panel.hidden = true
-      this.toggle.setAttribute('aria-expanded', 'false')
-      this.toggle.focus({ preventScroll: true })
     }
 
     private togglePlayback = () => {
-      const track = this.current()
-      if (!this.audio || !this.localAudioSource(track?.audioSrc)) {
-        this.setStatus('当前条目仍是占位内容，等待本站本地音频文件。')
-        if (this.isCompactMode() && this.toggle) this.toggle.title = '本地音频尚未准备好'
+      const player = this.player ?? this.meting?.aplayer
+      if (!player) {
+        this.setStatus('网易云歌单仍在加载，稍后再试。')
         return
       }
 
-      if (this.audio.paused) {
-        // This method is reached directly from a click: the first play request
-        // is therefore a real user gesture rather than an autoplay attempt.
-        this.userActivated = true
-        void this.playFromUserGesture()
-      } else {
-        this.audio.pause()
-      }
-    }
-
-    private async playFromUserGesture() {
-      if (!this.audio || !this.localAudioSource(this.current()?.audioSrc)) return
-      try {
-        await this.audio.play()
-      } catch {
-        this.setStatus('浏览器暂未允许播放，请再次主动点击播放按钮。')
-        this.syncPlayback()
-      }
-    }
-
-    private select = (offset: number, resume = false) => {
-      if (this.tracks.length === 0) return
-      const wasPlaying = Boolean(this.audio && !this.audio.paused)
-      this.persistPosition()
-      this.audio?.pause()
-      this.index = (this.index + offset + this.tracks.length) % this.tracks.length
-      this.render()
-      if ((resume || wasPlaying) && this.userActivated) void this.playFromUserGesture()
-    }
-
-    private handleEnded = () => {
-      const track = this.current()
-      if (track) this.storageRemove(`position:${track.id}`)
-      this.select(1, this.userActivated)
-    }
-
-    private changeVolume = (event: Event) => {
-      const input = event.currentTarget as HTMLInputElement
-      if (!this.audio) return
-      this.audio.volume = this.clampUnit(input.value, this.audio.volume)
-      this.storageSet('volume', String(this.audio.volume))
+      if (typeof player.toggle === 'function') player.toggle()
+      else this.playerContainer?.querySelector<HTMLElement>('.aplayer-button')?.click()
     }
 
     private syncPlayback = () => {
-      const playing = Boolean(this.audio && !this.audio.paused && this.audio.currentSrc)
+      const player = this.player
+      const audio = player?.audio
+      const playing = Boolean(player && player.paused === false && audio?.currentSrc)
       this.classList.toggle('is-playing', playing)
+      this.nav?.classList.toggle('playing', playing)
       this.dataset.playbackState = playing ? 'playing' : 'paused'
-      this.playButton?.setAttribute('aria-label', playing ? '暂停' : '播放')
-      if (this.playIcon) this.playIcon.textContent = playing ? 'Ⅱ' : '▶'
-      if (this.isCompactMode() && this.toggle) {
-        const label = this.localAudioSource(this.current()?.audioSrc)
-          ? playing
-            ? '暂停音乐'
-            : '播放音乐'
-          : '本地音频尚未准备好'
-        this.toggle.setAttribute('aria-label', label)
-        this.toggle.title = label
-      }
-      if (playing) this.setStatus('正在播放 · 点击暂停')
+
+      const title = this.currentTitle()
+      const label = playing ? '暂停音乐' : '播放音乐'
+      this.toggle?.setAttribute('aria-label', title ? `${label}：${title}` : label)
+      this.toggle?.setAttribute('title', title ? `${label}：${title}` : label)
+      if (playing) this.setStatus(`正在播放：${title || '网易云音乐'}`)
     }
 
-    private handleError = () => {
-      this.audio?.pause()
-      this.setStatus('本地音频暂时不可用，请检查文件路径和编码。')
+    private syncMetadata = () => {
+      const title = this.currentTitle()
+      if (title) this.dataset.currentTitle = title
       this.syncPlayback()
     }
 
-    private persistSelection() {
-      if (!this.tracks.length) return
-      this.storageSet('selection-date', this.dayKey())
-      this.storageSet('selection-index', String(this.index))
+    private currentTitle() {
+      return this.playerContainer?.querySelector('.aplayer-title')?.textContent?.trim() ?? ''
     }
 
-    private persistPosition = () => {
-      const track = this.current()
-      if (!this.audio || !track) return
-      this.persistSelection()
-      if (Number.isFinite(this.audio.currentTime) && this.audio.currentTime > 0) {
-        this.storageSet(`position:${track.id}`, String(this.audio.currentTime))
-      }
-    }
-
-    private restorePosition = () => {
-      const track = this.current()
-      if (
-        !this.audio ||
-        !track ||
-        !Number.isFinite(this.audio.duration) ||
-        this.audio.duration <= 0
-      )
-        return
-      const savedPosition = Number(this.storageGet(`position:${track.id}`))
-      if (
-        Number.isFinite(savedPosition) &&
-        savedPosition > 0 &&
-        savedPosition < this.audio.duration - 0.5
-      ) {
-        this.audio.currentTime = savedPosition
-      }
-    }
-
-    private handleVisibility = () => {
-      if (document.visibilityState === 'hidden') this.persistPosition()
-    }
-
-    private handleKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && this.panel && !this.panel.hidden) this.closePanel()
+    private handlePlaybackError = () => {
+      this.dataset.playbackState = 'error'
+      this.setStatus('公共音乐接口暂时不可用，请稍后重试。')
+      this.syncPlayback()
     }
 
     private handleNavigationUpdate = () => {
-      // The body can be replaced by Astro's ClientRouter, so reattach the
-      // attribute observer before applying the compact detail-page state.
       queueMicrotask(() => {
         this.observePresentationMode()
+        this.attachPlayer()
         this.syncPresentationMode()
       })
     }
@@ -497,70 +198,16 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
     }
 
     private syncPresentationMode = () => {
-      const compact = this.isCompactMode()
+      const compact = document.body?.dataset.musicMode === 'compact'
       this.classList.toggle('is-compact', compact)
       this.dataset.musicCompact = String(compact)
       this.dataset.mode = compact ? 'compact' : 'full'
-      if (compact && this.panel && this.toggle) {
-        // Do not call audio.pause(): entering a reading page only collapses UI.
-        this.panel.hidden = true
-        this.toggle.setAttribute('aria-expanded', 'false')
-        this.syncPlayback()
-      } else if (this.toggle) {
-        this.toggle.setAttribute('aria-label', '打开音乐播放器')
-        this.toggle.title = 'Music'
-      }
-    }
-
-    private isCompactMode() {
-      return document.body?.dataset.musicMode === 'compact'
-    }
-
-    private localAudioSource(source?: string) {
-      if (!source || !source.trim()) return undefined
-      try {
-        const resolved = new URL(source, window.location.href)
-        return resolved.origin === window.location.origin ? source : undefined
-      } catch {
-        return undefined
-      }
+      this.syncPlayback()
     }
 
     private setStatus(message: string) {
-      if (this.statusElement) this.statusElement.textContent = message
-    }
-
-    private clampUnit(value: string | number | null, fallback: number) {
-      const numeric = Number(value)
-      return Number.isFinite(numeric) ? Math.max(0, Math.min(1, numeric)) : fallback
-    }
-
-    private storageKey(key: string) {
-      return `${storagePrefix}:${key}`
-    }
-
-    private storageGet(key: string) {
-      try {
-        return localStorage.getItem(this.storageKey(key))
-      } catch {
-        return null
-      }
-    }
-
-    private storageSet(key: string, value: string) {
-      try {
-        localStorage.setItem(this.storageKey(key), value)
-      } catch {
-        // Private browsing can disable Storage; playback remains functional.
-      }
-    }
-
-    private storageRemove(key: string) {
-      try {
-        localStorage.removeItem(this.storageKey(key))
-      } catch {
-        // See storageSet above.
-      }
+      const status = this.querySelector<HTMLElement>('[data-music-status]')
+      if (status) status.textContent = message
     }
   }
 
@@ -579,320 +226,17 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
     color: hsl(var(--foreground));
   }
 
-  .music-player__toggle {
-    display: inline-flex;
-    min-height: 3.25rem;
-    align-items: center;
-    gap: 0.58rem;
-    border: 1px solid hsl(var(--border) / 0.86);
-    border-radius: 999px;
-    padding: 0.35rem 0.82rem 0.35rem 0.38rem;
-    background: hsl(var(--background) / 0.86);
-    color: hsl(var(--foreground));
-    box-shadow: 0 0.8rem 2.25rem hsl(var(--foreground) / 0.16);
-    cursor: pointer;
-    backdrop-filter: blur(1rem);
-    transition:
-      transform 180ms ease,
-      box-shadow 180ms ease,
-      border-color 180ms ease;
-  }
-
-  .music-player__toggle:hover,
-  .music-player__toggle:focus-visible {
-    border-color: hsl(var(--primary) / 0.7);
-    box-shadow: 0 1rem 2.6rem hsl(var(--foreground) / 0.22);
-    transform: translateY(-0.15rem);
-  }
-
-  .music-player__disc,
-  .music-player__mini-disc {
+  #nav-music {
     position: relative;
-    display: grid;
-    border-radius: 50%;
-    place-items: center;
-    color: hsl(var(--primary-foreground));
-    background:
-      radial-gradient(circle at center, hsl(var(--primary-foreground) / 0.88) 0 8%, transparent 9%),
-      repeating-radial-gradient(
-        circle at center,
-        hsl(var(--primary-foreground) / 0.22) 0 1px,
-        transparent 2px 5px
-      ),
-      hsl(var(--primary));
-  }
-
-  .music-player__disc {
-    width: 2.42rem;
-    height: 2.42rem;
-  }
-
-  .music-player__disc-dot {
-    width: 0.26rem;
-    height: 0.26rem;
-    border-radius: 50%;
-    background: hsl(var(--background));
-  }
-
-  .music-player__equalizer {
-    position: absolute;
-    right: -0.08rem;
-    bottom: 0.28rem;
     display: flex;
-    height: 0.68rem;
-    align-items: end;
-    gap: 0.08rem;
-    padding: 0.1rem;
-    border-radius: 0.26rem;
-    background: hsl(var(--background));
-  }
-
-  .music-player__equalizer i {
-    display: block;
-    width: 0.1rem;
-    height: 0.24rem;
-    border-radius: 999px;
-    background: hsl(var(--primary));
-  }
-
-  .music-player__equalizer i:nth-child(2) {
-    height: 0.44rem;
-  }
-
-  .music-player__equalizer i:nth-child(3) {
-    height: 0.34rem;
-  }
-
-  music-player.is-playing .music-player__disc,
-  music-player.is-playing .music-player__mini-disc {
-    animation: music-player-spin 4.2s linear infinite;
-  }
-
-  music-player.is-playing .music-player__equalizer i {
-    animation: music-player-pulse 0.9s ease-in-out infinite alternate;
-  }
-
-  music-player.is-playing .music-player__equalizer i:nth-child(2) {
-    animation-delay: -0.24s;
-  }
-
-  music-player.is-playing .music-player__equalizer i:nth-child(3) {
-    animation-delay: -0.48s;
-  }
-
-  .music-player__toggle-copy {
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-  }
-
-  .music-player__panel {
-    position: absolute;
-    bottom: calc(100% + 0.72rem);
-    left: 0;
-    width: min(22rem, calc(100vw - 2rem));
-    border: 1px solid hsl(var(--border));
-    border-radius: 1rem;
-    padding: 1rem;
-    background: hsl(var(--card) / 0.96);
-    box-shadow: 0 1.4rem 4rem hsl(var(--foreground) / 0.18);
-    backdrop-filter: blur(1.1rem);
-  }
-
-  .music-player__panel[hidden] {
-    display: none;
-  }
-
-  .music-player__header,
-  .music-player__identity,
-  .music-player__controls,
-  .music-player__volume {
-    display: flex;
-    align-items: center;
-  }
-
-  .music-player__header {
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .music-player__identity {
-    min-width: 0;
-    gap: 0.7rem;
-  }
-
-  .music-player__mini-disc {
-    width: 2.3rem;
-    height: 2.3rem;
-    flex: none;
-    font-size: 0.9rem;
-  }
-
-  .music-player__eyebrow,
-  .music-player__header h2,
-  .music-player__header p,
-  .music-player__reason,
-  .music-player__context,
-  .music-player__placeholder,
-  .music-player__status {
-    margin: 0;
-  }
-
-  .music-player__eyebrow {
-    color: hsl(var(--primary));
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .music-player__header h2 {
-    overflow: hidden;
-    margin-top: 0.12rem;
-    color: hsl(var(--foreground));
-    font-size: 1rem;
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .music-player__header p:not(.music-player__eyebrow),
-  .music-player__context,
-  .music-player__status {
-    color: hsl(var(--muted-foreground));
-    font-size: 0.72rem;
-    line-height: 1.55;
-  }
-
-  .music-player__header p:not(.music-player__eyebrow) {
-    margin-top: 0.16rem;
-  }
-
-  .music-player__close,
-  .music-player__control,
-  .music-player__play {
-    display: grid;
-    border: 1px solid hsl(var(--border));
-    place-items: center;
-    cursor: pointer;
-  }
-
-  .music-player__close {
-    width: 1.85rem;
-    height: 1.85rem;
-    flex: none;
-    border-radius: 0.5rem;
-    background: transparent;
-    color: hsl(var(--muted-foreground));
-    font-size: 1.3rem;
-    line-height: 1;
-  }
-
-  .music-player__reason {
-    margin-top: 1rem;
-    color: hsl(var(--foreground));
-    font-size: 0.84rem;
-    line-height: 1.62;
-  }
-
-  .music-player__context {
-    min-height: 1.15rem;
-    margin-top: 0.25rem;
-  }
-
-  .music-player__placeholder {
-    margin-top: 0.8rem;
-    border: 1px dashed hsl(var(--primary) / 0.48);
-    border-radius: 0.62rem;
-    padding: 0.55rem 0.62rem;
-    background: hsl(var(--muted) / 0.66);
-    color: hsl(var(--muted-foreground));
-    font-size: 0.7rem;
-    line-height: 1.55;
-  }
-
-  .music-player__controls {
-    margin-top: 0.95rem;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-
-  .music-player__control,
-  .music-player__play {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
-
-  .music-player__control {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    font-size: 0.7rem;
-  }
-
-  .music-player__play {
-    width: 2.55rem;
-    height: 2.55rem;
-    border-color: hsl(var(--primary));
-    border-radius: 50%;
-    background: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
-    font-size: 0.75rem;
-  }
-
-  .music-player__play:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
-  }
-
-  .music-player__control:hover,
-  .music-player__close:hover {
-    border-color: hsl(var(--primary) / 0.65);
-    color: hsl(var(--primary));
-  }
-
-  .music-player__volume {
-    gap: 0.32rem;
-    margin-left: 0.18rem;
-    color: hsl(var(--muted-foreground));
-  }
-
-  .music-player__volume-icon {
-    font-size: 0.78rem;
-  }
-
-  .music-player__volume input {
-    width: 3.9rem;
-    accent-color: hsl(var(--primary));
-  }
-
-  .music-player__status {
-    min-height: 1.15rem;
-    margin-top: 0.8rem;
-  }
-
-  music-player audio {
-    display: none;
-  }
-
-  /*
-   * XYX404's global player is an APlayer/Meting shell.  The isolated visual
-   * language below is directly adapted from its `#nav-music` rules (41px
-   * bottom-left pill, record, title, hover prompt, and light playback bar),
-   * while this component intentionally keeps the local audio-element engine above.
-   */
-  .music-player__toggle {
-    position: relative;
-    display: block;
-    width: auto;
+    width: max-content;
+    min-width: 41px;
     height: 41px;
-    min-height: 0;
-    margin: 0;
-    border-color: hsl(var(--border) / 0.86);
-    border-radius: 40px;
-    padding: 0;
+    align-items: center;
+    cursor: pointer;
     overflow: hidden;
+    border: 1px solid hsl(var(--border) / 0.86);
+    border-radius: 40px;
     background: hsl(var(--card) / 0.94);
     box-shadow: 0 0.45rem 1.65rem hsl(var(--foreground) / 0.15);
     backdrop-filter: saturate(180%) blur(1rem);
@@ -903,103 +247,75 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
       transform 180ms ease;
   }
 
-  .music-player__toggle:hover,
-  .music-player__toggle:focus-visible {
-    border-color: hsl(var(--primary) / 0.7);
-    box-shadow: 0 0.72rem 1.95rem hsl(var(--foreground) / 0.2);
-    transform: none;
-  }
-
-  .music-player__toggle:active {
+  #nav-music:active {
     transform: scale(0.97);
   }
 
-  .music-player__aplayer,
-  .music-player__body,
-  .music-player__info,
-  .music-player__music {
+  :global(#nav-music .aplayer) {
     display: flex;
+    width: max-content;
+    height: 41px;
+    margin: 0;
+    border: 0;
+    border-radius: 60px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :global(#nav-music .aplayer .aplayer-body) {
+    position: relative;
+    display: flex;
+    height: 100%;
     align-items: center;
   }
 
-  .music-player__aplayer,
-  .music-player__body {
-    height: 100%;
-  }
-
-  .music-player__body,
-  .music-player__info {
-    position: relative;
-  }
-
-  .music-player__pic {
-    position: relative;
-    display: grid;
+  :global(#nav-music .aplayer .aplayer-pic) {
+    z-index: 1;
     width: 25px;
     height: 25px;
     flex: none;
     margin-left: 8px;
-    overflow: hidden;
     border: 1px solid hsl(var(--border) / 0.9);
     border-radius: 40px;
-    place-items: center;
-    background:
-      radial-gradient(circle at center, hsl(var(--background)) 0 10%, transparent 11%),
-      repeating-radial-gradient(
-        circle at center,
-        hsl(var(--primary-foreground) / 0.22) 0 1px,
-        transparent 2px 4px
-      ),
-      hsl(var(--primary));
+    pointer-events: none;
     transform: rotate(0deg) scale(1);
+    animation: music-player-spin 24s linear infinite;
+    animation-play-state: paused;
     transition:
       border-color 300ms ease,
       box-shadow 300ms ease,
       transform 300ms ease;
-    animation: music-player-spin 24s linear infinite;
-    animation-play-state: paused;
   }
 
-  .music-player__pic-grooves {
-    position: absolute;
-    inset: 3px;
-    border: 1px solid hsl(var(--primary-foreground) / 0.22);
-    border-radius: 50%;
-    box-shadow:
-      0 0 0 3px hsl(var(--primary-foreground) / 0.08),
-      0 0 0 6px hsl(var(--primary-foreground) / 0.04);
+  :global(#nav-music .aplayer .aplayer-pic .aplayer-button) {
+    right: 50%;
+    bottom: 50%;
+    pointer-events: all;
+    transform: translate(50%, 50%);
+    margin: 0;
   }
 
-  .music-player__cover {
-    position: absolute;
-    inset: 0;
-    width: 100%;
+  :global(#nav-music .aplayer .aplayer-info) {
+    display: flex;
     height: 100%;
-    border-radius: inherit;
-    object-fit: cover;
-  }
-
-  .music-player__pic-hole {
-    position: relative;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: hsl(var(--background));
-  }
-
-  .music-player__info {
-    height: 100%;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
     color: hsl(var(--foreground));
   }
 
-  .music-player__music {
-    position: relative;
+  :global(#nav-music .aplayer .aplayer-info .aplayer-music) {
     z-index: 1;
+    display: flex;
     height: 100%;
+    align-items: center;
+    margin: 0;
     padding: 0 12px 0 8px;
+    cursor: pointer;
   }
 
-  .music-player__toggle-copy {
+  :global(#nav-music .aplayer .aplayer-info .aplayer-music .aplayer-title) {
     display: inline-block;
     max-width: 120px;
     overflow: hidden;
@@ -1007,61 +323,93 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
     font-size: 0.76rem;
     font-weight: 650;
     line-height: 1;
-    letter-spacing: normal;
     text-overflow: ellipsis;
-    text-transform: none;
     white-space: nowrap;
-    transition: color 300ms ease;
     user-select: none;
   }
 
-  .music-player__controller {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+  :global(#nav-music .aplayer .aplayer-info .aplayer-music .aplayer-author),
+  :global(#nav-music .aplayer .aplayer-info .aplayer-controller .aplayer-time),
+  :global(#nav-music .aplayer .aplayer-list),
+  :global(#nav-music .aplayer .aplayer-miniswitcher),
+  :global(#nav-music .aplayer .aplayer-notice),
+  :global(#nav-music .aplayer .aplayer-lrc) {
+    display: none;
   }
 
-  .music-player__bar,
-  .music-player__played {
-    display: block;
+  :global(#nav-music .aplayer .aplayer-info .aplayer-controller) {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
   }
 
-  .music-player__bar {
+  :global(#nav-music .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap) {
+    margin: 0;
+    padding: 0;
+  }
+
+  :global(#nav-music .aplayer .aplayer-info .aplayer-controller .aplayer-bar-wrap .aplayer-bar) {
+    height: 100%;
     background: transparent;
   }
 
-  .music-player__played {
+  :global(
+    #nav-music
+      .aplayer
+      .aplayer-info
+      .aplayer-controller
+      .aplayer-bar-wrap
+      .aplayer-bar
+      .aplayer-loaded
+  ) {
+    display: none;
+  }
+
+  :global(
+    #nav-music
+      .aplayer
+      .aplayer-info
+      .aplayer-controller
+      .aplayer-bar-wrap
+      .aplayer-bar
+      .aplayer-played
+  ) {
+    height: 100%;
     opacity: 0.1;
-    background: hsl(var(--primary-foreground));
+    background: hsl(var(--primary-foreground)) !important;
     animation: music-player-light-bar 5s ease infinite;
     animation-play-state: paused;
   }
 
-  .music-player__hover-tip {
+  #nav-music-hoverTips {
     position: absolute;
     z-index: 2;
     inset: 0;
     display: flex;
+    width: 100%;
+    height: 100%;
     align-items: center;
     justify-content: center;
+    border: 0;
     border-radius: 40px;
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
     font-size: 0.75rem;
     opacity: 0;
+    cursor: pointer;
     transition:
       width 300ms ease,
       opacity 300ms ease;
   }
 
-  .music-player__toggle:hover .music-player__hover-tip,
-  .music-player__toggle:focus-visible .music-player__hover-tip {
+  #nav-music:hover:not(.playing) #nav-music-hoverTips,
+  #nav-music:focus-within:not(.playing) #nav-music-hoverTips {
     opacity: 1;
   }
 
-  music-player.is-playing .music-player__toggle {
+  #nav-music.playing {
     border-color: hsl(var(--primary) / 0.78);
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
@@ -1069,22 +417,35 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
     animation: music-player-playing-shadow 5s linear infinite;
   }
 
-  music-player.is-playing .music-player__pic {
+  :global(#nav-music.playing .aplayer .aplayer-pic) {
     border-color: hsl(var(--primary-foreground) / 0.9);
     box-shadow: 0 0 0.9rem hsl(var(--primary-foreground) / 0.55);
     transform: rotate(0deg) scale(1.1);
     animation-play-state: running;
   }
 
-  music-player.is-playing .music-player__played {
+  :global(#nav-music.playing .aplayer .aplayer-info .aplayer-controller .aplayer-played) {
     animation-play-state: running;
   }
 
-  music-player.is-playing .music-player__hover-tip,
-  music-player.is-playing .music-player__toggle:hover .music-player__hover-tip,
-  music-player.is-playing .music-player__toggle:focus-visible .music-player__hover-tip {
+  #nav-music.playing #nav-music-hoverTips {
     width: 0;
+    pointer-events: none;
     opacity: 0;
+  }
+
+  music-player.is-compact #nav-music {
+    width: 41px;
+  }
+
+  :global(music-player.is-compact #nav-music .aplayer .aplayer-info) {
+    width: 0;
+    overflow: hidden;
+  }
+
+  :global(music-player.is-compact #nav-music .aplayer .aplayer-info .aplayer-music) {
+    width: 0;
+    padding: 0;
   }
 
   @keyframes music-player-playing-shadow {
@@ -1109,74 +470,23 @@ const serializedTracks = JSON.stringify(dailyMusic).replace(/</g, '\\u003c')
     }
   }
 
-  /* Detail layouts set body[data-music-mode='compact']. JS mirrors this rule
-     for accessibility state and keeps it correct across ClientRouter swaps. */
-  :global(body[data-music-mode='compact']) music-player .music-player__panel,
-  music-player.is-compact .music-player__panel {
-    display: none !important;
-  }
-
-  :global(body[data-music-mode='compact']) music-player .music-player__toggle,
-  music-player.is-compact .music-player__toggle {
-    width: 41px;
-    min-height: 0;
-    padding: 0;
-  }
-
-  :global(body[data-music-mode='compact']) music-player .music-player__toggle-copy,
-  music-player.is-compact .music-player__toggle-copy {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
-  :global(body[data-music-mode='compact']) music-player .music-player__info,
-  music-player.is-compact .music-player__info {
-    width: 0;
-    overflow: hidden;
-  }
-
   @keyframes music-player-spin {
     to {
       transform: rotate(360deg);
     }
   }
 
-  @keyframes music-player-pulse {
-    from {
-      transform: scaleY(0.58);
-    }
-
-    to {
-      transform: scaleY(1.2);
-    }
-  }
-
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     music-player {
       left: 0.75rem;
       bottom: max(0.75rem, env(safe-area-inset-bottom));
     }
-
-    .music-player__panel {
-      position: fixed;
-      right: 0.75rem;
-      bottom: calc(4.3rem + env(safe-area-inset-bottom));
-      left: 0.75rem;
-      width: auto;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .music-player__toggle,
-    .music-player__disc,
-    .music-player__pic,
-    .music-player__mini-disc,
-    .music-player__equalizer i,
-    .music-player__played {
+    #nav-music,
+    :global(#nav-music .aplayer .aplayer-pic),
+    :global(#nav-music .aplayer .aplayer-played) {
       animation: none !important;
       transition: none;
     }

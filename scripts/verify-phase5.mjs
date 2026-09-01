@@ -38,6 +38,10 @@ const localAssets = [
     hash: 'bdfa95bf30097a9bd10500e8847c33bbf28cbf9a7013f933db3f63b5ea57f511'
   },
   {
+    path: 'media/effects/tracer-companion.webp',
+    hash: 'a68c070b24760685b2329e088edd30d951d6833154096fbb13fecfe2920c3af0'
+  },
+  {
     path: 'media/residence/skywt-plane.png',
     hash: '6139475bcd1bda273eee07cde12aa71441174bb0900213ad8bff34379a87ea81'
   },
@@ -51,11 +55,11 @@ const localAssets = [
   },
   {
     path: 'media/residence/residence-map.svg',
-    hash: 'a078e00f0ff7676349a4f0bcc445a7817bca2757f3eaca53da8bea53a49472c0'
+    hash: '562ed1d699171b6bb610a741437641201be578f1aa98abc0aedc2e9eaeb3a188'
   },
   {
     path: 'media/residence/visitor-avatar.svg',
-    hash: '278fa0d90c15e9a59d8484ecc8cbafcb76c5b0ffcf0ea6acb309ffe8d56b719b'
+    hash: '415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351'
   },
   {
     path: 'vendor/maplibre-gl@5.24.0/maplibre-gl.js',
@@ -83,6 +87,7 @@ const contributionData = source('src/data/github-contributions.ts')
 const heatmapStyles = source('src/assets/styles/github-contribution-heatmap.css')
 const companion = source('src/components/effects/ScrollCompanion.astro')
 const baseLayout = source('src/layouts/BaseLayout.astro')
+const residenceData = source('src/data/residence.ts')
 
 expect(
   residenceCard.includes('data-residence-map') &&
@@ -100,30 +105,49 @@ expect(
   'residence preserves lazy MapLibre loading and ClientRouter teardown/re-entry'
 )
 expect(
+  residenceData.includes("publicPrecision: 'city'") &&
+    residenceData.includes('latitude: 39.9') &&
+    residenceData.includes('longitude: 116.4') &&
+    !residenceData.includes('位置占位') &&
+    !residenceData.includes('海淀'),
+  'residence candidate exposes only city-level location copy and coordinates'
+)
+expect(
   heatmap.includes("username = 'Susurrium'") &&
-    heatmap.includes('githeatmap-grid') &&
+    heatmap.includes('contribution-heatmap-grid') &&
     contributionData.includes('Promise.allSettled') &&
     contributionData.includes('GITHUB_FETCH_TIMEOUT') &&
     contributionData.includes('createGitHubContributionHeatmapSkeleton'),
   'heatmap preserves HanLife 53-week structure with no-token failure fallback'
 )
 expect(
-  companion.includes('travel * 140') &&
-    companion.includes('travel * 42') &&
-    companion.includes('progress <= 0.25') &&
-    companion.includes("progress / 0.35") &&
+  companion.includes("src = '/media/effects/tracer-companion.webp'") &&
+    !companion.includes('tnxg-background-aijo-karen.webp') &&
+    companion.includes('COMPANION_EXIT_SHARE = 0.88') &&
+    companion.includes('COMPANION_MAX_X = 22') &&
+    companion.includes('COMPANION_MAX_ROTATE = 10') &&
+    companion.includes('COMPANION_FADE_START = 0.68') &&
+    companion.includes('scrollable * COMPANION_EXIT_SHARE') &&
+    companion.includes('const travel = timeline') &&
+    companion.includes('smoothstep') &&
+    companion.includes('travel * COMPANION_MAX_X') &&
+    companion.includes('travel * COMPANION_MAX_ROTATE') &&
+    !companion.includes('COMPANION_EASING_POWER') &&
+    !companion.includes('Math.pow(timeline') &&
+    !companion.includes('travel * 140') &&
+    !companion.includes('travel * 42') &&
     companion.includes('data-src={resolvedSrc}') &&
     companion.includes('activateImage') &&
     companion.includes('deactivateImage') &&
     !companion.includes('companion-breathe'),
-  'About companion uses the current TNXG formula without historical breathing or hidden-view downloads'
+  'About companion uses the current local Tracer asset with bounded scroll drift, a long fade, and no historical breathing'
 )
 expect(
-  heatmapStyles.includes('.githeatmap-link:focus-visible') && heatmapStyles.includes('outline: 2px solid'),
+  heatmapStyles.includes('.contribution-heatmap-link:focus-visible') && heatmapStyles.includes('outline: 2px solid'),
   'heatmap retains a visible keyboard focus indicator'
 )
 expect(
-  baseLayout.includes("effectProfiles[effectProfile].companion") && baseLayout.includes('<ScrollCompanion />'),
+  baseLayout.includes('effectProfiles[effectProfile].companion') && baseLayout.includes('<ScrollCompanion />'),
   'BaseLayout mounts the companion only for its explicit route profile'
 )
 
@@ -131,16 +155,23 @@ const home = existsSync(resolve(dist, 'home/index.html')) ? output('home/index.h
 const about = existsSync(resolve(dist, 'about/index.html')) ? output('about/index.html') : ''
 const traceOutputDirectory = resolve(dist, 'traces')
 const traceDetailDirectory = existsSync(traceOutputDirectory)
-  ? readdirSync(traceOutputDirectory, { withFileTypes: true }).find((entry) => entry.isDirectory())?.name
+  ? readdirSync(traceOutputDirectory, { withFileTypes: true }).find(
+      (entry) =>
+        entry.isDirectory() && !/^\d+$/.test(entry.name) && entry.name.toLowerCase() !== 'tags'
+    )?.name
   : undefined
 const traceDetailOutput = traceDetailDirectory ? `traces/${traceDetailDirectory}/index.html` : undefined
 const reading = traceDetailOutput && existsSync(resolve(dist, traceDetailOutput)) ? output(traceDetailOutput) : ''
 
 expect(home.includes('data-residence-map'), 'Home emits the residence scene')
-expect(home.includes('githeatmap-link') && home.includes('github.com/Susurrium'), 'Home emits the GitHub contribution heatmap')
-expect(about.includes('<scroll-companion') && about.includes('/media/effects/tnxg-background-aijo-karen.webp'), 'About emits the local TNXG companion')
-expect(Boolean(traceDetailOutput), 'production build emits a Trace detail page for reading-profile regression')
-expect(!reading.includes('<scroll-companion'), 'reading pages do not emit the About companion')
+expect(home.includes('contribution-heatmap-link') && home.includes('github.com/Susurrium'), 'Home emits the GitHub contribution heatmap')
+expect(about.includes('<scroll-companion') && about.includes('/media/effects/tracer-companion.webp'), 'About emits the selected local tracer companion')
+if (traceDetailOutput) {
+  pass(`reading-profile regression uses ${traceDetailOutput}`)
+  expect(!reading.includes('<scroll-companion'), 'reading pages do not emit the About companion')
+} else {
+  pass('no published Trace detail exists; reading-profile detail check is skipped')
+}
 expect(
   ![home, about, reading].join('\n').includes('cdn.tnxg.top/images/cover/background_aijo_karen.webp'),
   'production HTML never hotlinks the TNXG companion asset'

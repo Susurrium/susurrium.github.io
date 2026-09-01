@@ -1,0 +1,47 @@
+---
+/**
+ * Related-content capability.
+ *
+ * The common footer chooses only a semantic mode.  The mature Blog
+ * recommendation renderer is kept as an isolated visual adapter here; other
+ * content types use the normalized shared card fallback automatically.
+ */
+import {
+  toReadingArticleBottomData,
+  type ReadingNavigationModel,
+  type RenderablePageItem
+} from '@/lib/content-layer'
+import type { ReadingRelatedMode, ReadingRelatedVariant } from '@/lib/content-layer/reading-policy'
+
+import { ArticleBottom } from 'astro-pure/components/pages'
+import ReadingNavigation from '@/components/reading/ReadingNavigation.astro'
+
+import ReadingRecommendations from './ReadingRecommendations.astro'
+
+interface Props {
+  current: RenderablePageItem
+  items: readonly RenderablePageItem[]
+  mode: ReadingRelatedMode
+  navigation: ReadingNavigationModel
+  variant?: ReadingRelatedVariant
+}
+
+const { current, items, mode, navigation, variant = 'cards' } = Astro.props as Props
+const genericItems = items.filter((item) => item.contentKey !== current.contentKey)
+const articleBottom =
+  variant === 'article-bottom' ? toReadingArticleBottomData(current, items) : undefined
+---
+
+{
+  mode === 'recommendations' && articleBottom && articleBottom.collections.length > 0 ? (
+    <ArticleBottom
+      collections={articleBottom.collections}
+      id={articleBottom.id}
+      class='mt-3 sm:mt-6'
+    />
+  ) : mode === 'recommendations' && genericItems.length > 0 ? (
+    <ReadingRecommendations currentKey={current.contentKey} items={items} />
+  ) : mode === 'adjacent' ? (
+    <ReadingNavigation next={navigation.next} previous={navigation.previous} class='mt-3 sm:mt-6' />
+  ) : null
+}

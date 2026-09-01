@@ -1,58 +1,39 @@
 /**
- * Local-only music catalogue for `HIST-MUSIC` state and the `XYX-MUSIC-UI`
- * shell. Every eventual source must be a same-origin static asset.
+ * Public MetingJS music configuration.
  *
- * Keep `audioSrc` unset until an owned or explicitly authorised audio file has
- * been placed in `public/`. When that happens, use same-origin paths such as
- * `/media/music/a-quiet-morning.ogg` and `/media/music/a-quiet-morning.webp`.
- * The player intentionally rejects remote URLs so a static GitHub Pages build
- * never turns into an implicit third-party audio request.
+ * The playlist id currently follows the first reference site (xyx404). The
+ * second reference site uses `8152976493`; changing `id` is enough to switch
+ * to that playlist later.
+ *
+ * MetingJS turns this provider request into APlayer audio, cover and lyric
+ * records in the browser. The endpoint is deliberately kept in one place so
+ * it can be replaced if the public service changes or becomes unavailable.
  */
-export interface MusicTrack {
+export interface MusicProviderConfig {
   id: string
-  title: string
-  artist: string
-  /** Future local, same-origin audio path. Deliberately absent in fixtures. */
-  audioSrc?: string
-  /** Optional local cover path for the compact XYX-inspired record shell. */
-  coverSrc?: string
-  reason: string
-  context: string
-  tags: readonly string[]
-  licenseNote: string
+  server: 'netease'
+  type: 'playlist'
+  api: string
+  mutex: boolean
+  preload: 'none' | 'metadata' | 'auto'
+  order: 'random' | 'list'
+  volume: number
+  lrcType: number
+  playlistUrl: string
 }
 
-/**
- * Self-authored UI fixtures, not playable music. They exercise the daily
- * selection and metadata interface without bundling, streaming, or requesting
- * any audio before final media is supplied.
- */
-export const dailyMusic: readonly MusicTrack[] = [
-  {
-    id: 'morning-margin',
-    title: '晨光留白',
-    artist: '本地占位曲目',
-    reason: '把节奏放慢一点，给刚开始的一天留出能呼吸的空白。',
-    context: '适合打开编辑器前、窗边光线还很柔和的几分钟。',
-    tags: ['轻盈', '专注'],
-    licenseNote: '这是本地占位条目，尚未配置可播放音频。'
-  },
-  {
-    id: 'rainy-draft',
-    title: '雨后草稿',
-    artist: '本地占位曲目',
-    reason: '让未完成的想法先流动起来，不急着把每一句定稿。',
-    context: '适合整理笔记、写下第一行草稿的午后。',
-    tags: ['雨声', '书写'],
-    licenseNote: '这是本地占位条目，尚未配置可播放音频。'
-  },
-  {
-    id: 'night-window',
-    title: '夜窗微光',
-    artist: '本地占位曲目',
-    reason: '在结束前回看一天，把值得记住的小事轻轻收好。',
-    context: '适合合上工作窗口、准备离开屏幕的时候。',
-    tags: ['夜晚', '回望'],
-    licenseNote: '这是本地占位条目，尚未配置可播放音频。'
-  }
-]
+export const musicConfig: MusicProviderConfig = {
+  id: '12812783625',
+  server: 'netease',
+  type: 'playlist',
+  // Same Meting protocol as the reference sites' default endpoint. The
+  // reference endpoint currently answers 403 in some environments, so use a
+  // compatible public endpoint that is presently reachable.
+  api: 'https://api.injahow.cn/meting/?server=:server&type=:type&id=:id&r=:r',
+  mutex: true,
+  preload: 'none',
+  order: 'random',
+  volume: 0.7,
+  lrcType: 0,
+  playlistUrl: 'https://music.163.com/#/playlist?id=12812783625'
+}

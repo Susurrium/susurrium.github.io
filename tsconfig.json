@@ -22,6 +22,7 @@
       "@/utils/*": ["src/utils/*"],
       "@/plugins/*": ["src/plugins/*"],
       "@/pages/*": ["src/pages/*"],
+      "@/scripts/*": ["src/scripts/*"],
       "@/types": ["src/types/index.ts"],
       "@/site-config": ["src/site.config.ts"]
     }
@@ -29,6 +30,7 @@
   "exclude": [
     "node_modules",
     "**/node_modules/*",
+    "artifacts/**",
     ".vscode",
     "dist*/**",
     "packages/pure/**",

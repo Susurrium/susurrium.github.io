@@ -11,6 +11,20 @@
   font-style: italic;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Abril Fatface';
+  src: url('/fonts/AbrilFatface-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Paralines';
+  src: url('/fonts/Paralines-Regular.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 html {
   font-family: 'Satoshi', sans-serif;
 }
@@ -76,6 +90,120 @@ html.dark {
   color-scheme: dark;
 }
 
+/*
+ * Normal BaseLayout documents opt into native View Transitions from the
+ * layout itself. EntranceLayout deliberately opts out: the root → Home
+ * boundary uses the shared-color handoff surface below, so unrelated full
+ * document screenshots never dissolve into one another.
+ */
+
+::view-transition-group(root) {
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.22, 0.7, 0.2, 1);
+}
+
+::view-transition-old(root) {
+  animation: susurrium-transition-out 420ms cubic-bezier(0.22, 0.7, 0.2, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: susurrium-transition-in 560ms cubic-bezier(0.22, 0.7, 0.2, 1) both;
+}
+
+@keyframes susurrium-transition-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+}
+
+@keyframes susurrium-transition-in {
+  from {
+    opacity: 0;
+    transform: scale(1.012);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 1ms;
+  }
+}
+
+/*
+ * Cross-document handoff surface.
+ *
+ * The entrance and Home documents both paint this exact token. The outgoing
+ * page fades into it before navigation; Home keeps it over the first paint
+ * until its Hero image is decoded, then reveals the page once. This avoids
+ * blending two unrelated full-screen images and also covers a slow network.
+ */
+:root {
+  --document-handoff-surface: hsl(var(--background));
+  --document-handoff-surface: color-mix(
+    in srgb,
+    hsl(var(--background)) 92%,
+    rgb(198 184 159)
+  );
+}
+
+.document-handoff {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay, 1000);
+  pointer-events: none;
+  background: var(--document-handoff-surface);
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+}
+
+.home-entry-handoff {
+  transition:
+    opacity 320ms cubic-bezier(0.2, 0.75, 0.25, 1),
+    visibility 0s linear 320ms;
+}
+
+html[data-home-handoff='pending'] .home-entry-handoff {
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+}
+
+html[data-home-handoff='revealing'] .home-entry-handoff {
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition-delay: 0s, 320ms;
+}
+
+/* Keep the first Home frame still while the handoff curtain is leaving. */
+html[data-home-handoff='pending'] [data-home-hero] .hero-gallery__slide,
+html[data-home-handoff='pending'] [data-home-waves] .hero-gallery__parallax > use,
+html[data-home-handoff='revealing'] [data-home-hero] .hero-gallery__slide,
+html[data-home-handoff='revealing'] [data-home-waves] .hero-gallery__parallax > use {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-entry-handoff {
+    transition: none;
+  }
+}
+
 /* Global */
 a {
   transition: color 0.2s ease;
@@ -84,5 +212,79 @@ a {
   overflow-wrap: anywhere;
   &:hover {
     color: hsl(var(--primary) / var(--un-text-opacity, 1));
+  }
+}
+
+a:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
+
+/*
+ * Shared surface for ordinary information cards.
+ *
+ * Keep this as a semantic class instead of targeting every rounded/bordered
+ * element globally: specialised surfaces (residence scene, timeline, reader
+ * and QR plate) intentionally keep different contracts. The heatmap may
+ * consume these tokens while retaining its own grid geometry.
+ * Alpha belongs to the background only, so card copy and media stay crisp.
+ * Specialized components may consume these tokens while keeping their own
+ * geometry and interaction rules.
+ */
+:root {
+  --site-card-background: hsl(var(--card) / 0.88);
+  --site-card-background-fallback: hsl(var(--card) / 0.94);
+  --site-card-background-hover: hsl(var(--muted) / 0.9);
+  --site-card-border: hsl(var(--border) / 0.82);
+  --site-card-blur: 8px;
+  --site-card-shadow: 0 0.625rem 1.875rem -0.9375rem hsl(var(--foreground) / 0.18);
+  --site-card-shadow-hover: 0 0 2rem hsl(var(--foreground) / 0.18);
+}
+
+.site-card-surface {
+  box-sizing: border-box;
+  background-color: var(--site-card-background);
+  border-color: var(--site-card-border);
+  -webkit-backdrop-filter: blur(var(--site-card-blur));
+  backdrop-filter: blur(var(--site-card-blur));
+  box-shadow: var(--site-card-shadow);
+}
+
+.site-card-surface--interactive {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.site-card-surface--interactive:is(:hover, :focus-within) {
+  background-color: var(--site-card-background-hover);
+  box-shadow: var(--site-card-shadow-hover);
+}
+
+.site-card-surface--interactive:focus-within {
+  border-color: hsl(var(--ring) / 0.6);
+}
+
+.site-empty-state {
+  display: block;
+  margin: 0;
+  border: 1px dashed var(--site-card-border, hsl(var(--border)));
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+}
+
+@supports not ((backdrop-filter: blur(1px))) {
+  .site-card-surface {
+    background-color: var(--site-card-background-fallback);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-card-surface--interactive {
+    transition: none;
   }
 }

@@ -12,9 +12,6 @@ interface Props {
 const { view, comment, class: className, ...props } = Astro.props
 
 const path = Astro.url.pathname
-// The entire Waline surface is intentionally absent while the integration is
-// disabled.  Besides avoiding a misleading empty "views" label, this keeps
-// the legacy Pageview dynamic import out of the delivered page entirely.
 const enabled = config.integ.waline.enable
 ---
 

@@ -1,0 +1,68 @@
+---
+import { Button } from 'astro-pure/user'
+import { cn } from 'astro-pure/utils'
+
+import PageLayout from '@/layouts/BaseLayout.astro'
+import {
+  getContentTagCounts,
+  getContentTypeDefinition,
+  loadContentCatalog,
+  type ContentKind
+} from '@/lib/content-layer'
+
+interface Props {
+  kind: ContentKind
+}
+
+const { kind } = Astro.props as Props
+const definition = getContentTypeDefinition(kind)
+const catalog = await loadContentCatalog()
+const tags = getContentTagCounts(catalog, kind)
+
+const meta = {
+  description: `Browse ${definition.label} topics.`,
+  title: `${definition.label} Tags`
+}
+---
+
+<PageLayout {meta}>
+  <Button title='Back' href={definition.basePath} variant='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <h1 id={`${kind}-tags-heading`} class='mb-6 text-3xl font-medium'>{definition.label} Tags</h1>
+    </div>
+
+    <section
+      id='content'
+      class='animate'
+      aria-labelledby={`${kind}-tags-heading`}
+      data-content-kind={kind}
+      data-taxonomy-scope={kind}
+    >
+      {
+        tags.length > 0 ? (
+          <ul class='flex flex-wrap gap-4'>
+            {tags.map(({ count, href, tag }) => (
+              <li>
+                <Button
+                  href={href}
+                  variant='pill'
+                  class={cn(
+                    'items-start gap-x-1',
+                    count > 2 ? 'rounded-xl px-3 py-1 text-xl' : count > 1 && 'text-lg'
+                  )}
+                  title={`${definition.label} tag ${tag}`}
+                >
+                  {tag}
+                  <span class={count > 2 ? 'text-base' : 'text-xs'}>{count}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class='site-empty-state'>No {definition.label.toLowerCase()} tags yet.</p>
+        )
+      }
+    </section>
+  </main>
+</PageLayout>

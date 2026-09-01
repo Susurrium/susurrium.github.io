@@ -1,27 +1,53 @@
 /* HAN-HEATMAP / hanlife02/Astro-star at the ledger-locked revision.
-   Structure, proportions and hover sweep are retained; component-local
-   variables translate the source theme's --line/--text-muted tokens. */
-.githeatmap-link {
-  --githeatmap-gap: clamp(2px, 0.22vw, 3px);
-  --githeatmap-line: hsl(var(--primary));
-  --githeatmap-text-muted: hsl(var(--muted-foreground));
-  --githeatmap-empty: color-mix(in srgb, hsl(var(--border)) 8%, transparent);
-  --githeatmap-active: var(--githeatmap-line);
+   The contribution grid and hover sweep remain source-faithful. Its outer
+   surface consumes the site's shared card tokens so it aligns with the other
+   Home sections while retaining the heatmap's own color scale. */
+.contribution-heatmap-link {
+  --contribution-heatmap-gap: clamp(2px, 0.22vw, 3px);
+  --contribution-heatmap-line: hsl(var(--primary));
+  --contribution-heatmap-text-muted: hsl(var(--muted-foreground));
+  --contribution-heatmap-panel: var(--site-card-background, hsl(var(--card) / 0.88));
+  --contribution-heatmap-panel-fallback: var(
+    --site-card-background-fallback,
+    hsl(var(--card) / 0.94)
+  );
+  --contribution-heatmap-panel-hover: var(--site-card-background-hover, hsl(var(--muted) / 0.9));
+  --contribution-heatmap-panel-border: var(--site-card-border, hsl(var(--border) / 0.82));
+  --contribution-heatmap-panel-shadow: var(
+    --site-card-shadow,
+    0 0.625rem 1.875rem -0.9375rem hsl(var(--foreground) / 0.18)
+  );
+  --contribution-heatmap-panel-shadow-hover: var(
+    --site-card-shadow-hover,
+    0 0 2rem hsl(var(--foreground) / 0.18)
+  );
+  --contribution-heatmap-empty: color-mix(in srgb, hsl(var(--muted)) 58%, transparent);
+  --contribution-heatmap-active: var(--contribution-heatmap-line);
   position: relative;
   display: grid;
   gap: 0.42rem;
   width: 100%;
-  max-width: min(100%, 34rem);
-  padding: 0.42rem 0;
-  color: var(--githeatmap-line);
+  max-width: none;
+  box-sizing: border-box;
+  padding: 0.8rem 0.9rem 0.72rem;
+  border: 1px solid var(--contribution-heatmap-panel-border);
+  border-radius: 0.8rem;
+  background-color: var(--contribution-heatmap-panel);
+  box-shadow: var(--contribution-heatmap-panel-shadow);
+  -webkit-backdrop-filter: blur(var(--site-card-blur, 8px));
+  backdrop-filter: blur(var(--site-card-blur, 8px));
+  color: var(--contribution-heatmap-line);
   text-align: left;
   text-decoration: none;
   transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
     opacity 0.18s ease,
     transform 0.18s ease;
 }
 
-.githeatmap-summary {
+.contribution-heatmap-summary {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -33,209 +59,224 @@
   white-space: nowrap;
 }
 
-.githeatmap-count,
-.githeatmap-month,
-.githeatmap-footer,
-.githeatmap-legend {
+.contribution-heatmap-count,
+.contribution-heatmap-month,
+.contribution-heatmap-footer,
+.contribution-heatmap-legend {
   letter-spacing: 0;
 }
 
-.githeatmap-count {
+.contribution-heatmap-count {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  color: var(--githeatmap-text-muted);
+  color: var(--contribution-heatmap-text-muted);
   font-size: clamp(0.64rem, 0.58rem + 0.16vw, 0.78rem);
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.githeatmap-calendar {
+.contribution-heatmap-calendar {
   display: grid;
   gap: 0.16rem;
   min-width: 0;
 }
 
-.githeatmap-months {
+.contribution-heatmap-months {
   display: grid;
-  grid-template-columns: repeat(var(--githeatmap-week-count, 53), 1fr);
+  grid-template-columns: repeat(var(--contribution-heatmap-week-count, 53), 1fr);
   height: 0.78rem;
   line-height: 1;
 }
 
-.githeatmap-month {
+.contribution-heatmap-month {
   display: block;
   overflow: visible;
-  color: var(--githeatmap-text-muted);
+  color: var(--contribution-heatmap-text-muted);
   font-size: clamp(0.55rem, 0.5rem + 0.16vw, 0.68rem);
   font-weight: 500;
   white-space: nowrap;
 }
 
-.githeatmap-grid {
+.contribution-heatmap-grid {
   display: grid;
-  grid-template-columns: repeat(var(--githeatmap-week-count, 53), 1fr);
+  grid-template-columns: repeat(var(--contribution-heatmap-week-count, 53), 1fr);
   grid-template-rows: repeat(7, 1fr);
   grid-auto-flow: column;
-  gap: var(--githeatmap-gap);
+  gap: var(--contribution-heatmap-gap);
   width: 100%;
-  aspect-ratio: var(--githeatmap-week-count, 53) / 7;
+  aspect-ratio: var(--contribution-heatmap-week-count, 53) / 7;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.githeatmap-week {
+.contribution-heatmap-week {
   display: contents;
 }
 
-.githeatmap-cell,
-.githeatmap-legend-cell {
-  --githeatmap-fill: var(--githeatmap-empty);
+.contribution-heatmap-cell,
+.contribution-heatmap-legend-cell {
+  --contribution-heatmap-fill: var(--contribution-heatmap-empty);
   border-radius: 2px;
-  background-color: var(--githeatmap-fill);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--border)) 4%, transparent);
+  background-color: var(--contribution-heatmap-fill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--border)) 34%, transparent);
 }
 
-.githeatmap-cell {
+.contribution-heatmap-cell {
   width: 100%;
   height: 100%;
   transform-origin: center;
 }
 
-.githeatmap-cell[data-blank='true'] {
-  --githeatmap-fill: transparent;
+.contribution-heatmap-cell[data-blank='true'] {
+  --contribution-heatmap-fill: transparent;
   background-color: transparent;
   box-shadow: none;
 }
 
-.githeatmap-cell[data-level='1'],
-.githeatmap-legend-cell[data-level='1'] {
-  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 28%, transparent);
+.contribution-heatmap-cell[data-level='1'],
+.contribution-heatmap-legend-cell[data-level='1'] {
+  --contribution-heatmap-fill: color-mix(in srgb, var(--contribution-heatmap-active) 42%, transparent);
 }
 
-.githeatmap-cell[data-level='2'],
-.githeatmap-legend-cell[data-level='2'] {
-  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 46%, transparent);
+.contribution-heatmap-cell[data-level='2'],
+.contribution-heatmap-legend-cell[data-level='2'] {
+  --contribution-heatmap-fill: color-mix(in srgb, var(--contribution-heatmap-active) 62%, transparent);
 }
 
-.githeatmap-cell[data-level='3'],
-.githeatmap-legend-cell[data-level='3'] {
-  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 66%, transparent);
+.contribution-heatmap-cell[data-level='3'],
+.contribution-heatmap-legend-cell[data-level='3'] {
+  --contribution-heatmap-fill: color-mix(in srgb, var(--contribution-heatmap-active) 80%, transparent);
 }
 
-.githeatmap-cell[data-level='4'],
-.githeatmap-legend-cell[data-level='4'] {
-  --githeatmap-fill: color-mix(in srgb, var(--githeatmap-active) 88%, transparent);
+.contribution-heatmap-cell[data-level='4'],
+.contribution-heatmap-legend-cell[data-level='4'] {
+  --contribution-heatmap-fill: color-mix(in srgb, var(--contribution-heatmap-active) 96%, transparent);
 }
 
-.githeatmap-footer {
+html.dark .contribution-heatmap-link {
+  --contribution-heatmap-panel: var(--site-card-background, hsl(var(--card) / 0.88));
+  --contribution-heatmap-panel-border: var(--site-card-border, hsl(var(--border) / 0.82));
+  --contribution-heatmap-empty: color-mix(in srgb, hsl(var(--muted)) 76%, transparent);
+  --contribution-heatmap-active: hsl(195 95% 78%);
+}
+
+.contribution-heatmap-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   min-height: 0.78rem;
-  color: var(--githeatmap-text-muted);
+  color: var(--contribution-heatmap-text-muted);
   font-size: clamp(0.55rem, 0.5rem + 0.16vw, 0.68rem);
   line-height: 1;
 }
 
-.githeatmap-legend {
+.contribution-heatmap-legend {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 0.34rem;
 }
 
-.githeatmap-legend-scale {
+.contribution-heatmap-legend-scale {
   display: inline-grid;
   grid-template-columns: repeat(5, 0.58rem);
   gap: 0.12rem;
 }
 
-.githeatmap-legend-cell {
+.contribution-heatmap-legend-cell {
   display: block;
   width: 0.58rem;
   height: 0.58rem;
 }
 
-.githeatmap-link[data-githeatmap-state='fallback'] .githeatmap-grid,
-.githeatmap-link[data-githeatmap-state='fallback'] .githeatmap-legend-scale {
+.contribution-heatmap-link[data-contribution-heatmap-state='fallback'] .contribution-heatmap-grid,
+.contribution-heatmap-link[data-contribution-heatmap-state='fallback'] .contribution-heatmap-legend-scale {
   opacity: 0.44;
 }
 
-@keyframes githeatmap-fill-sweep {
+@keyframes contribution-heatmap-fill-sweep {
   0% {
-    background-color: var(--githeatmap-empty);
+    background-color: var(--contribution-heatmap-empty);
     opacity: 0.5;
     transform: scale(0.72);
   }
 
   72% {
-    background-color: var(--githeatmap-fill);
+    background-color: var(--contribution-heatmap-fill);
     opacity: 1;
     transform: scale(1.08);
   }
 
   100% {
-    background-color: var(--githeatmap-fill);
+    background-color: var(--contribution-heatmap-fill);
     opacity: 1;
     transform: scale(1);
   }
 }
 
 @media (hover: hover) {
-  .githeatmap-link:hover {
-    opacity: 0.86;
+  .contribution-heatmap-link:hover {
+    background-color: var(--contribution-heatmap-panel-hover);
+    box-shadow: var(--contribution-heatmap-panel-shadow-hover);
   }
 
-  .githeatmap-link:hover .githeatmap-cell:not([data-blank='true']) {
-    animation: githeatmap-fill-sweep 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: var(--githeatmap-hover-delay, 0ms);
+  .contribution-heatmap-link:hover .contribution-heatmap-cell:not([data-blank='true']) {
+    animation: contribution-heatmap-fill-sweep 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--contribution-heatmap-hover-delay, 0ms);
   }
 }
 
-.githeatmap-link:focus-visible {
+@supports not ((backdrop-filter: blur(1px))) {
+  .contribution-heatmap-link {
+    background-color: var(--contribution-heatmap-panel-fallback);
+  }
+}
+
+.contribution-heatmap-link:focus-visible {
   outline: 2px solid hsl(var(--foreground));
   outline-offset: 4px;
-  opacity: 0.86;
+  background-color: var(--contribution-heatmap-panel-hover);
+  box-shadow: var(--contribution-heatmap-panel-shadow-hover);
 }
 
-.githeatmap-link:focus-visible .githeatmap-cell:not([data-blank='true']) {
-  animation: githeatmap-fill-sweep 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  animation-delay: var(--githeatmap-hover-delay, 0ms);
+.contribution-heatmap-link:focus-visible .contribution-heatmap-cell:not([data-blank='true']) {
+  animation: contribution-heatmap-fill-sweep 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--contribution-heatmap-hover-delay, 0ms);
 }
 
 @media (max-width: 30rem) {
-  .githeatmap-link {
-    max-width: min(100%, 27rem);
+  .contribution-heatmap-link {
+    max-width: none;
   }
 
-  .githeatmap-month:nth-child(even) {
+  .contribution-heatmap-month:nth-child(even) {
     visibility: hidden;
   }
 }
 
 @media (min-width: 48rem) {
-  .githeatmap-link {
-    --githeatmap-gap: 3px;
-    max-width: min(100%, 38rem);
+  .contribution-heatmap-link {
+    --contribution-heatmap-gap: 3px;
+    max-width: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .githeatmap-link {
+  .contribution-heatmap-link {
     transition: none;
   }
 
-  .githeatmap-link:hover,
-  .githeatmap-link:focus-visible {
+  .contribution-heatmap-link:hover,
+  .contribution-heatmap-link:focus-visible {
     transform: none;
   }
 
-  .githeatmap-link:hover .githeatmap-cell,
-  .githeatmap-link:focus-visible .githeatmap-cell {
+  .contribution-heatmap-link:hover .contribution-heatmap-cell,
+  .contribution-heatmap-link:focus-visible .contribution-heatmap-cell {
     animation: none;
   }
 }

@@ -1,26 +1,67 @@
 ---
-import { getCollection, render, type CollectionEntry } from 'astro:content'
+import { render } from 'astro:content'
+import {
+  buildCollectionPageData,
+  buildDetailPageData,
+  getPageItems,
+  hydratePageItem,
+  hydratePageItems,
+  loadContentCatalog,
+  sortContentRecords,
+  type PageData
+} from '@/lib/content-layer'
+
 import SayingPost from '@/layouts/SayingPost.astro'
-import { published, sortByDate } from '@/lib/content'
 
 export const prerender = true
 
 export async function getStaticPaths() {
-  const sayings = sortByDate(published(await getCollection('saying')))
-  return sayings.map((saying) => ({
-    params: { slug: saying.id },
-    props: { saying }
+  const contentCatalog = await loadContentCatalog()
+  const records = sortContentRecords(contentCatalog.byKind.saying, 'id-asc')
+  const archivePage = buildCollectionPageData('saying-archive', '/sayings', records)
+  const archivePlacementByContentKey = new Map(
+    getPageItems(archivePage, 'content', 'items').map(({ contentKey, placement }) => [
+      contentKey,
+      {
+        index: placement.index,
+        ...(placement.imageAssignment ? { imageAssignment: placement.imageAssignment } : {})
+      }
+    ])
+  )
+
+  return records.map((record) => ({
+    params: { slug: record.id },
+    props: {
+      pageData: buildDetailPageData('saying-detail', `/sayings/${record.id}`, record, records, {
+        primaryMeaning: '当前 Saying 文章',
+        relatedGroupKey: 'sayings',
+        relatedMeaning: '按稳定 ID 排列的 Saying 条目',
+        relatedSectionMeaning: 'Saying 详情页相邻导航内容',
+        primaryCardPlacement: archivePlacementByContentKey.get(record.key)
+      })
+    }
   }))
 }
 
 interface Props {
-  saying: CollectionEntry<'saying'>
+  pageData: PageData<'saying-detail'>
 }
 
-const { saying } = Astro.props
+const { pageData } = Astro.props as Props
+const sayingItem = getPageItems(pageData, 'article', 'primary')[0]
+if (!sayingItem) {
+  throw new Error('Saying detail page data is missing its Saying primary item')
+}
+const contentCatalog = await loadContentCatalog()
+const renderItem = hydratePageItem(sayingItem, contentCatalog)
+if (renderItem.record.kind !== 'saying')
+  throw new Error('Saying detail page resolved a non-Saying item')
+const sayingItemResolved = renderItem as Extract<typeof renderItem, { record: { kind: 'saying' } }>
+const saying = sayingItemResolved.source
+const relatedItems = hydratePageItems(getPageItems(pageData, 'related', 'sayings'), contentCatalog)
 const { Content, headings } = await render(saying)
 ---
 
-<SayingPost {saying} {headings}>
+<SayingPost item={sayingItemResolved} relatedItems={relatedItems} {headings}>
   <Content />
 </SayingPost>

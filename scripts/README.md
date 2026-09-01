@@ -1,80 +1,33 @@
-# 博客更新日期管理工具
+## 友链健康检查
 
-这个工具用于自动管理博客文章的更新日期，基于文件内容的哈希值来跟踪文章的变化。
+`check-links.mjs` 会探测 `public/links.json` 中 `cf-links` 与
+`inactive-links` 两个分组的博客地址。连续失败达到阈值后，条目会自动移动到
+`inactive-links`；恢复后会按稳定的添加顺序移回。头像地址不会参与判定，避免单独的
+CDN 故障把整篇博客误判为失效。
 
-## 功能特性
+```powershell
+# 只查看结果，不修改文件
+bun run links:check:dry
 
-- **哈希检测**: 使用MD5哈希值检测文章内容是否发生变化
-- **自动更新日期**: 当文章内容发生变化时，自动更新 `updatedDate`
-- **初始化处理**: 为没有 `updatedDate` 的文章自动添加该字段
-- **数据持久化**: 维护一个JSON数据库记录所有文章的元数据
-
-## 使用方法
-
-### 1. 安装依赖
-
-```bash
-bun install
+# 执行检查并更新分组/状态记录
+bun run links:check
 ```
 
-### 2. 运行工具
+默认每次检查请求 3 次，临时故障连续 2 次检查失败才移动；证书错误、HTTP 404/410
+和降级到 HTTP 的重定向会在本次重试结束后立即移动。可用
+`--retries=N`、`--threshold=N`、`--timeout=N` 和 `--concurrency=N` 调整；脚本还会把
+失败计数保存在 `scripts/link-health.json`，因此不会因一次短暂网络抖动立即移动。
 
-```bash
-# 使用 npm script
-bun date
+候选仓库不启用定时链接 workflow，也不会在部署时自动写回状态。发布审计期间只运行
+`links:check:dry`；如果未来要启用写模式，必须由人工审阅 diff 后单独提交
+`public/links.json` 和 `scripts/link-health.json`，并重新评估 workflow 的权限与触发器。
 
-# 或直接运行
-bun scripts/updateBlogDates.ts
-```
+## 其他会写文件的开发脚本
 
-## 工作原理
-
-1. **扫描博客目录**: 扫描 `src/content/blog` 目录下的所有 `.md` 和 `.mdx` 文件
-
-2. **哈希计算**: 为每个文件计算MD5哈希值
-
-3. **数据库对比**: 将当前哈希值与数据库中存储的哈希值进行对比
-
-4. **更新处理**:
-   - **新文章**: 如果文章没有 `updatedDate`，使用 `publishDate` 作为初始值并添加到frontmatter
-   - **内容变更**: 如果哈希值发生变化，更新 `updatedDate` 为当前时间
-   - **无变更**: 如果哈希值相同，不做任何操作
-
-5. **文件更新**: 自动修改文章文件，在 `publishDate` 后添加或更新 `updatedDate`
-
-## 数据格式
-
-工具维护的JSON数据库格式：
-
-```json
-{
-  "article.md": {
-    "hash": "abc123...",
-    "publishDate": "2024-04-03 15:26:04",
-    "updatedDate": "2024-04-03 15:26:04"
-  }
-}
-```
-
-## Frontmatter处理
-
-工具会在文章的frontmatter中自动添加或更新 `updatedDate` 字段：
-
-```yaml
----
-title: 文章标题
-publishDate: 2024-04-03 15:26:04
-updatedDate: 2024-04-03 15:26:04 # 自动添加/更新
-description: 文章描述
-tags:
-  - tag1
-  - tag2
----
-```
-
-## 注意事项
-
-- 工具会自动创建 `scripts/blog-metadata.json` 数据库文件
-- 请确保文章的frontmatter格式正确（以 `---` 开始和结束）
-- 文章必须包含 `publishDate` 字段，否则会被跳过
-- 工具会自动清理数据库中已删除文件的记录
+- `card-preview:generate` 只为卡片裁剪审阅生成 `src/content/sayings/card-preview-*` 与
+  `src/content/traces/card-preview-*` 临时内容。审阅后必须移出；即使命中 `.gitignore`，也不能让
+  这些文件留在构建树中。
+- `cache:avatars` 会写入 `public/avatars/` 并可能更新 `public/links.json`。头像缓存目录已忽略；
+  若要把缓存作为生产资源保留，必须先逐项审阅来源、许可和清单 diff，再单独纳入提交。
+- `capture:visual-baseline` 的默认输出目录是 `artifacts/visual-baseline/`。使用自定义
+  `VISUAL_OUTPUT_DIR` 时，仍应选择仓库外目录或已忽略的 `artifacts/` 子目录。

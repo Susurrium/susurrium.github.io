@@ -9,17 +9,35 @@ import { integ } from '@/site-config'
 
 interface Props {
   title: string
+  description?: string
+  noindex?: boolean
+  ogImage?: string
   headings?: MarkdownHeading[]
   view?: boolean
   comment?: boolean
   effectProfile?: EffectProfile
 }
 
-const { title, headings, view, comment: enableComment, effectProfile, ...props } = Astro.props
+const {
+  title,
+  description,
+  noindex,
+  ogImage,
+  headings,
+  view,
+  comment: enableComment,
+  effectProfile,
+  ...props
+} = Astro.props
 const commentsEnabled = integ.waline.enable
 ---
 
-<PageLayout meta={{ title }} {effectProfile} {...props}>
+<PageLayout
+  meta={{ title, description, noindex, ogImage }}
+  {effectProfile}
+  sidebar={Boolean(headings?.length)}
+  {...props}
+>
   {headings?.length && <TOC headings={headings} slot='sidebar' />}
 
   <Fragment slot='header'>

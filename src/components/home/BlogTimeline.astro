@@ -3,35 +3,80 @@
  * A focused, Blog-only extraction of the historical NotesPreview timeline.
  * It deliberately keeps the horizontal year rail but removes Notes modes,
  * demo data, panels and client lifecycle code. Every dot is a real Blog link.
+ * The timeline receives canonical PageItems, so visual code does not read
+ * collection frontmatter directly.
  */
-import type { CollectionEntry } from 'astro:content'
+import type { BlogRecord, RenderablePageItem } from '@/lib/content-layer/types'
 
 interface Props {
-  posts: readonly CollectionEntry<'blog'>[]
+  items: readonly RenderablePageItem[]
+  /** The one year Home should render. Omit to select the newest available year. */
+  year?: number
 }
 
 type TimelinePost = {
   date: Date
   id: string
   position: number
+  season: TimelineSeason
   title: string
 }
 
-const { posts } = Astro.props
-const dateFormatter = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' })
+type TimelineSeason = 'spring' | 'summer' | 'autumn' | 'winter'
+
+type UnpositionedTimelinePost = Omit<TimelinePost, 'position' | 'season'>
+type PositionedTimelinePost = Omit<TimelinePost, 'season'>
+
+const { items, year: requestedYear } = Astro.props
+const chinaYearFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric'
+})
+const chinaCalendarFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric'
+})
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'Asia/Shanghai'
+})
+
+function yearInChina(date: Date): number {
+  return Number(chinaYearFormatter.format(date))
+}
 
 function dayProgress(date: Date): number {
-  const start = new Date(date.getFullYear(), 0, 1).getTime()
-  const end = new Date(date.getFullYear() + 1, 0, 1).getTime()
-  return ((date.getTime() - start) / (end - start)) * 100
+  const parts = chinaCalendarFormatter.formatToParts(date)
+  const values = Object.fromEntries(
+    parts.filter(({ type }) => type !== 'literal').map(({ type, value }) => [type, Number(value)])
+  ) as Record<'day' | 'month' | 'year', number>
+  const start = Date.UTC(values.year, 0, 1)
+  const end = Date.UTC(values.year + 1, 0, 1)
+  const current = Date.UTC(values.year, values.month - 1, values.day)
+  return ((current - start) / (end - start)) * 100
 }
 
 /**
  * Retain date-position logic while deterministically opening room for the
  * upstream Blog's many same-day posts. The historical component allowed all
  * of those dots to overlap and made them unreachable by pointer or keyboard.
+ * The gap is expressed as a percentage so it remains usable on the fixed
+ * mobile rail as well as the fluid desktop rail.
+ * The seasons are intentionally visual bands on the rail. They follow the
+ * requested left-to-right Spring → Winter treatment instead of reinterpreting
+ * the natural-year dates as meteorological months.
  */
-function assignPositions(entries: Omit<TimelinePost, 'position'>[]): TimelinePost[] {
+function seasonForPosition(position: number): TimelineSeason {
+  if (position < 25) return 'spring'
+  if (position < 50) return 'summer'
+  if (position < 75) return 'autumn'
+  return 'winter'
+}
+
+function assignPositions(entries: UnpositionedTimelinePost[]): TimelinePost[] {
   const sorted = [...entries].sort(
     (left, right) => left.date.getTime() - right.date.getTime() || left.id.localeCompare(right.id)
   )
@@ -39,8 +84,8 @@ function assignPositions(entries: Omit<TimelinePost, 'position'>[]): TimelinePos
 
   const minPosition = 1.5
   const maxPosition = 98.5
-  const minimumGap = Math.min(1.15, (maxPosition - minPosition) / Math.max(sorted.length, 1))
-  const positions: TimelinePost[] = []
+  const minimumGap = Math.min(3.4, (maxPosition - minPosition) / Math.max(sorted.length - 1, 1))
+  const positions: PositionedTimelinePost[] = []
   let previous = minPosition - minimumGap
 
   for (const entry of sorted) {
@@ -57,16 +102,42 @@ function assignPositions(entries: Omit<TimelinePost, 'position'>[]): TimelinePos
     }
   }
 
-  return positions
+  return positions.map((entry) => ({ ...entry, season: seasonForPosition(entry.position) }))
 }
 
-const publishedPosts = posts.filter((post) => !post.data.draft)
-const byYear = new Map<number, Omit<TimelinePost, 'position'>[]>()
+const publishedPosts = items.filter(
+  (item): item is Extract<RenderablePageItem, { record: BlogRecord }> =>
+    item.record.kind === 'blog' && !item.record.draft
+)
+const currentYear = yearInChina(new Date())
+const availableYears = [
+  ...new Set(
+    publishedPosts
+      .map((item) => item.record.publishedAt)
+      .filter((date): date is Date => date !== undefined)
+      .map(yearInChina)
+  )
+]
+  .filter((year) => year <= currentYear)
+  .sort((left, right) => right - left)
+const selectedYear =
+  requestedYear !== undefined && availableYears.includes(requestedYear)
+    ? requestedYear
+    : availableYears[0]
+const selectedPosts =
+  selectedYear === undefined
+    ? []
+    : publishedPosts.filter(
+        (item) => item.record.publishedAt && yearInChina(item.record.publishedAt) === selectedYear
+      )
+const byYear = new Map<number, UnpositionedTimelinePost[]>()
 
-for (const post of publishedPosts) {
-  const year = post.data.publishDate.getFullYear()
+for (const item of selectedPosts) {
+  const record = item.record
+  if (!record.publishedAt) continue
+  const year = yearInChina(record.publishedAt)
   const yearPosts = byYear.get(year) ?? []
-  yearPosts.push({ date: post.data.publishDate, id: post.id, title: post.data.title })
+  yearPosts.push({ date: record.publishedAt, id: record.id, title: record.title })
   byYear.set(year, yearPosts)
 }
 
@@ -75,110 +146,150 @@ const years = [...byYear.entries()]
   .map(([year, yearPosts]) => ({ entries: assignPositions(yearPosts), year }))
 ---
 
-<section class='blog-timeline' aria-labelledby='blog-timeline-heading' data-blog-timeline data-content-type='blog' data-notes-timeline>
-  <header class='blog-timeline__header'>
-    <p class='blog-timeline__eyebrow'>Writing timeline</p>
-    <h2 id='blog-timeline-heading'>Blog timeline</h2>
-    <p>Follow the formal posts that have accumulated over time.</p>
-  </header>
+{
+  years.length > 0 && (
+    <section
+      class='blog-timeline'
+      aria-labelledby='blog-timeline-heading'
+      data-blog-timeline
+      data-content-type='blog'
+      data-notes-timeline
+      data-timeline-year={selectedYear ?? ''}
+    >
+      <h2 id='blog-timeline-heading' class='sr-only'>
+        Blog timeline
+      </h2>
 
-  {
-    years.length > 0 ? (
-      <div class='blog-timeline__rail' data-blog-timeline-rail tabindex='0'>
-        <div class='blog-timeline__rail-content'>
-          {years.map(({ entries, year }) => (
-            <section class='blog-timeline__year' aria-labelledby={`blog-timeline-year-${year}`}>
-              <div class='blog-timeline__topline'>
-                <h3 id={`blog-timeline-year-${year}`}>{year}</h3>
-                <span>{entries.length} posts</span>
-              </div>
-              <div class='blog-timeline__track'>
-                <span class='blog-timeline__line' aria-hidden='true' />
-                <span class='blog-timeline__accent' aria-hidden='true' />
-                {
-                  entries.map((entry, index) => (
+      <div class='blog-timeline__surface site-card-surface' data-timeline-surface>
+        <div class='blog-timeline__rail' data-blog-timeline-rail tabindex='0'>
+          <div class='blog-timeline__rail-content'>
+            {years.map(({ entries, year }) => (
+              <section class='blog-timeline__year' aria-labelledby={`blog-timeline-year-${year}`}>
+                <div class='blog-timeline__topline'>
+                  <span class='blog-timeline__post-count'>{entries.length} posts</span>
+                </div>
+                <div class='blog-timeline__track'>
+                  <span class='blog-timeline__line' aria-hidden='true' />
+                  <span class='blog-timeline__accent' aria-hidden='true' />
+                  {entries.map((entry, index) => (
                     <a
-                      class:list={['blog-timeline__dot', index === entries.length - 1 && 'is-last']}
+                      class:list={[
+                        'blog-timeline__dot',
+                        index === entries.length - 1 && 'is-last',
+                        entries.length > 1 && entry.position <= 14 && 'is-near-start',
+                        entries.length > 1 && entry.position >= 86 && 'is-near-end'
+                      ]}
                       href={`/blog/${entry.id}`}
+                      data-astro-prefetch
                       aria-label={`${dateFormatter.format(entry.date)}, ${entry.title}`}
                       data-blog-id={entry.id}
+                      data-season={entry.season}
                       data-timeline-entry
-                      style={`--timeline-position:${entry.position}%`}
+                      style={`--timeline-position:${entry.position}%;`}
                     >
                       <span class='blog-timeline__point' />
                       <span class='blog-timeline__tooltip' aria-hidden='true'>
-                        <small>{dateFormatter.format(entry.date)}</small>
-                        {entry.title}
+                        <span class='blog-timeline__tooltip-rule' aria-hidden='true' />
+                        <span class='blog-timeline__tooltip-meta'>
+                          <small>{dateFormatter.format(entry.date)}</small>
+                        </span>
+                        <span class='blog-timeline__tooltip-title'>{entry.title}</span>
                       </span>
                     </a>
-                  ))
-                }
-              </div>
-              <div class='blog-timeline__seasons' aria-hidden='true'>
-                <span>Spring</span>
-                <span>Summer</span>
-                <span>Autumn</span>
-                <span>Winter</span>
-              </div>
-            </section>
-          ))}
+                  ))}
+                </div>
+                <div class='blog-timeline__bottomline'>
+                  <h3 id={`blog-timeline-year-${year}`} class='sr-only' data-year={year}>
+                    {year}
+                  </h3>
+                  <div class='blog-timeline__seasons' aria-hidden='true'>
+                    <span data-season='spring'>Spring</span>
+                    <span data-season='summer'>Summer</span>
+                    <span data-season='autumn'>Autumn</span>
+                    <span data-season='winter'>Winter</span>
+                  </div>
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+        <div class='blog-timeline__year-watermark' aria-hidden='true' data-year={selectedYear}>
+          <span class='blog-timeline__year-mark'>{selectedYear}</span>
         </div>
       </div>
-    ) : (
-      <p class='blog-timeline__empty'>The Blog timeline will appear after the first published post.</p>
-    )
-  }
-</section>
+    </section>
+  )
+}
 
 <style>
   .blog-timeline {
     --blog-timeline-rose: #d98497;
+    --blog-timeline-spring: #61b394;
+    --blog-timeline-summer: #5a9ec8;
+    --blog-timeline-autumn: #d09152;
+    --blog-timeline-winter: #9a83c5;
+    --blog-timeline-spring-ink: #2e765b;
+    --blog-timeline-summer-ink: #2f7099;
+    --blog-timeline-autumn-ink: #9a5a27;
+    --blog-timeline-winter-ink: #6d579a;
+    --blog-timeline-season-line-opacity: 0.9;
+    --blog-timeline-year-opacity: 0.24;
+    --blog-timeline-year-color: color-mix(
+      in srgb,
+      hsl(var(--foreground)) 76%,
+      var(--blog-timeline-summer) 24%
+    );
+    --blog-timeline-year-wash: hsl(var(--card) / 0.08);
+    --blog-timeline-preview-background: hsl(var(--card) / 0.96);
+    --blog-timeline-preview-wash: 16%;
     min-width: 0;
   }
 
-  .blog-timeline__header {
-    max-width: 38rem;
-    margin: 0 auto clamp(2.25rem, 5vw, 3.75rem);
-    text-align: center;
+  :global(html.dark) .blog-timeline {
+    --blog-timeline-spring: #8dd7b5;
+    --blog-timeline-summer: #8bc9e8;
+    --blog-timeline-autumn: #e4b170;
+    --blog-timeline-winter: #bcaae6;
+    --blog-timeline-spring-ink: #a6e1c6;
+    --blog-timeline-summer-ink: #a8ddf2;
+    --blog-timeline-autumn-ink: #f0c48e;
+    --blog-timeline-winter-ink: #d2c4f0;
+    --blog-timeline-season-line-opacity: 0.96;
+    --blog-timeline-year-opacity: 0.32;
+    --blog-timeline-year-color: color-mix(
+      in srgb,
+      hsl(var(--foreground)) 68%,
+      var(--blog-timeline-summer) 32%
+    );
+    --blog-timeline-year-wash: hsl(var(--card) / 0.12);
+    --blog-timeline-preview-background: hsl(var(--card) / 0.94);
+    --blog-timeline-preview-wash: 19%;
   }
 
-  .blog-timeline__header h2,
-  .blog-timeline__header p {
-    margin: 0;
-  }
-
-  .blog-timeline__eyebrow {
-    margin-bottom: 0.55rem !important;
-    color: hsl(var(--muted-foreground));
-    font-size: 0.62rem;
-    font-weight: 620;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-  }
-
-  .blog-timeline__header h2 {
-    font-family: ui-serif, 'Noto Serif SC', Georgia, serif;
-    font-size: clamp(1.45rem, 3vw, 1.85rem);
-    font-weight: 520;
-    letter-spacing: 0.11em;
-    line-height: 1.25;
-  }
-
-  .blog-timeline__header > p:last-child {
-    margin-top: 0.65rem;
-    color: hsl(var(--muted-foreground));
-    font-family: ui-serif, 'Noto Serif SC', Georgia, serif;
-    font-size: 0.78rem;
-    font-style: italic;
-    line-height: 1.65;
+  /* Keep the original horizontal rail visual language and add one shared
+     glass card as its quiet background surface. Desktop previews may escape
+     above the card; the rail restores horizontal scrolling on narrow screens. */
+  .blog-timeline__surface {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+    border: 1px solid var(--site-card-border);
+    border-radius: 0.75rem;
+    isolation: isolate;
+    padding: clamp(0.65rem, 1.5vw, 0.9rem) clamp(0.8rem, 2.1vw, 1.35rem)
+      clamp(0.55rem, 1.2vw, 0.8rem);
+    box-shadow: var(--site-card-shadow);
   }
 
   .blog-timeline__rail {
+    position: relative;
+    z-index: 2;
     width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 0.35rem 0.35rem 0.7rem;
+    overflow: visible;
+    padding: 0.15rem 0.35rem 0.35rem;
     overscroll-behavior-x: contain;
     scroll-snap-type: x proximity;
     scrollbar-color: color-mix(in srgb, var(--blog-timeline-rose) 45%, transparent) transparent;
@@ -192,38 +303,102 @@ const years = [...byYear.entries()]
 
   .blog-timeline__rail-content {
     display: flex;
-    width: max-content;
+    width: 100%;
     min-width: 100%;
     gap: clamp(1.5rem, 4vw, 3rem);
     align-items: flex-start;
   }
 
   .blog-timeline__year {
-    width: 46rem;
-    flex: 0 0 46rem;
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    flex: 1 1 auto;
     scroll-snap-align: start;
     scroll-margin-inline: 0.35rem;
   }
 
   .blog-timeline__topline {
     display: flex;
-    margin-bottom: 0.5rem;
-    align-items: center;
-    justify-content: space-between;
+    min-height: 0.85rem;
+    margin-bottom: 0.1rem;
+    align-items: flex-start;
+    justify-content: flex-end;
     color: hsl(var(--muted-foreground));
     font-size: 0.68rem;
     font-variant-numeric: tabular-nums;
   }
 
-  .blog-timeline__topline h3 {
+  .blog-timeline__bottomline {
+    position: relative;
+    z-index: 3;
+    min-height: 1.85rem;
+    margin-top: 0.08rem;
+  }
+
+  /* The year is a decorative, card-bound graphic layer. Keep the outer card
+     overflow visible so desktop previews can escape, while the numeral itself
+     is positioned fully inside the bottom edge instead of being cropped. */
+  .blog-timeline__year-watermark {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.35rem;
+    bottom: 0.2rem;
+    left: 0.35rem;
+    z-index: 1;
+    height: auto;
+    overflow: visible;
+    border-radius: 0 0 0.55rem 0.55rem;
+    background: linear-gradient(to top, var(--blog-timeline-year-wash), transparent 88%);
+    pointer-events: none;
+    isolation: isolate;
+  }
+
+  .blog-timeline__year-mark {
+    position: absolute;
+    right: auto;
+    /* Paralines' rounded outlines overshoot its CSS line box by a few pixels;
+       this optical inset keeps the visible bottom strokes inside the card. */
+    bottom: 0.35rem;
+    left: 0.2rem;
+    display: block;
+    width: max-content;
     margin: 0;
-    font-size: inherit;
-    font-weight: 580;
+    padding: 0;
+    color: var(--blog-timeline-year-color);
+    font-family: 'Paralines', 'Satoshi', sans-serif;
+    font-size: clamp(6.5rem, 14vw, 10.75rem);
+    font-variant-numeric: lining-nums;
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: 0.005em;
+    line-height: 0.7;
+    pointer-events: none;
+    text-rendering: geometricPrecision;
+    user-select: none;
+    opacity: var(--blog-timeline-year-opacity);
+    white-space: nowrap;
+  }
+
+  .blog-timeline__post-count {
+    position: relative;
+    z-index: 3;
+    margin-left: auto;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid hsl(var(--border) / 0.5);
+    border-radius: 999px;
+    background: hsl(var(--card) / 0.68);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
   }
 
   .blog-timeline__track {
     position: relative;
-    height: 2rem;
+    z-index: 2;
+    isolation: isolate;
+    height: 1.7rem;
   }
 
   .blog-timeline__accent,
@@ -237,12 +412,26 @@ const years = [...byYear.entries()]
   }
 
   .blog-timeline__line {
-    background: hsl(var(--border) / 0.92);
+    z-index: 1;
+    background: hsl(var(--border) / 0.76);
   }
 
   .blog-timeline__accent {
-    left: 74%;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--blog-timeline-rose) 58%, transparent));
+    z-index: 2;
+    height: 1px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--blog-timeline-spring) 0%,
+      var(--blog-timeline-spring) 22%,
+      var(--blog-timeline-summer) 28%,
+      var(--blog-timeline-summer) 47%,
+      var(--blog-timeline-autumn) 53%,
+      var(--blog-timeline-autumn) 72%,
+      var(--blog-timeline-winter) 78%,
+      var(--blog-timeline-winter) 100%
+    );
+    opacity: var(--blog-timeline-season-line-opacity);
   }
 
   .blog-timeline__dot {
@@ -251,7 +440,11 @@ const years = [...byYear.entries()]
     left: var(--timeline-position);
     z-index: 2;
     display: block;
-    width: 2.75rem;
+    /* Keep the invisible hit area large enough to use, but narrower than the
+       old 2.75rem box so adjacent dates cannot cover one another. The
+       percentage spacing above leaves one box of breathing room for normal
+       and same-day entries. */
+    width: clamp(1rem, 2vw, 2rem);
     height: 2.75rem;
     margin: 0;
     border: 0;
@@ -263,61 +456,207 @@ const years = [...byYear.entries()]
     transform: translate(-50%, -50%);
   }
 
+  .blog-timeline__dot[data-season='spring'] {
+    --timeline-season-color: var(--blog-timeline-spring);
+    --timeline-season-ink: var(--blog-timeline-spring-ink);
+  }
+
+  .blog-timeline__dot[data-season='summer'] {
+    --timeline-season-color: var(--blog-timeline-summer);
+    --timeline-season-ink: var(--blog-timeline-summer-ink);
+  }
+
+  .blog-timeline__dot[data-season='autumn'] {
+    --timeline-season-color: var(--blog-timeline-autumn);
+    --timeline-season-ink: var(--blog-timeline-autumn-ink);
+  }
+
+  .blog-timeline__dot[data-season='winter'] {
+    --timeline-season-color: var(--blog-timeline-winter);
+    --timeline-season-ink: var(--blog-timeline-winter-ink);
+  }
+
+  .blog-timeline__dot::before,
+  .blog-timeline__dot::after {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    content: '';
+    opacity: 0;
+  }
+
+  .blog-timeline__dot::before {
+    top: 50%;
+    left: 50%;
+    z-index: 0;
+    width: clamp(4.5rem, 8vw, 6.5rem);
+    height: 0.75rem;
+    border-radius: 999px;
+    background: radial-gradient(
+      ellipse,
+      color-mix(in srgb, var(--timeline-season-color) 45%, transparent),
+      transparent 70%
+    );
+    transform: translate(-50%, -50%);
+    transition: opacity 180ms ease-out;
+  }
+
+  .blog-timeline__dot::after {
+    bottom: calc(50% + 0.3rem);
+    left: 50%;
+    z-index: 0;
+    width: 1px;
+    height: 1.15rem;
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--timeline-season-color) 75%, transparent),
+      transparent
+    );
+    transform: translateX(-50%) scaleY(0);
+    transform-origin: bottom center;
+    transition:
+      opacity 160ms ease-out,
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   .blog-timeline__point {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 0.38rem;
-    height: 0.38rem;
+    z-index: 2;
+    width: 0.45rem;
+    height: 0.45rem;
     border-radius: 999px;
-    background: color-mix(in srgb, hsl(var(--muted-foreground)) 52%, hsl(var(--border)));
-    box-shadow: 0 0 0 0 transparent;
+    background: var(--timeline-season-color, hsl(var(--muted-foreground)));
+    box-shadow:
+      0 0 0 0.1rem hsl(var(--card) / 0.9),
+      0 0 0 0.14rem color-mix(in srgb, var(--timeline-season-color) 48%, transparent);
     transform: translate(-50%, -50%);
     transition:
       width 220ms ease-out,
       height 220ms ease-out,
       background-color 220ms ease-out,
-      box-shadow 220ms ease-out;
+      box-shadow 220ms ease-out,
+      transform 180ms ease-out;
   }
 
-  .blog-timeline__dot:is(:hover, :focus-visible, .is-last) .blog-timeline__point {
-    width: 0.58rem;
-    height: 0.58rem;
-    background: var(--blog-timeline-rose);
+  .blog-timeline__dot.is-last .blog-timeline__point {
+    width: 0.56rem;
+    height: 0.56rem;
     box-shadow:
-      0 0 0 0.25rem color-mix(in srgb, var(--blog-timeline-rose) 11%, transparent),
-      0 3px 9px color-mix(in srgb, var(--blog-timeline-rose) 28%, transparent);
+      0 0 0 0.1rem hsl(var(--card) / 0.92),
+      0 0 0 0.18rem color-mix(in srgb, var(--blog-timeline-rose) 55%, transparent),
+      0 0 0 0.28rem color-mix(in srgb, var(--timeline-season-color) 16%, transparent);
+  }
+
+  .blog-timeline__dot:is(:hover, :focus-visible) .blog-timeline__point {
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--timeline-season-color);
+    box-shadow:
+      0 0 0 0.11rem hsl(var(--card) / 0.95),
+      0 0 0 0.28rem color-mix(in srgb, var(--timeline-season-color) 38%, transparent),
+      0 0.2rem 0.85rem color-mix(in srgb, var(--timeline-season-color) 42%, transparent);
+  }
+
+  .blog-timeline__dot:is(:hover, :focus-visible)::before,
+  .blog-timeline__dot:is(:hover, :focus-visible)::after {
+    opacity: 1;
+  }
+
+  .blog-timeline__dot:is(:hover, :focus-visible)::after {
+    transform: translateX(-50%) scaleY(1);
+  }
+
+  .blog-timeline__dot:active .blog-timeline__point {
+    transform: translate(-50%, -50%) scale(0.86);
+  }
+
+  .blog-timeline__dot:focus-visible {
+    border-radius: 999px;
+    outline: 2px solid color-mix(in srgb, var(--timeline-season-color) 76%, hsl(var(--ring)));
+    outline-offset: 0.12rem;
   }
 
   .blog-timeline__tooltip {
     position: absolute;
     bottom: calc(100% + 0.45rem);
     left: 50%;
+    z-index: 4;
     width: max-content;
-    max-width: min(17rem, 60vw);
-    border: 1px solid hsl(var(--border) / 0.84);
-    border-radius: 0.48rem;
-    padding: 0.52rem 0.68rem;
-    background: hsl(var(--card) / 0.94);
-    box-shadow: 0 10px 28px rgb(35 36 39 / 10%);
+    max-width: min(20rem, calc(100vw - 2rem));
+    border: 1px solid
+      color-mix(in srgb, var(--timeline-season-color, hsl(var(--border))) 58%, hsl(var(--border)));
+    border-radius: 0.65rem;
+    padding: 0.78rem 0.88rem 0.82rem;
+    background-color: var(--blog-timeline-preview-background);
+    background-image: linear-gradient(
+      135deg,
+      color-mix(
+        in srgb,
+        var(--timeline-season-color, hsl(var(--primary))) var(--blog-timeline-preview-wash),
+        transparent
+      ),
+      transparent 72%
+    );
+    -webkit-backdrop-filter: blur(var(--site-card-blur));
+    backdrop-filter: blur(var(--site-card-blur));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--timeline-season-color) 12%, transparent),
+      0 1rem 2.25rem hsl(var(--foreground) / 0.22),
+      0 0.2rem 0.8rem color-mix(in srgb, var(--timeline-season-color) 18%, transparent);
     color: hsl(var(--foreground));
-    font-size: 0.68rem;
-    line-height: 1.35;
+    font-size: 0.72rem;
+    line-height: 1.45;
     opacity: 0;
+    overflow: hidden;
     pointer-events: none;
-    transform: translate(-50%, 0.35rem) scale(0.96);
+    transform: translate(-50%, 0.45rem) scale(0.95);
     transform-origin: center bottom;
     transition:
-      opacity 180ms ease,
-      transform 260ms ease-out;
+      opacity 150ms ease,
+      transform 190ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .blog-timeline__tooltip small {
+  .blog-timeline__tooltip-rule {
     display: block;
-    margin-bottom: 0.16rem;
-    color: var(--blog-timeline-rose);
-    font-size: 0.58rem;
+    width: calc(100% + 1.76rem);
+    height: 3px;
+    margin: -0.78rem -0.88rem 0.62rem;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--timeline-season-color, hsl(var(--primary))),
+      color-mix(in srgb, var(--timeline-season-color) 48%, transparent)
+    );
+    opacity: 0.95;
+    transform-origin: left center;
+    transition:
+      opacity 180ms ease-out,
+      filter 180ms ease-out;
+  }
+
+  .blog-timeline__tooltip-meta {
+    display: flex;
+    margin-bottom: 0.36rem;
+    align-items: baseline;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.61rem;
     font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .blog-timeline__tooltip-meta small {
+    font-size: inherit;
+  }
+
+  .blog-timeline__tooltip-title {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 560;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
   }
 
   .blog-timeline__dot:is(:hover, :focus-visible) .blog-timeline__tooltip {
@@ -325,20 +664,132 @@ const years = [...byYear.entries()]
     transform: translate(-50%, 0) scale(1);
   }
 
+  /* Keep previews inside the timeline/page while leaving middle dots centered.
+     The 14%/86% threshold is based on the tooltip's 20rem maximum width, so
+     clustered dates near either edge are handled as well as the first/last
+     entry. The :not() guards preserve centered placement for a single post. */
+  .blog-timeline__dot.is-near-start:not(.is-near-end) .blog-timeline__tooltip {
+    left: 0;
+    transform: translate(0, 0.45rem) scale(0.95);
+    transform-origin: left bottom;
+  }
+
+  .blog-timeline__dot.is-near-start:not(.is-near-end):is(:hover, :focus-visible)
+    .blog-timeline__tooltip {
+    transform: translate(0, 0) scale(1);
+  }
+
+  .blog-timeline__dot.is-near-end:not(.is-near-start) .blog-timeline__tooltip {
+    left: 100%;
+    transform: translate(-100%, 0.45rem) scale(0.95);
+    transform-origin: right bottom;
+  }
+
+  .blog-timeline__dot.is-near-end:not(.is-near-start):is(:hover, :focus-visible)
+    .blog-timeline__tooltip {
+    transform: translate(-100%, 0) scale(1);
+  }
+
+  @supports not ((backdrop-filter: blur(1px))) {
+    .blog-timeline__tooltip {
+      background-color: var(--site-card-background-fallback);
+      background-image: none;
+    }
+  }
+
   .blog-timeline__seasons {
+    position: relative;
+    z-index: 3;
     display: grid;
+    margin-top: 0.28rem;
     grid-template-columns: repeat(4, 1fr);
     color: hsl(var(--muted-foreground));
     font-family: ui-serif, 'Noto Serif SC', Georgia, serif;
-    font-size: 0.66rem;
+    font-size: 0.8rem;
+    font-style: italic;
+    font-weight: 520;
+    letter-spacing: 0.06em;
+    line-height: 1.25;
   }
 
   .blog-timeline__seasons span {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.38rem;
+    color: var(--timeline-season-ink, hsl(var(--muted-foreground)));
     text-align: center;
+    transition:
+      color 180ms ease-out,
+      opacity 180ms ease-out;
   }
 
-  .blog-timeline__seasons span:last-child {
-    color: var(--blog-timeline-rose);
+  .blog-timeline__seasons span::before {
+    width: 2.55rem;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--timeline-season-color);
+    content: '';
+    opacity: 0.78;
+    transform: scaleX(0.82);
+    transform-origin: center;
+    transition:
+      opacity 180ms ease-out,
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .blog-timeline__seasons [data-season='spring'] {
+    --timeline-season-color: var(--blog-timeline-spring);
+    --timeline-season-ink: var(--blog-timeline-spring-ink);
+  }
+
+  .blog-timeline__seasons [data-season='summer'] {
+    --timeline-season-color: var(--blog-timeline-summer);
+    --timeline-season-ink: var(--blog-timeline-summer-ink);
+  }
+
+  .blog-timeline__seasons [data-season='autumn'] {
+    --timeline-season-color: var(--blog-timeline-autumn);
+    --timeline-season-ink: var(--blog-timeline-autumn-ink);
+  }
+
+  .blog-timeline__seasons [data-season='winter'] {
+    --timeline-season-color: var(--blog-timeline-winter);
+    --timeline-season-ink: var(--blog-timeline-winter-ink);
+  }
+
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='spring']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='spring'],
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='summer']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='summer'],
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='autumn']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='autumn'],
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='winter']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='winter'] {
+    color: var(--timeline-season-ink);
+    font-weight: 680;
+    opacity: 1;
+  }
+
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='spring']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='spring']::before,
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='summer']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='summer']::before,
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='autumn']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='autumn']::before,
+  .blog-timeline__year:has(.blog-timeline__dot[data-season='winter']:is(:hover, :focus-visible))
+    .blog-timeline__seasons
+    [data-season='winter']::before {
+    opacity: 1;
+    transform: scaleX(1);
   }
 
   .blog-timeline__empty {
@@ -350,16 +801,45 @@ const years = [...byYear.entries()]
   }
 
   @media (max-width: 680px) {
-    .blog-timeline__header {
-      margin-bottom: 2rem;
+    .blog-timeline__topline {
+      min-height: 0.85rem;
+    }
+
+    .blog-timeline__bottomline {
+      min-height: 1.75rem;
+    }
+
+    .blog-timeline__year-mark {
+      bottom: 0.25rem;
+      left: 0.1rem;
+      font-size: clamp(5.75rem, 25vw, 8rem);
+    }
+
+    .blog-timeline__year-watermark {
+      top: 0.15rem;
+      right: 0.18rem;
+      bottom: 0.15rem;
+      left: 0.18rem;
+      height: auto;
+    }
+
+    .blog-timeline__post-count {
+      margin-left: 0;
     }
 
     .blog-timeline__rail {
+      overflow-x: auto;
+      overflow-y: hidden;
       padding-inline: 0.25rem;
+    }
+
+    .blog-timeline__surface {
+      padding-inline: 0.6rem;
     }
 
     .blog-timeline__year {
       width: 34rem;
+      min-width: 34rem;
       flex-basis: 34rem;
     }
 
@@ -370,7 +850,12 @@ const years = [...byYear.entries()]
 
   @media (prefers-reduced-motion: reduce) {
     .blog-timeline__point,
-    .blog-timeline__tooltip {
+    .blog-timeline__tooltip,
+    .blog-timeline__tooltip-rule,
+    .blog-timeline__dot::before,
+    .blog-timeline__dot::after,
+    .blog-timeline__seasons span,
+    .blog-timeline__seasons span::before {
       transition: none;
     }
   }

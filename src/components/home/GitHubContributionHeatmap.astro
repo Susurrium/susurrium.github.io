@@ -28,7 +28,7 @@ const compactContributionCount = fetchedHeatmap && heatmap.total > 0
       .format(heatmap.total)
       .toLowerCase()} contributions`
   : 'contributions'
-const heatmapStyle = `--githeatmap-week-count: ${heatmap.weekCount};`
+const heatmapStyle = `--contribution-heatmap-week-count: ${heatmap.weekCount};`
 const legendLevels = [0, 1, 2, 3, 4]
 const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, (_, weekIndex) => ({
   days: heatmap.days.slice(weekIndex * 7, weekIndex * 7 + 7),
@@ -39,29 +39,30 @@ const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, 
 {
   normalizedUsername && (
     <a
-      class:list={['githeatmap-link', className]}
-      data-githeatmap-state={fetchedHeatmap ? 'ready' : 'fallback'}
+      class:list={['contribution-heatmap-link', className]}
+      data-card-surface='standard'
+      data-contribution-heatmap-state={fetchedHeatmap ? 'ready' : 'fallback'}
       href={profileHref}
       target='_blank'
       rel='noopener noreferrer'
       style={heatmapStyle}
       aria-label={`View ${normalizedUsername}'s GitHub profile: ${contributionSummary}`}
     >
-      <span class='githeatmap-summary'>{contributionSummary}</span>
-      <div class='githeatmap-calendar' aria-hidden='true'>
-        <div class='githeatmap-months'>
+      <span class='contribution-heatmap-summary'>{contributionSummary}</span>
+      <div class='contribution-heatmap-calendar' aria-hidden='true'>
+        <div class='contribution-heatmap-months'>
           {heatmap.months.map((month) => (
-            <span class='githeatmap-month' style={`grid-column: ${month.weekIndex + 1};`}>
+            <span class='contribution-heatmap-month' style={`grid-column: ${month.weekIndex + 1};`}>
               {month.label}
             </span>
           ))}
         </div>
-        <div class='githeatmap-grid'>
+        <div class='contribution-heatmap-grid'>
           {heatmapWeeks.map((week) => (
-            <span class='githeatmap-week' style={`--githeatmap-hover-delay: ${week.hoverDelay};`}>
+            <span class='contribution-heatmap-week' style={`--contribution-heatmap-hover-delay: ${week.hoverDelay};`}>
               {week.days.map((day) => (
                 <span
-                  class='githeatmap-cell'
+                  class='contribution-heatmap-cell'
                   data-level={day.level}
                   data-blank={day.isBlank ? 'true' : undefined}
                   title={day.label || undefined}
@@ -71,16 +72,16 @@ const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, 
           ))}
         </div>
       </div>
-      <div class='githeatmap-footer' aria-hidden='true'>
-        <span class='githeatmap-count'>{compactContributionCount}</span>
-        <span class='githeatmap-legend'>
-          <span class='githeatmap-legend-label'>Less</span>
-          <span class='githeatmap-legend-scale'>
+      <div class='contribution-heatmap-footer' aria-hidden='true'>
+        <span class='contribution-heatmap-count'>{compactContributionCount}</span>
+        <span class='contribution-heatmap-legend'>
+          <span class='contribution-heatmap-legend-label'>Less</span>
+          <span class='contribution-heatmap-legend-scale'>
             {legendLevels.map((level) => (
-              <span class='githeatmap-legend-cell' data-level={level} />
+              <span class='contribution-heatmap-legend-cell' data-level={level} />
             ))}
           </span>
-          <span class='githeatmap-legend-label'>More</span>
+          <span class='contribution-heatmap-legend-label'>More</span>
         </span>
       </div>
     </a>

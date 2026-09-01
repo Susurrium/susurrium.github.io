@@ -57,10 +57,14 @@ export default defineConfig({
   },
 
   integrations: [
-    // Register sitemap explicitly so the replayable, noindex entrance is not
-    // submitted to crawlers. AstroPure detects this integration and will not
-    // register a second default sitemap instance.
-    sitemap({ filter: (page) => new URL(page).pathname !== '/' }),
+    // Register sitemap explicitly so replayable/noindex utility pages are not
+    // submitted to crawlers. Keep this list in sync with route-level `noindex`
+    // metadata because the sitemap integration cannot inspect rendered head
+    // props.
+    sitemap({
+      filter: (page) =>
+        !new Set(['/', '/404', '/search', '/tools/card-crop-review']).has(new URL(page).pathname)
+    }),
     // astro-pure will automatically add mdx & unocss
     // mdx(),
     AstroPureIntegration(config)
@@ -113,6 +117,13 @@ export default defineConfig({
     contentIntellisense: true
   },
   vite: {
+    // Browser audit profiles are generated under `artifacts/`; they contain
+    // locked Chromium session files on Windows and must not be watched.
+    server: {
+      watch: {
+        ignored: ['**/artifacts/**']
+      }
+    },
     plugins: [
       //   visualizer({
       //     emitFile: true,

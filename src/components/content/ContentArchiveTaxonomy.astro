@@ -1,0 +1,81 @@
+---
+/**
+ * The discoverability layer for a content archive.
+ *
+ * Trace and Saying use the Media card family, whose primary card link
+ * intentionally owns the whole card surface.  Tags therefore live here, at
+ * the archive boundary, instead of being nested links inside that card.
+ * Keeping this component registry-driven gives future content types the same
+ * entry point without hand-building taxonomy URLs in each page.
+ */
+import { isContentSurfaceEnabled } from '@/lib/content-layer/policy'
+import { contentTagPath, getContentTypeDefinition } from '@/lib/content-layer/registry'
+import type { ContentTagCount } from '@/lib/content-layer/tags'
+import type { ContentKind } from '@/lib/content-layer/types'
+
+import { Button, Icon } from 'astro-pure/user'
+
+interface Props {
+  /** Counts are produced by the shared catalog/tag query, never by the view. */
+  tags: readonly ContentTagCount[]
+  kind: ContentKind
+  /** Keep an archive compact while leaving the complete index one click away. */
+  previewLimit?: number
+}
+
+const { kind, previewLimit = 6, tags } = Astro.props as Props
+const definition = getContentTypeDefinition(kind)
+const showTags = isContentSurfaceEnabled(kind, 'tags')
+const visibleTags = tags.slice(0, Math.max(0, previewLimit))
+const tagIndexHref = contentTagPath(kind)
+
+function entryCountLabel(count: number) {
+  return count === 1 ? 'entry' : 'entries'
+}
+---
+
+{
+  showTags && (
+    <nav
+      class='mb-6 flex flex-wrap items-center gap-2 text-sm'
+      aria-label={`${definition.label} taxonomy`}
+      data-taxonomy-navigation
+      data-taxonomy-scope={kind}
+      data-taxonomy-count={tags.length}
+    >
+      <span class='me-1 inline-flex items-center gap-1 text-muted-foreground'>
+        <Icon name='tag-2' class='size-4' />
+        <span>Tags</span>
+      </span>
+
+      {visibleTags.map(({ count, href, tag }) => (
+        <Button
+          href={href}
+          variant='pill'
+          class='gap-x-1'
+          aria-label={`${definition.label} tag ${tag}, ${count} ${entryCountLabel(count)}`}
+          data-taxonomy-action='tag'
+        >
+          {tag}
+          <span class='text-xs' aria-hidden='true'>
+            {count}
+          </span>
+        </Button>
+      ))}
+
+      {tags.length === 0 && (
+        <span class='text-muted-foreground' data-taxonomy-empty>
+          No {definition.label.toLowerCase()} tags yet.
+        </span>
+      )}
+
+      <Button
+        href={tagIndexHref}
+        variant='ahead'
+        title='View all tags'
+        aria-label={`View all ${definition.label} tags`}
+        data-taxonomy-action='index'
+      />
+    </nav>
+  )
+}

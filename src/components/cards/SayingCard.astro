@@ -1,42 +1,42 @@
 ---
-import type { CollectionEntry } from 'astro:content'
-import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
-import { getSayingDecorativeImage, type ContentPresentation } from '@/data/home-media'
+/**
+ * Saying's content adapter for the shared Media visual primitive.
+ * Decoration, attribution text, and route have already been projected by the
+ * content layer.  This component only preserves the existing visual call.
+ */
+import MediaCard from '@/components/cards/MediaCard.astro'
+import type { ContentPresentation, MediaCardData } from '@/lib/content-layer/types'
 
 interface Props {
   actionLabel?: string
-  archiveIndex: number
+  archiveIndex?: number
   class?: string
+  data: MediaCardData
   headingLevel?: 2 | 3 | 4 | 5 | 6
   presentation?: ContentPresentation
-  saying: CollectionEntry<'saying'>
 }
 
 const {
-  actionLabel = 'View complete saying',
-  archiveIndex,
+  actionLabel = 'Read',
+  archiveIndex = 0,
   class: className,
+  data,
   headingLevel,
-  presentation = 'large-skull-decorative',
-  saying
+  presentation = 'media-decorative'
 } = Astro.props
-const image = getSayingDecorativeImage(archiveIndex)
-const author = saying.data.author ? `— ${saying.data.author}` : 'Collected saying'
-const footerText = saying.data.source ?? 'Saying'
 ---
 
-<LargeSkullCard
+<MediaCard
   actionLabel={actionLabel}
   class={className}
-  contentId={saying.id}
-  contentType='saying'
-  date={saying.data.publishDate}
-  description={author}
-  footerText={footerText}
+  contentId={data.contentId}
+  contentType={data.contentType}
+  description={data.description ?? ''}
+  footerText={data.footerText}
   {headingLevel}
-  href={`/sayings/${saying.id}`}
-  {image}
+  href={data.href}
+  image={data.image}
   index={archiveIndex}
   {presentation}
-  title={`“${saying.data.text}”`}
+  title={data.title}
 />

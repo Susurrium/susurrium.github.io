@@ -1,0 +1,216 @@
+---
+/**
+ * The single image-frame primitive used by Media cards and the crop
+ * workbench.
+ *
+ * There are deliberately two different concerns here:
+ * - `transform` chooses which part of the source image is visible;
+ * - `frame` chooses the atomic card layout (and therefore the diagonal side
+ *   and image side together).
+ *
+ * Keeping those concerns in one DOM/CSS implementation is what makes the
+ * editor preview and the runtime card render the same image. The legacy
+ * `mask` input remains for frame-less media blocks, but it cannot contradict
+ * a supplied diagonal frame.
+ */
+import {
+  CARD_CROP_FRAME_RATIO,
+  DEFAULT_CARD_CROP_TRANSFORM,
+  normalizeCropTransform,
+  type CardCropFit,
+  type CardCropFrame,
+  type CardCropTransform
+} from '@/lib/card-crop/types'
+
+export type CardMediaMask = 'left' | 'right' | 'none'
+
+interface Props {
+  alt?: string
+  aspectRatio?: number
+  class?: string
+  decorative?: boolean
+  fit?: CardCropFit
+  frame?: CardCropFrame
+  imageKey?: string
+  imageClass?: string
+  loading?: 'eager' | 'lazy'
+  mask?: CardMediaMask
+  /** Draw the editor-only frame outline inside the same clipped element. */
+  outline?: boolean
+  src?: string
+  transform?: CardCropTransform
+  width?: number
+  height?: number
+  /** Extra inline declarations are useful for the interactive editor canvas. */
+  style?: string
+  /** Optional consumer-owned data hooks (kept out of the visual contract). */
+  dataAttributes?: Record<string, string | number | boolean | undefined>
+}
+
+const {
+  alt = '',
+  aspectRatio,
+  class: className,
+  decorative = false,
+  fit = 'cover',
+  frame,
+  imageKey,
+  imageClass,
+  loading = 'lazy',
+  mask = frame === 'diagonal-left' ? 'left' : frame === 'diagonal-right' ? 'right' : 'right',
+  outline = false,
+  src,
+  transform = DEFAULT_CARD_CROP_TRANSFORM,
+  width = 640,
+  height = 448,
+  style: customStyle,
+  dataAttributes
+} = Astro.props as Props
+
+const normalizedTransform = normalizeCropTransform(transform)
+const position = `${normalizedTransform.x}% ${normalizedTransform.y}%`
+const frameRatio = aspectRatio ?? CARD_CROP_FRAME_RATIO
+const effectiveMask: CardMediaMask = frame ? (frame === 'diagonal-left' ? 'left' : 'right') : mask
+const mediaStyle = [
+  `--card-media-fit:${fit}`,
+  `--card-media-position:${position}`,
+  `--card-media-origin:${position}`,
+  `--card-media-zoom:${normalizedTransform.zoom}`,
+  aspectRatio ? `--card-media-aspect-ratio:${frameRatio};aspect-ratio:${frameRatio}` : '',
+  customStyle ?? ''
+]
+  .filter(Boolean)
+  .join(';')
+---
+
+<div
+  class:list={[
+    'card-media-frame',
+    `card-media-frame--${effectiveMask}`,
+    outline && 'card-media-frame--outlined',
+    className
+  ]}
+  data-card-media-frame
+  data-media-frame={frame}
+  data-media-mask={effectiveMask}
+  data-frame={frame}
+  data-fit={fit}
+  aria-hidden={decorative ? 'true' : undefined}
+  {...dataAttributes}
+  style={mediaStyle}
+>
+  {
+    src ? (
+      <img
+        alt={alt}
+        class:list={['card-media-frame__image', imageClass]}
+        data-card-image
+        data-image-key={imageKey}
+        data-media-image
+        height={height}
+        loading={loading}
+        src={src}
+        width={width}
+      />
+    ) : (
+      <span
+        class='card-media-frame__missing'
+        data-card-image-missing
+        data-media-image-missing
+        aria-hidden='true'
+      />
+    )
+  }
+</div>
+
+<style>
+  .card-media-frame {
+    position: relative;
+    overflow: hidden;
+    background: hsl(var(--muted) / 0.35);
+    isolation: isolate;
+  }
+
+  .card-media-frame--right,
+  .card-media-frame[data-frame='diagonal-right'] {
+    clip-path: polygon(0 0, 92% 0, 100% 100%, 0 100%);
+  }
+
+  .card-media-frame--left,
+  .card-media-frame[data-frame='diagonal-left'] {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 8% 100%);
+  }
+
+  .card-media-frame--none {
+    clip-path: none;
+  }
+
+  .card-media-frame__image,
+  .card-media-frame__missing {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: var(--card-media-fit, var(--media-card-image-fit, cover));
+    object-position: var(--card-media-position, var(--media-card-image-position, 50% 50%));
+    transform: scale(var(--card-media-zoom, var(--media-card-image-zoom, 1)));
+    transform-origin: var(--card-media-origin, var(--media-card-image-origin, center));
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .card-media-frame__missing {
+    background: linear-gradient(135deg, hsl(var(--muted)), hsl(var(--background)));
+  }
+
+  .card-media-frame[data-fit='contain'] {
+    background: hsl(var(--muted) / 0.25);
+  }
+
+  .card-media-frame[data-fit='contain'] .card-media-frame__image {
+    background: hsl(var(--muted) / 0.25);
+  }
+
+  /* The editor can request a visible frame edge without reimplementing the
+     clip polygon. Because this pseudo-element is a child, the parent
+     clip-path clips its border exactly like the image and missing-image
+     fallback. */
+  .card-media-frame--outlined::after {
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgb(255 255 255 / 0.7);
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
+    content: '';
+    pointer-events: none;
+  }
+
+  /* Match Media's mobile mask while keeping the image transform intact. */
+  @media (max-width: 767px) {
+    .card-media-frame--right,
+    .card-media-frame[data-frame='diagonal-right'] {
+      clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+    }
+
+    .card-media-frame--left,
+    .card-media-frame[data-frame='diagonal-left'] {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 92%);
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .card-media-frame--right,
+    .card-media-frame[data-frame='diagonal-right'] {
+      clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
+    }
+
+    .card-media-frame--left,
+    .card-media-frame[data-frame='diagonal-left'] {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 92%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-media-frame__image,
+    .card-media-frame__missing {
+      transition: none;
+    }
+  }
+</style>

@@ -1,0 +1,59 @@
+---
+// Source: astro-pure@1.4.6/components/advanced/GithubCard.astro.
+//
+// This keeps the upstream card's information hierarchy and link affordance,
+// but deliberately omits its browser-side GitHub REST request. Test articles
+// can therefore retain repository references without turning a static Pages
+// visit into an unbounded third-party runtime dependency.
+import { Icon } from 'astro-pure/user'
+
+interface Props {
+  repo: string
+}
+
+const { repo: repoRaw } = Astro.props
+const repo = repoRaw.replace(/^https:\/\/github\.com\//, '').replace(/^\/+|\/+$/g, '')
+const [owner = 'GitHub', repoName = repo || 'repository'] = repo.split('/')
+const avatarLabel = owner.slice(0, 1).toUpperCase()
+---
+
+<article class='not-prose' data-static-github-card>
+  <a
+    href={`https://github.com/${repo}`}
+    target='_blank'
+    rel='noopener noreferrer'
+    class='group block flex flex-col gap-y-2 rounded-xl border px-4 py-3 no-underline transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:bg-muted focus-visible:text-muted-foreground sm:px-5 sm:py-4'
+  >
+    <div class='flex items-center justify-between gap-x-2'>
+      <div
+        class='flex min-w-0 flex-1 items-center gap-x-2 text-foreground group-hover:text-primary group-focus-within:text-primary'
+      >
+        <span
+          class='me-2 flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground sm:size-8'
+          aria-hidden='true'
+        >
+          {avatarLabel}
+        </span>
+        <span class='min-w-0 flex-1'>
+          <span class='flex items-center gap-x-1 max-sm:flex-wrap'>
+            <span class='truncate text-base transition-colors sm:text-lg'>{owner}</span>
+            <span class='text-muted-foreground max-sm:hidden'>/</span>
+            <span class='truncate text-base font-medium transition-colors sm:text-lg max-sm:w-full'>
+              {repoName}
+            </span>
+          </span>
+        </span>
+      </div>
+      <span class='flex-shrink-0 rounded-full bg-card p-1' aria-hidden='true'>
+        <Icon name='github' />
+      </span>
+    </div>
+    <p class='text-sm text-muted-foreground sm:text-base'>GitHub repository.</p>
+    <span
+      class='flex items-center justify-between gap-x-2 text-sm text-muted-foreground sm:text-base'
+    >
+      <span>Open repository</span>
+      <span aria-hidden='true'>↗</span>
+    </span>
+  </a>
+</article>

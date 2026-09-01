@@ -1,0 +1,120 @@
+---
+import { Image } from 'astro:assets'
+import { profileIntro } from '@/data/profile'
+
+import { Button } from 'astro-pure/user'
+import avatar from '@/assets/avatar.jpg'
+import config from '@/site-config'
+---
+
+<section
+  class='home-profile-intro'
+  aria-labelledby='home-profile-intro-name'
+  data-home-profile-intro
+>
+  <header class='home-profile-intro__header'>
+    <Image
+      src={avatar}
+      alt={`${config.author} 的头像`}
+      class='home-profile-intro__avatar'
+      width={128}
+      height={128}
+      loading='lazy'
+      decoding='async'
+    />
+    <h2 id='home-profile-intro-name'>{config.author}</h2>
+  </header>
+
+  <!-- HeroGallery owns Home's only document-level h1. About shares the
+       same section-heading contract as Recent, Education, and Residence. -->
+  <section class='home-profile-intro__about' aria-labelledby='home-profile-intro-about-heading'>
+    <div class='home-profile-intro__about-heading home-section-heading'>
+      <h2 id='home-profile-intro-about-heading'>About</h2>
+    </div>
+    <div class='home-profile-intro__about-body'>
+      <p class='home-profile-intro__role' set:html={profileIntro.role}></p>
+      <div class='home-profile-intro__copy'>
+        {profileIntro.paragraphs.map((paragraph) => <p set:html={paragraph}></p>)}
+      </div>
+      <Button
+        title='More about me'
+        href='/about'
+        variant='ahead'
+        aria-label={`了解更多关于 ${config.author} 的信息`}
+        data-home-action='ahead'
+        class='home-profile-intro__more w-fit self-end'
+      />
+    </div>
+  </section>
+</section>
+
+<style>
+  .home-profile-intro {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: clamp(2rem, 4vw, 3rem);
+  }
+
+  .home-profile-intro__header {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 1.25rem;
+    text-align: center;
+  }
+
+  .home-profile-intro__avatar {
+    box-sizing: border-box;
+    width: 8rem;
+    height: 8rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 9999px;
+    padding: 0.25rem;
+    object-fit: cover;
+  }
+
+  .home-profile-intro__header h2 {
+    margin: 0;
+    font-size: clamp(1.75rem, 3vw, 1.875rem);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .home-profile-intro__about {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0;
+  }
+
+  .home-profile-intro__about-body {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .home-profile-intro__role,
+  .home-profile-intro__copy p {
+    margin: 0;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .home-profile-intro__role {
+    margin-top: 0.25rem;
+  }
+
+  .home-profile-intro__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    line-height: 1.75;
+  }
+
+  .home-profile-intro__more {
+    margin-top: 0.25rem;
+    white-space: nowrap;
+  }
+</style>

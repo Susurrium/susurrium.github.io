@@ -31,23 +31,43 @@ const pagePairs = [
   { id: 'home', label: 'Home', upstreamPath: '/', currentPath: '/home' },
   { id: 'blog-list', label: 'Blog list', upstreamPath: '/blog/', currentPath: '/blog' },
   {
-    id: 'blog-detail',
-    label: 'Blog detail',
-    upstreamPath: '/blog/advanced-mathematics/',
-    currentPath: '/blog/advanced-mathematics'
+    id: 'blog-tags',
+    label: 'Blog tags',
+    // Arthals has one Blog taxonomy route; this project scopes it under the
+    // Blog namespace and deliberately removes the old aggregate /tags route.
+    upstreamPath: '/tags/',
+    currentPath: '/blog/tags'
   },
-  {
-    id: 'blog-detail-github-card',
-    label: 'Blog detail with GitHub card',
-    upstreamPath: '/blog/initialize-linux/',
-    currentPath: '/blog/initialize-linux'
-  },
-  { id: 'tags', label: 'Tags', upstreamPath: '/tags/', currentPath: '/tags' },
   { id: 'archives', label: 'Archives', upstreamPath: '/archives/', currentPath: '/archives' },
   { id: 'search', label: 'Search', upstreamPath: '/search/', currentPath: '/search' },
   { id: 'about', label: 'About', upstreamPath: '/about/', currentPath: '/about' },
   { id: 'links', label: 'Links', upstreamPath: '/links/', currentPath: '/links' }
 ]
+
+// Detail captures are content-dependent. Keep them opt-in so deleting all
+// development posts for the final release does not leave a stale fixture route
+// in the visual harness. Set both paths when a representative article exists.
+const visualBlogDetailPath = process.env.VISUAL_CURRENT_BLOG_DETAIL_PATH
+const visualUpstreamBlogDetailPath = process.env.VISUAL_UPSTREAM_BLOG_DETAIL_PATH
+if (visualBlogDetailPath) {
+  pagePairs.push({
+    id: 'blog-detail',
+    label: 'Blog detail',
+    upstreamPath: visualUpstreamBlogDetailPath ?? visualBlogDetailPath,
+    currentPath: visualBlogDetailPath
+  })
+}
+
+const visualGithubDetailPath = process.env.VISUAL_CURRENT_GITHUB_DETAIL_PATH
+const visualUpstreamGithubDetailPath = process.env.VISUAL_UPSTREAM_GITHUB_DETAIL_PATH
+if (visualGithubDetailPath) {
+  pagePairs.push({
+    id: 'blog-detail-github-card',
+    label: 'Blog detail with GitHub card',
+    upstreamPath: visualUpstreamGithubDetailPath ?? visualGithubDetailPath,
+    currentPath: visualGithubDetailPath
+  })
+}
 
 const variants = [
   { id: 'desktop-light', width: 1440, height: 1000, mobile: false, theme: 'light' },

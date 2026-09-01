@@ -1,44 +1,32 @@
 ---
 /**
- * The single presentation host for Blog, Trace and Saying lists.
+ * The single presentation host for content cards.
  *
- * It intentionally owns policy selection. Content-specific adapters only
- * translate their data to a visual primitive; they must not decide which
- * visual primitive a page receives. This keeps page override → type default
- * → safe fallback meaningful as the site grows.
+ * Dispatch is based on the resolved visual family. A Blog text card has one
+ * narrowly-scoped metadata facade because Astro's generated reading-time
+ * value is only available from its raw entry; that facade still renders the
+ * same TextCard primitive as every other text card. The visual decision is
+ * never encoded as three source-specific card implementations.
  */
 import type { CollectionEntry } from 'astro:content'
-import ArthalsBlogCard from '@/components/cards/ArthalsBlogCard.astro'
-import ArthalsTextCard from '@/components/cards/ArthalsTextCard.astro'
-import LargeSkullCard from '@/components/cards/LargeSkullCard.astro'
-import SayingCard from '@/components/cards/SayingCard.astro'
-import TraceCard from '@/components/cards/TraceCard.astro'
-import {
-  getSayingDecorativeImage,
-  getTraceCardImage,
-  resolvePresentation,
-  type ContentImageInput,
-  type ContentKind,
-  type ContentPresentation
-} from '@/data/home-media'
 
-type ContentEntry =
-  | CollectionEntry<'blog'>
-  | CollectionEntry<'trace'>
-  | CollectionEntry<'saying'>
+import { adaptContentEntry } from '@/lib/content-layer/adapters'
+import {
+  createResolvedPageItem,
+  toContentCardViewData,
+  type ContentCardViewData
+} from '@/lib/content-layer'
+import type { ContentKind, ContentPresentation, RenderablePageItem } from '@/lib/content-layer/types'
+
+import BlogTextCardAdapter from '@/components/cards/BlogTextCardAdapter.astro'
+import MediaCard from '@/components/cards/MediaCard.astro'
+import TextCard from '@/components/cards/TextCard.astro'
+
+type ContentEntry = CollectionEntry<'blog'> | CollectionEntry<'trace'> | CollectionEntry<'saying'>
 
 type HeadingLevel = 2 | 3 | 4 | 5 | 6
 
-type NormalizedContent = {
-  contentImage?: ContentImageInput
-  date: Date
-  description?: string
-  footerText: string
-  href: string
-  title: string
-}
-
-interface Props {
+interface LegacyProps {
   actionLabel?: string
   class?: string
   contentKind: ContentKind
@@ -46,148 +34,67 @@ interface Props {
   entry: ContentEntry
   headingLevel?: HeadingLevel
   index?: number
-  /** A page-level visual decision. Omit it to use the type default. */
-  presentation?: ContentPresentation
+  presentation?: ContentPresentation | string
 }
 
-const {
-  actionLabel,
-  class: className,
-  contentKind,
-  detailed = false,
-  entry,
-  headingLevel,
-  index = 0,
-  presentation: presentationOverride
-} = Astro.props
-
-function toContentImage(source: unknown, alt: string | undefined, contentId: string): ContentImageInput | undefined {
-  if (typeof source === 'string') {
-    return { alt, key: `content-${contentId}`, src: source }
-  }
-  if (!source || typeof source !== 'object' || !('src' in source)) return undefined
-
-  const src = (source as { src?: unknown }).src
-  return typeof src === 'string' ? { alt, key: `content-${contentId}`, src } : undefined
+interface ModelProps {
+  class?: string
+  item: RenderablePageItem
 }
 
-function normalize(entryToNormalize: ContentEntry, kind: ContentKind): NormalizedContent {
-  if (kind === 'blog') {
-    const blog = entryToNormalize as CollectionEntry<'blog'>
-    return {
-      contentImage: toContentImage(blog.data.heroImage, blog.data.heroImage?.alt, blog.id),
-      date: blog.data.updatedDate ?? blog.data.publishDate,
-      description: blog.data.description,
-      footerText: blog.data.tags.length > 0 ? blog.data.tags.map((tag) => `#${tag}`).join(' ') : 'Blog',
-      href: `/blog/${blog.id}`,
-      title: blog.data.title
-    }
-  }
+type Props = LegacyProps | ModelProps
+const props = Astro.props as Props
+const className = props.class
+const isLegacy = !('item' in props)
 
-  if (kind === 'trace') {
-    const trace = entryToNormalize as CollectionEntry<'trace'>
-    return {
-      contentImage: toContentImage(trace.data.cover, trace.data.coverAlt, trace.id),
-      date: trace.data.updatedDate ?? trace.data.publishDate,
-      description: trace.data.description,
-      footerText: trace.data.tags.length > 0 ? trace.data.tags.map((tag) => `#${tag}`).join(' ') : 'Trace',
-      href: `/traces/${trace.id}`,
-      title: trace.data.title
-    }
-  }
+const item: RenderablePageItem = isLegacy
+  ? (() => {
+      const legacy = props as LegacyProps
+      const record = adaptContentEntry(legacy.entry)
+      if (record.kind !== legacy.contentKind) {
+        throw new Error(`ContentCard kind mismatch: expected ${legacy.contentKind}, got ${record.kind}`)
+      }
+      return {
+        ...createResolvedPageItem(record, {
+          actionLabel: legacy.actionLabel,
+          detailed: legacy.detailed,
+          headingLevel: legacy.headingLevel,
+          index: legacy.index,
+          presentation: legacy.presentation
+        }),
+        source: legacy.entry
+      } as RenderablePageItem
+    })()
+  : (props as ModelProps).item
 
-  const saying = entryToNormalize as CollectionEntry<'saying'>
-  return {
-    date: saying.data.publishDate,
-    description: saying.data.author ? `— ${saying.data.author}` : 'Collected saying',
-    footerText: saying.data.source ?? 'Saying',
-    href: `/sayings/${saying.id}`,
-    title: `“${saying.data.text}”`
-  }
-}
-
-const resolvedPresentation = resolvePresentation(contentKind, presentationOverride)
-const normalized = normalize(entry, contentKind)
-const defaultActionLabel = contentKind === 'saying' ? 'View complete saying' : contentKind === 'trace' ? 'Read Trace' : 'Read Blog'
-const resolvedActionLabel = actionLabel ?? defaultActionLabel
-const genericContentImage = getTraceCardImage(entry.id, normalized.contentImage)
-const genericDecorativeImage = getSayingDecorativeImage(index)
+const detailed = item.placement.detailed
+const cardView: ContentCardViewData = toContentCardViewData(item)
+const classNameValue = className
 ---
 
-{
-  resolvedPresentation === 'arthals-text' &&
-    (contentKind === 'blog' ? (
-      <ArthalsBlogCard class={className} {detailed} post={entry as CollectionEntry<'blog'>} />
-    ) : (
-      <ArthalsTextCard
-        class={className}
-        contentId={entry.id}
-        contentType={contentKind}
-        date={normalized.date}
-        description={normalized.description}
-        {detailed}
-        href={normalized.href}
-        title={normalized.title}
-      />
-    ))
-}
-
-{
-  resolvedPresentation === 'large-skull-content' &&
-    (contentKind === 'trace' ? (
-      <TraceCard
-        actionLabel={resolvedActionLabel}
-        class={className}
-        {headingLevel}
-        index={index}
-        presentation={resolvedPresentation}
-        trace={entry as CollectionEntry<'trace'>}
-      />
-    ) : (
-      <LargeSkullCard
-        actionLabel={resolvedActionLabel}
-        class={className}
-        contentId={entry.id}
-        contentType={contentKind}
-        date={normalized.date}
-        description={normalized.description}
-        footerText={normalized.footerText}
-        {headingLevel}
-        href={normalized.href}
-        image={genericContentImage}
-        index={index}
-        presentation={resolvedPresentation}
-        title={normalized.title}
-      />
-    ))
-}
-
-{
-  resolvedPresentation === 'large-skull-decorative' &&
-    (contentKind === 'saying' ? (
-      <SayingCard
-        actionLabel={resolvedActionLabel}
-        archiveIndex={index}
-        class={className}
-        {headingLevel}
-        presentation={resolvedPresentation}
-        saying={entry as CollectionEntry<'saying'>}
-      />
-    ) : (
-      <LargeSkullCard
-        actionLabel={resolvedActionLabel}
-        class={className}
-        contentId={entry.id}
-        contentType={contentKind}
-        date={normalized.date}
-        description={normalized.description}
-        footerText={normalized.footerText}
-        {headingLevel}
-        href={normalized.href}
-        image={genericDecorativeImage}
-        index={index}
-        presentation={resolvedPresentation}
-        title={normalized.title}
-      />
-    ))
-}
+{cardView.family === 'text' ? (
+  item.record.kind === 'blog' ? (
+    <BlogTextCardAdapter
+      class={classNameValue}
+      item={item as Extract<RenderablePageItem, { record: { kind: 'blog' } }>}
+    />
+  ) : (
+    <TextCard as='article' class={classNameValue} data={cardView} {detailed} />
+  )
+) : (
+  <MediaCard
+    actionLabel={item.placement.actionLabel ?? 'Read'}
+    class={classNameValue}
+    contentId={cardView.data.contentId}
+    contentType={cardView.data.contentType}
+    date={cardView.data.date}
+    description={cardView.data.description}
+    footerText={cardView.data.footerText}
+    headingLevel={item.placement.headingLevel}
+    href={cardView.data.href}
+    image={cardView.data.image}
+    index={item.placement.index}
+    presentation={item.placement.presentation}
+    title={cardView.data.title}
+  />
+)}

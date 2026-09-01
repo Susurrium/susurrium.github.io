@@ -48,7 +48,7 @@ describe('Phase 5 HanLife contribution data', () => {
 
 describe('Phase 5 SkyWT residence geometry', () => {
   test('keeps the direct-reuse geography helpers stable', () => {
-    expect(haversineDistanceKm([116.3229, 39.9834], [116.3229, 39.9834])).toBe(0)
+    expect(haversineDistanceKm([116.4, 39.9], [116.4, 39.9])).toBe(0)
     expect(haversineDistanceKm([0, 0], [1, 0])).toBeCloseTo(111.195, 3)
     expect(shortestLongitudeFrom(170, -170)).toBe(190)
     expect(globeFitZoomForDistance(0)).toBe(12.5)
@@ -59,6 +59,11 @@ describe('Phase 5 SkyWT residence geometry', () => {
 
   test('keeps development location data and all runtime marker assets explicit', () => {
     expect(residence.city).toBe('北京')
+    expect(residence.publicPrecision).toBe('city')
+    expect(Math.abs(residence.latitude * 10 - Math.round(residence.latitude * 10))).toBe(0)
+    expect(Math.abs(residence.longitude * 10 - Math.round(residence.longitude * 10))).toBe(0)
+    expect(residence.label).not.toContain('位置占位')
+    expect(residence.label).not.toContain('海淀')
     expect(residence.mapStyle).toContain('basemaps.cartocdn.com')
     expect(residence.ownerAvatar).toBe('/media/residence/avatar.jpg')
     expect(residence.visitorAvatar).toBe('/media/residence/visitor-avatar.svg')

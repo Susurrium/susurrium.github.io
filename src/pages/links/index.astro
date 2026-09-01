@@ -4,14 +4,14 @@ import config from 'virtual:config'
 
 import { Collapse, Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
-import Signature from '@/components/arthals/Signature.astro'
+import Signature from '@/components/shared/Signature.astro'
 import FriendList from '@/components/links/FriendList.astro'
+import { siteFeatures } from '@/site-config'
 
 const headings = [
   { depth: 2, slug: 'common-links', text: 'Common Links' },
   { depth: 2, slug: 'special-links', text: 'Special Links' },
-  { depth: 2, slug: 'apply-links', text: 'Apply Links' },
-  { depth: 2, slug: 'friend-circle', text: 'Friend Circle' }
+  { depth: 2, slug: 'apply-links', text: 'Link exchange' }
 ]
 
 const { friends } = links
@@ -19,21 +19,20 @@ const linksConf = config.integ.links
 ---
 
 <PageLayout title='Links' {headings} comment effectProfile='links'>
-  <p>怎么可能有顺序呢，当然是随机的~ It's random</p>
   <h2 id='common-links'>Common Links</h2>
   <FriendList list={friends[0]} />
   <Collapse title='Links with Bad Status'>
     <FriendList list={friends[1]} />
   </Collapse>
-  <Collapse title='Link History Book'>
+  <Collapse title='Link history'>
     <Timeline events={linksConf.logbook} />
   </Collapse>
   <h2 id='special-links'>Special Links</h2>
   <FriendList list={friends[2]} />
 
   <!-- apply-links -->
-  <h2 id='apply-links'>Apply Links</h2>
-  <p>本站信息（点击复制）The site information (click to copy)：</p>
+  <h2 id='apply-links'>Link exchange</h2>
+  <p>本站信息（点击复制）：</p>
   <blockquote class='not-prose border-s-4 ps-4'>
     <site-info-copy class='grid grid-cols-[auto_1fr] gap-x-2 break-words'>
       {
@@ -55,25 +54,13 @@ const linksConf = config.integ.links
     </site-info-copy>
   </blockquote>
 
-  <p>申请时还请按照这个模板留言，此外有关申请说明：</p>
+  <p>申请时请按此模板留言，并确认：</p>
   <ul>
-    <li>在你的友链上添加了本站. You've recommended this site on your website.</li>
-    <li>请确保你的站点活着. Make sure your site is alive.</li>
-    <li>博客内容不违反国家法律. Content does not violate common laws.</li>
+    <li>已在你的友链上添加本站。</li>
+    <li>请确保你的站点正常运行。</li>
+    <li>博客内容不违反适用法律。</li>
   </ul>
-  <h2 id='friend-circle'>Friend Circle</h2>
-  <!-- Deliberately static: the live FriendCircle endpoint is outside the
-       project's approved runtime allowlist. A local snapshot can replace this
-       placeholder later without adding ClientRouter listeners or remote fetches. -->
-  <div
-    id='friend-circle-lite-root'
-    class='not-prose rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground'
-    data-friend-circle-status='deferred'
-  >
-    <p class='m-0 font-medium text-foreground'>Friend Circle is being prepared.</p>
-    <p class='mb-0 mt-1'>A local, curated snapshot will appear here when it is ready.</p>
-  </div>
-  <Signature />
+  {siteFeatures.signature.enabled && <Signature />}
 </PageLayout>
 
 <script>
@@ -115,7 +102,13 @@ const linksConf = config.integ.links
         document.body.append(input)
         try {
           input.select()
-          copied = document.execCommand('copy')
+          // `execCommand` is the last-resort path for older browsers. Read it
+          // reflectively so the supported Clipboard API remains the primary
+          // contract without introducing a deprecated DOM typing diagnostic.
+          const execCommand = Reflect.get(document, 'execCommand') as
+            | ((commandId: string) => boolean)
+            | undefined
+          copied = typeof execCommand === 'function' ? execCommand.call(document, 'copy') : false
         } catch {
           copied = false
         } finally {
@@ -127,8 +120,8 @@ const linksConf = config.integ.links
         new CustomEvent('toast', {
           detail: {
             message: copied
-              ? `Copied "${value}" to clipboard!`
-              : 'Unable to copy. Please select the value.'
+              ? 'Copied to clipboard.'
+              : 'Copy failed. Please copy it manually.'
           }
         })
       )

@@ -14,11 +14,17 @@ import EntranceTypedText from './EntranceTypedText.astro'
   data-reduced-motion='false'
   data-video-ready='false'
   data-leaving='false'
+  data-scroll-enter-enabled={String(entrance.scrollToEnter.enabled)}
+  data-scroll-enter-threshold={entrance.scrollToEnter.threshold}
+  data-scroll-enter-reset-after={entrance.scrollToEnter.resetAfter}
+  data-scroll-enter-max-delta={entrance.scrollToEnter.maxDeltaPerEvent}
+  data-scroll-enter-desktop-min-width={entrance.scrollToEnter.desktopMinWidth}
   tabindex='0'
   role='group'
-  aria-label='Click anywhere or press Enter to enter Home'
+  aria-label='Click anywhere, press Enter, or scroll down to enter Home'
 >
   <picture data-entrance-poster aria-hidden='true'>
+    <source media='(max-width: 720px)' srcset={entrance.media.mobilePoster} />
     <img
       src={entrance.media.poster}
       alt=''
@@ -45,21 +51,33 @@ import EntranceTypedText from './EntranceTypedText.astro'
   </video>
   <div class='entrance-scene__veil' aria-hidden='true'></div>
   <div class='entrance-scene__content'>
-    <p class='entrance-scene__greeting'>{entrance.greeting}</p>
-    <h1>{entrance.title}</h1>
+    <h1 class='entrance-scene__greeting'>{entrance.greeting}</h1>
     <p class='entrance-scene__subtitle'>
-      {entrance.subtitle}
       <span class='entrance-scene__typewriter' aria-hidden='true'>
         <EntranceTypedText
           words={entrance.dynamicWords}
           startDelay={entrance.typed.startDelay}
           typeSpeed={entrance.typed.typeSpeed}
           backSpeed={entrance.typed.backSpeed}
+          backDelay={entrance.typed.backDelay}
           loop={entrance.typed.loop}
         />
       </span>
     </p>
+    <p class='entrance-scene__featured-line'>
+      <span class='entrance-scene__featured-prefix'>{entrance.featuredLine.prefix}</span>{' '}
+      <span class='entrance-scene__featured-token'>
+        <span class='entrance-scene__featured-star' aria-hidden='true'>✦</span>
+        <span class='entrance-scene__featured-keyword'>
+          <span class='entrance-scene__featured-keyword-text'>{entrance.featuredLine.keyword}</span>
+        </span>
+        <span class='entrance-scene__featured-period' aria-hidden='true'>.</span>
+        <span class='entrance-scene__featured-cursor' aria-hidden='true'></span>
+      </span>
+    </p>
     <a href={entrance.homeHref} data-enter-home>Enter Home</a>
+  </div>
+  <div class='document-handoff entrance-scene__handoff' data-entrance-handoff aria-hidden='true'>
   </div>
 </section>
 
@@ -72,7 +90,21 @@ import EntranceTypedText from './EntranceTypedText.astro'
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     const controller = new AbortController()
     const { signal } = controller
+    const navigationDelay = 240
     let navigationTimer = 0
+    const scrollToEnter = {
+      enabled: scene.dataset.scrollEnterEnabled === 'true',
+      threshold: Number(scene.dataset.scrollEnterThreshold),
+      resetAfter: Number(scene.dataset.scrollEnterResetAfter),
+      maxDeltaPerEvent: Number(scene.dataset.scrollEnterMaxDelta),
+      desktopMinWidth: Number(scene.dataset.scrollEnterDesktopMinWidth)
+    }
+    const desktopViewport = window.matchMedia(
+      `(min-width: ${scrollToEnter.desktopMinWidth}px)`
+    )
+    let wheelDistance = 0
+    let wheelResetTimer = 0
+    let lastWheelAt = 0
 
     const showPoster = () => {
       scene.dataset.videoReady = 'false'
@@ -113,15 +145,25 @@ import EntranceTypedText from './EntranceTypedText.astro'
       }
     }
 
+    const resetWheelIntent = () => {
+      wheelDistance = 0
+      lastWheelAt = 0
+      if (wheelResetTimer) window.clearTimeout(wheelResetTimer)
+      wheelResetTimer = 0
+    }
+
     const resetLeavingState = () => {
       if (navigationTimer) window.clearTimeout(navigationTimer)
       navigationTimer = 0
+      resetWheelIntent()
       scene.dataset.leaving = 'false'
       syncMotion()
     }
 
     const leave = (event?: Event) => {
-      if (event instanceof MouseEvent) {
+      // WheelEvent inherits from MouseEvent. Check the event type explicitly
+      // so the wheel path can call preventDefault before sharing this handler.
+      if (event instanceof MouseEvent && event.type === 'click') {
         const isPrimaryUnmodifiedClick =
           event.button === 0 &&
           !event.defaultPrevented &&
@@ -136,38 +178,113 @@ import EntranceTypedText from './EntranceTypedText.astro'
       scene.dataset.leaving = 'true'
       pauseVideo()
 
-      const navigate = () => window.location.replace(enterLink.href)
+      const navigate = () => {
+        const destination = new URL(enterLink.href, window.location.href)
+        if (!reducedMotion.matches) destination.hash = 'from-entrance'
+        window.location.replace(destination.href)
+      }
       if (reducedMotion.matches) {
         navigate()
         return
       }
-      navigationTimer = window.setTimeout(navigate, 420)
+      navigationTimer = window.setTimeout(navigate, navigationDelay)
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      if (
+        !scrollToEnter.enabled ||
+        !desktopViewport.matches ||
+        scene.dataset.leaving === 'true' ||
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+
+      const unitMultiplier =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? window.innerHeight
+            : 1
+      const deltaX = event.deltaX * unitMultiplier
+      const deltaY = event.deltaY * unitMultiplier
+
+      // Ignore horizontal gestures so a trackpad swipe cannot accidentally
+      // become a request to enter Home.
+      if (
+        !Number.isFinite(deltaX) ||
+        !Number.isFinite(deltaY) ||
+        Math.abs(deltaX) >= Math.abs(deltaY)
+      ) {
+        return
+      }
+
+      // The entrance occupies the viewport; keep the wheel gesture from
+      // producing a small page shift or overscroll while intent is measured.
+      if (event.cancelable) event.preventDefault()
+
+      if (deltaY <= 0) {
+        resetWheelIntent()
+        return
+      }
+
+      const now = performance.now()
+      if (lastWheelAt && now - lastWheelAt > scrollToEnter.resetAfter) {
+        wheelDistance = 0
+      }
+      lastWheelAt = now
+      wheelDistance += Math.min(deltaY, scrollToEnter.maxDeltaPerEvent)
+
+      if (wheelResetTimer) window.clearTimeout(wheelResetTimer)
+      wheelResetTimer = window.setTimeout(resetWheelIntent, scrollToEnter.resetAfter)
+
+      if (wheelDistance >= scrollToEnter.threshold) {
+        resetWheelIntent()
+        leave(event)
+      }
     }
 
     video.addEventListener('playing', showVideo, { signal })
     video.addEventListener('error', showPoster, { signal })
     video.addEventListener('abort', showPoster, { signal })
     reducedMotion.addEventListener('change', syncMotion, { signal })
+    desktopViewport.addEventListener('change', resetWheelIntent, { signal })
     document.addEventListener(
       'visibilitychange',
       () => {
-        if (document.visibilityState === 'hidden') pauseVideo()
+        if (document.visibilityState === 'hidden') {
+          resetWheelIntent()
+          pauseVideo()
+        }
         else resumeVideo()
       },
       { signal }
     )
-    window.addEventListener('pagehide', pauseVideo, { signal })
+    window.addEventListener(
+      'pagehide',
+      () => {
+        resetWheelIntent()
+        pauseVideo()
+      },
+      { signal }
+    )
     window.addEventListener('pageshow', resetLeavingState, { signal })
     document.addEventListener(
       'astro:before-swap',
       () => {
         if (navigationTimer) window.clearTimeout(navigationTimer)
+        resetWheelIntent()
         pauseVideo()
         controller.abort()
       },
       { signal }
     )
     scene.addEventListener('click', leave, { signal })
+    scene.addEventListener('wheel', handleWheel, { signal, passive: false })
     scene.addEventListener(
       'keydown',
       (event) => {
@@ -219,7 +336,10 @@ import EntranceTypedText from './EntranceTypedText.astro'
   [data-entrance-video] {
     z-index: -2;
     opacity: 0;
-    transition: opacity 500ms ease;
+    transition:
+      opacity 500ms ease,
+      transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      filter 420ms ease;
   }
 
   [data-video-ready='true'] [data-entrance-poster] {
@@ -234,62 +354,275 @@ import EntranceTypedText from './EntranceTypedText.astro'
     z-index: -1;
     pointer-events: none;
     background:
-      linear-gradient(180deg, rgb(5 10 24 / 0.1), rgb(5 10 24 / 0.52)),
-      radial-gradient(circle at 50% 42%, transparent 0 22%, rgb(3 8 20 / 0.25) 76%);
+      linear-gradient(180deg, rgb(8 6 5 / 0.07), rgb(8 6 5 / 0.29)),
+      linear-gradient(90deg, rgb(5 4 3 / 0.15), rgb(5 4 3 / 0) 47%, rgb(5 4 3 / 0.08)),
+      radial-gradient(
+        ellipse at 50% 42%,
+        rgb(14 10 7 / 0) 0%,
+        rgb(14 10 7 / 0.1) 48%,
+        rgb(14 10 7 / 0.32) 100%
+      );
   }
 
   .entrance-scene__content {
-    width: min(100% - 2rem, 50rem);
+    width: min(calc(100% - 3rem), 48rem);
+    margin: -2vh auto 0;
     text-align: center;
-    text-shadow: 0 2px 32px rgb(0 0 0 / 0.28);
+    text-shadow:
+      0 2px 18px rgb(10 7 5 / 0.52),
+      0 1px 2px rgb(10 7 5 / 0.62);
     transition:
-      opacity 360ms ease,
-      transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1);
+      opacity 180ms ease,
+      transform 200ms cubic-bezier(0.2, 0.75, 0.25, 1);
   }
 
   [data-entrance-scene]:focus-visible {
-    outline: 3px solid #87e3d5;
+    outline: 3px solid #ffd4c5;
     outline-offset: -0.65rem;
   }
 
-  .entrance-scene__content > .entrance-scene__greeting {
-    margin: 0 0 0.85rem;
-    color: rgb(248 245 239 / 0.94);
-    font-size: clamp(1.05rem, 2.4vw, 1.45rem);
-    letter-spacing: 0.01em;
+  .entrance-scene__greeting {
+    margin: 0;
+    color: #f2f0e8;
+    font-family: 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+    font-size: clamp(2.25rem, 3.333vw, 3rem);
+    font-weight: 500;
+    letter-spacing: -0.018em;
+    line-height: 1.08;
     text-transform: none;
   }
 
   .entrance-scene__content p {
-    margin: 0 0 0.85rem;
-    color: rgb(238 246 250 / 0.8);
-    font-size: clamp(0.78rem, 1.7vw, 0.98rem);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
-
-  .entrance-scene__content h1 {
     margin: 0;
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(3.4rem, 13vw, 9.5rem);
-    font-weight: 500;
-    letter-spacing: -0.045em;
-    line-height: 0.92;
   }
 
   .entrance-scene__subtitle {
-    margin: 1.4rem 0 0;
-    color: rgb(238 246 250 / 0.8);
-    font-size: clamp(0.78rem, 1.7vw, 0.98rem);
-    letter-spacing: 0.06em;
+    max-width: 100%;
+    margin: 0.95rem 0 0 !important;
+    color: rgb(239 238 229 / 0.93) !important;
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-size: clamp(1.125rem, 1.6vw, 1.4375rem) !important;
+    font-weight: 440;
+    letter-spacing: 0 !important;
+    line-height: 1.28;
     text-transform: none;
+    text-wrap: balance;
   }
 
   .entrance-scene__typewriter {
     display: block;
-    margin-top: 0.7rem;
-    color: #87e3d5;
-    letter-spacing: 0.02em;
+    min-height: 1.28em;
+    color: inherit;
+    letter-spacing: inherit;
+    text-wrap: pretty;
+  }
+
+  .entrance-scene__featured-line {
+    max-width: 100%;
+    margin: 1rem 0 0 !important;
+    color: rgb(237 236 228 / 0.92) !important;
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-size: clamp(1.125rem, 1.39vw, 1.25rem) !important;
+    font-weight: 500;
+    letter-spacing: 0 !important;
+    line-height: 1.25;
+    text-transform: none !important;
+    text-wrap: balance;
+  }
+
+  .entrance-scene__featured-prefix,
+  .entrance-scene__featured-period,
+  .entrance-scene__featured-token {
+    vertical-align: middle;
+  }
+
+  .entrance-scene__featured-prefix {
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+  }
+
+  .entrance-scene__featured-token {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    --entrance-ai-accent: #f2c98c;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .entrance-scene__featured-star {
+    flex: 0 0 auto;
+    margin-inline: 0.28em 0.18em;
+    color: var(--entrance-ai-accent);
+    font-size: 0.72em;
+    line-height: 1;
+    text-shadow:
+      0 0 0.42em rgb(255 220 156 / 0.58),
+      0 0 0.08em rgb(255 249 237 / 0.72);
+    animation: entrance-ai-twinkle 2.4s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform, opacity;
+  }
+
+  .entrance-scene__featured-keyword {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin-inline: 0.08em 0.02em;
+    padding: 0.24em 0.72em;
+    overflow: hidden;
+    border: 1px solid rgb(242 201 140 / 0.52);
+    border-radius: 999px;
+    background-color: rgb(74 54 36 / 0.34);
+    background-image:
+      linear-gradient(
+        120deg,
+        rgb(74 54 36 / 0.34),
+        rgb(128 99 63 / 0.24),
+        rgb(74 54 36 / 0.34)
+      ),
+      linear-gradient(
+        115deg,
+        transparent 42%,
+        rgb(255 246 226 / 0.28) 48%,
+        rgb(242 201 140 / 0.34) 50%,
+        rgb(255 246 226 / 0.2) 52%,
+        transparent 58%
+      );
+    background-repeat: no-repeat, no-repeat;
+    background-size: 100% 100%, 250% 100%;
+    background-position: 0 0, 100% 0;
+    box-shadow:
+      0 0.2rem 0.8rem rgb(8 5 3 / 0.14),
+      0 0 1rem rgb(242 201 140 / 0.14),
+      inset 0 1px 0 rgb(255 248 232 / 0.22),
+      inset 0 -1px 0 rgb(42 26 14 / 0.13);
+    color: #f0dfbd;
+    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-size: clamp(1rem, 1.25vw, 1.125rem);
+    font-weight: 540;
+    letter-spacing: 0.004em;
+    line-height: 1;
+    vertical-align: middle;
+    white-space: nowrap;
+    -webkit-backdrop-filter: blur(3px) saturate(1.06);
+    backdrop-filter: blur(3px) saturate(1.06);
+    animation: entrance-ai-shimmer 4.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    will-change: background-position;
+  }
+
+  .entrance-scene__featured-keyword-text {
+    display: inline-block;
+    color: inherit;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .entrance-scene__featured-period {
+    align-self: center;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    line-height: 1.25;
+    margin-inline-start: 0.04em;
+  }
+
+  .entrance-scene__featured-cursor {
+    display: inline-block;
+    flex: 0 0 2.5px;
+    width: 2.5px;
+    min-width: 2.5px;
+    /* The featured line is smaller than the typewriter line above, and the
+       capsule adds a strong visual frame; give this tail a little more mass. */
+    height: 1.16em;
+    margin-left: 3px;
+    border-radius: 999px;
+    background: #f6ead5;
+    box-shadow:
+      0 0 0.42em rgb(255 229 183 / 0.72),
+      0 0 0.1em rgb(255 249 237 / 0.8);
+    opacity: 1;
+    pointer-events: none;
+    transform: translateY(0.04em);
+    vertical-align: middle;
+    animation: entrance-ai-cursor 0.95s steps(1, end) infinite;
+    will-change: opacity;
+  }
+
+  .entrance-scene__featured-keyword::before,
+  .entrance-scene__featured-keyword::after {
+    display: none;
+    content: none;
+  }
+
+  @media (min-width: 721px) {
+    [data-entrance-scene] {
+      place-items: start;
+    }
+
+    .entrance-scene__content {
+      /*
+       * Keep the text axis fluid: it starts at the centered tablet position
+       * and eases toward the diagonal's desktop reference line.
+       */
+      --entrance-content-gutter: max(
+        1.5rem,
+        min(32.5vw, calc(50% - 24rem + clamp(0rem, calc(38.8vw - 26.675rem), 8.25rem)))
+      );
+      /* Move the editorial axis into the open space beneath the diagonal.
+         The clamp keeps the nudge restrained on tablet-sized viewports. */
+      --entrance-content-shift: clamp(2.25rem, 5vw, 4.5rem);
+      --entrance-content-drop: clamp(1.5rem, 3.2vh, 2.5rem);
+      align-self: start;
+      justify-self: start;
+      width: min(
+        48rem,
+        calc(100% - var(--entrance-content-gutter) - var(--entrance-content-shift) - 1.5rem)
+      );
+      margin-top: calc(clamp(14rem, 32.2vh, 22rem) + var(--entrance-content-drop));
+      margin-right: 1.5rem;
+      margin-left: calc(var(--entrance-content-gutter) + var(--entrance-content-shift));
+      text-align: left;
+    }
+  }
+
+  @keyframes entrance-ai-shimmer {
+    0% {
+      background-position: 0 0, 100% 0;
+    }
+
+    42%,
+    100% {
+      background-position: 0 0, 0 0;
+    }
+  }
+
+  @keyframes entrance-ai-twinkle {
+    0%,
+    100% {
+      opacity: 0.64;
+      transform: translateY(-0.02em) scale(0.98) rotate(0deg);
+    }
+
+    50% {
+      opacity: 0.95;
+      transform: translateY(-0.04em) scale(1.03) rotate(6deg);
+    }
+  }
+
+  @keyframes entrance-ai-cursor {
+    0%,
+    49.9% {
+      opacity: 1;
+    }
+
+    50%,
+    100% {
+      opacity: 0;
+    }
   }
 
   [data-enter-home] {
@@ -303,7 +636,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
   }
 
   [data-enter-home]:focus-visible {
-    outline: 3px solid #87e3d5;
+    outline: 3px solid #ffd4c5;
     outline-offset: 4px;
     clip: auto;
     clip-path: none;
@@ -323,8 +656,30 @@ import EntranceTypedText from './EntranceTypedText.astro'
 
   [data-leaving='true'] [data-entrance-video],
   [data-leaving='true'] [data-entrance-poster] {
+    /* The handoff surface owns the visible fade. Keep the active media in its
+       original layer (the poster must not reappear over a ready video), and
+       only add a restrained cinematic dim/zoom underneath the curtain. */
+    filter: brightness(0.74) saturate(0.78);
+    transform: scale(1.01);
+    transition-duration: 220ms;
+  }
+
+  .entrance-scene__handoff.document-handoff {
+    position: absolute;
+    z-index: 3;
     opacity: 0;
-    transition-duration: 420ms;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 220ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      visibility 0s linear 220ms;
+  }
+
+  [data-leaving='true'] .entrance-scene__handoff.document-handoff {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
   }
 
   [data-reduced-motion='true'] [data-entrance-poster] {
@@ -336,12 +691,39 @@ import EntranceTypedText from './EntranceTypedText.astro'
   }
 
   @media (max-width: 720px) {
-    .entrance-scene__content {
-      width: min(100% - 2.5rem, 34rem);
+    [data-entrance-scene] {
+      place-items: center;
     }
 
-    .entrance-scene__content h1 {
-      font-size: clamp(3.3rem, 20vw, 6.5rem);
+    .entrance-scene__content {
+      width: min(calc(100% - 2.25rem), 34rem);
+      margin: calc(2vh + clamp(0.5rem, 1.2vh, 0.75rem)) auto 0;
+    }
+
+    .entrance-scene__greeting {
+      font-size: clamp(1.75rem, 8vw, 2rem);
+    }
+
+    .entrance-scene__subtitle {
+      margin-top: 1.1rem !important;
+      font-size: clamp(1.05rem, 4.8vw, 1.2rem) !important;
+      line-height: 1.3;
+    }
+
+    .entrance-scene__typewriter {
+      min-height: 4.7em;
+    }
+
+    .entrance-scene__featured-line {
+      margin-top: 1rem !important;
+      font-size: clamp(0.98rem, 4.1vw, 1.125rem) !important;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .entrance-scene__featured-keyword {
+      font-size: clamp(0.9rem, 3.7vw, 1rem);
+      padding: 0.24em 0.72em;
     }
   }
 
@@ -349,8 +731,18 @@ import EntranceTypedText from './EntranceTypedText.astro'
     [data-entrance-poster],
     [data-entrance-video],
     .entrance-scene__content,
-    [data-enter-home] {
+    [data-enter-home],
+    .entrance-scene__handoff,
+    .entrance-scene__featured-token,
+    .entrance-scene__featured-keyword,
+    .entrance-scene__featured-star,
+    .entrance-scene__featured-cursor {
       transition: none;
+      animation: none;
+    }
+
+    .entrance-scene__featured-cursor {
+      display: none;
     }
   }
 </style>

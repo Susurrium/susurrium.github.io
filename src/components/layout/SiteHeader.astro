@@ -17,13 +17,14 @@ const menu = config.header.menu ?? []
     class='z-30 text-xl font-medium group-[.not-top]:ms-2 sm:group-[.not-top]:ms-3'
     style='transition:margin-inline 0.3s'
     href='/home'
+    data-astro-prefetch
     aria-label='Brand'>{config.title}</a
   >
 
   <div class='flex items-center gap-x-2'>
     <div
       id='headerExpandContent'
-      class='end-0 start-0 top-12 grid border border-transparent group-[.not-top]:rounded-xl group-[.expanded]:opacity-100 dark:group-[.expanded.not-top]:bg-muted max-sm:absolute max-sm:opacity-0 max-sm:group-[.not-top]:border-border max-sm:group-[.not-top]:px-4 max-sm:group-[.not-top]:py-2 max-sm:group-[.expanded.not-top]:bg-background sm:grid-rows-1'
+      class='end-0 start-0 top-12 grid border border-transparent group-[.not-top]:rounded-xl dark:group-[.expanded.not-top]:bg-muted max-sm:group-[.not-top]:border-border max-sm:group-[.not-top]:px-4 max-sm:group-[.not-top]:py-2 max-sm:group-[.expanded.not-top]:bg-background sm:grid-rows-1'
     >
       <div class='flex flex-col items-center justify-center overflow-hidden sm:flex-row'>
         {
@@ -31,7 +32,8 @@ const menu = config.header.menu ?? []
             <a
               href={item.link}
               class='w-full flex-none grow py-2 text-right font-medium transition-none hover:text-primary sm:w-fit sm:px-3'
-              aria-label='Nav menu item'
+              aria-label={item.title}
+              data-nav-menu-item
               data-astro-prefetch
             >
               {item.title}
@@ -39,7 +41,12 @@ const menu = config.header.menu ?? []
           ))
         }
         <div class='flex w-full grow flex-row justify-end gap-x-3 sm:w-fit sm:gap-x-5'>
-          <a class='px-1 py-2 transition-none sm:px-2' href='/search' title='Search'>
+          <a
+            class='px-1 py-2 transition-none sm:px-2'
+            href='/search'
+            title='Search'
+            data-astro-prefetch
+          >
             <span class='sr-only'>Search</span>
             <Icon name='search' class='size-5' />
           </a>
@@ -51,6 +58,8 @@ const menu = config.header.menu ?? []
       <button
         id='toggleDarkMode'
         class='group/dark box-content size-5 rounded-md border p-1.5 transition-colors hover:bg-border sm:group-[.not-top]:rounded-xl'
+        type='button'
+        aria-label='Toggle color theme'
       >
         <span class='sr-only'>Dark Theme</span>
         <Icon class='system size-5 group-hover/dark:text-primary' name='computer' />
@@ -60,6 +69,10 @@ const menu = config.header.menu ?? []
       <button
         id='toggleMenu'
         class='rounded-md border p-1.5 transition-colors hover:bg-border sm:hidden sm:group-[.not-top]:rounded-xl'
+        type='button'
+        aria-label='Toggle navigation menu'
+        aria-controls='headerExpandContent'
+        aria-expanded='false'
       >
         <span class='sr-only'>Menu</span>
         <Icon class='size-5' name='menu' />
@@ -75,6 +88,12 @@ const menu = config.header.menu ?? []
   }
 </script>
 <script>
+  declare global {
+    interface Window {
+      __susurriumSetThemeHandoff?: (theme: 'dark' | 'light') => void
+    }
+  }
+
   // The two tiny browser helpers are copied from astro-pure@1.4.6 instead of
   // importing its barrel. The barrel also exports date.ts, which imports the
   // Astro-only `virtual:config` module and makes Vite dev prebundling fail.
@@ -98,10 +117,11 @@ const menu = config.header.menu ?? []
     }
 
     document.documentElement.classList.toggle('dark', targetTheme === 'dark')
+    document.documentElement.dataset.theme = targetTheme === 'dark' ? 'dark' : 'light'
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', targetTheme === 'dark' ? '#0B0B10' : '#FCFCFD')
-
+    window.__susurriumSetThemeHandoff?.(targetTheme === 'dark' ? 'dark' : 'light')
     return theme
   }
 
@@ -147,13 +167,43 @@ const menu = config.header.menu ?? []
         )
       }
 
-      this.querySelector('#toggleMenu')?.addEventListener(
-        'click',
-        () => {
-          this.classList.toggle('expanded')
-        },
-        { signal }
-      )
+      const menuButton = this.querySelector<HTMLButtonElement>('#toggleMenu')
+      const menuPanel = this.querySelector<HTMLElement>('#headerExpandContent')
+      if (menuButton && menuPanel) {
+        const mobileQuery = window.matchMedia('(max-width: 639px)')
+
+        const setMenuOpen = (open: boolean, restoreFocus = false) => {
+          const mobile = mobileQuery.matches
+          const expanded = mobile && open
+          this.classList.toggle('expanded', expanded)
+          menuButton.setAttribute('aria-expanded', String(expanded))
+          menuPanel.setAttribute('aria-hidden', String(mobile && !expanded))
+          menuPanel.toggleAttribute('inert', mobile && !expanded)
+
+          if (!expanded && restoreFocus) menuButton.focus()
+        }
+
+        menuButton.addEventListener(
+          'click',
+          () => setMenuOpen(!this.classList.contains('expanded')),
+          { signal }
+        )
+        menuPanel.querySelectorAll<HTMLAnchorElement>('[data-nav-menu-item]').forEach((link) => {
+          link.addEventListener('click', () => setMenuOpen(false), { signal })
+        })
+        this.addEventListener(
+          'keydown',
+          (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && this.classList.contains('expanded')) {
+              event.preventDefault()
+              setMenuOpen(false, true)
+            }
+          },
+          { signal }
+        )
+        mobileQuery.addEventListener('change', () => setMenuOpen(false), { signal })
+        setMenuOpen(false)
+      }
     }
 
     disconnectedCallback() {
@@ -205,18 +255,28 @@ const menu = config.header.menu ?? []
     background-color: hsl(var(--muted) / var(--un-bg-opacity));
   }
 
-  @media (max-width: 640px) {
-    #headerExpandContent {
+  @media (max-width: 639px) {
+    header-component #headerExpandContent {
+      position: absolute;
+      top: 3rem;
       grid-template-rows: 0fr;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
       transition:
-        opacity 0.3s,
-        padding 0.3s,
-        border-color 0.15s,
-        grid-template-rows 0.3s;
+        opacity 0.3s ease,
+        padding 0.3s ease,
+        border-color 0.15s ease,
+        grid-template-rows 0.3s ease,
+        visibility 0s linear 0.3s;
     }
 
-    .expanded #headerExpandContent {
+    header-component.expanded #headerExpandContent {
       grid-template-rows: 1fr;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition-delay: 0s;
     }
 
     .expanded.not-top #headerExpandContent {

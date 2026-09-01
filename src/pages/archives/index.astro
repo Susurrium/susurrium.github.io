@@ -1,18 +1,61 @@
 ---
-import type { CollectionEntry } from 'astro:content'
-import { getBlogCollection, groupCollectionsByYear, sortMDByDate } from 'astro-pure/server'
 import { Button } from 'astro-pure/user'
 import ContentCard from '@/components/cards/ContentCard.astro'
 import PageLayout from '@/layouts/BaseLayout.astro'
+import {
+  createPageData,
+  createPageGroup,
+  createPageItem,
+  createPageSection,
+  hydratePageItems,
+  loadContentCatalog,
+  getContentYear,
+  sortContentRecords,
+  type RenderablePageItem
+} from '@/lib/content-layer'
 
 export const prerender = true
 
-const allPosts = await getBlogCollection()
-const allPostsByDate = sortMDByDate(allPosts)
-const allPostsByYear = groupCollectionsByYear(allPostsByDate) as [number, CollectionEntry<'blog'>[]][]
+const contentCatalog = await loadContentCatalog()
+const allPosts = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
+const postsByYear = new Map<number, typeof allPosts>()
+for (const post of allPosts) {
+  const year = (post.updatedAt ?? post.publishedAt)
+    ? getContentYear(post.updatedAt ?? post.publishedAt!)
+    : undefined
+  if (year === undefined) continue
+  const posts = postsByYear.get(year) ?? []
+  posts.push(post)
+  postsByYear.set(year, posts)
+}
+
+const pageData = createPageData(
+  'blog-year-archive',
+  '/archives',
+  [...postsByYear.entries()]
+    .sort(([left], [right]) => right - left)
+    .map(([year, posts]) =>
+      createPageSection(
+        `year-${year}`,
+        `${year} 年的 Blog`,
+        [
+          createPageGroup(
+            'posts',
+            '该年份的 Blog 条目',
+            posts.map((post, index) => createPageItem(post, { index }))
+          )
+        ],
+        String(year)
+      )
+    )
+)
+const allPostsByYear: { year: number; items: RenderablePageItem[] }[] = pageData.sections.map((section) => ({
+  items: hydratePageItems(section.groups[0]?.items ?? [], contentCatalog),
+  year: Number(section.key.replace(/^year-/, ''))
+}))
 
 const meta = {
-  description: 'A list of all the years of creating my posts',
+  description: 'Browse posts by year.',
   title: 'Archives'
 }
 ---
@@ -22,30 +65,43 @@ const meta = {
 
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
-      <h1 class='mb-6 text-3xl font-medium'>Archives</h1>
+      <h1 id='archives-heading' class='mb-6 text-3xl font-medium'>Archives</h1>
     </div>
 
-    {allPosts.length === 0 && <p>No posts yet.</p>}
-
-    <section id='content' class='animate' aria-label='Blog post list'>
+    <section id='content' class='animate' aria-labelledby='archives-heading'>
       {
-        allPostsByYear.map(([year, posts]) => (
-          <div class='relative mt-20'>
-            <h2
-              class='absolute -start-6 -top-16 z-0 text-9xl font-bold text-transparent opacity-10'
-              style='-webkit-text-stroke-width:2px;-webkit-text-stroke-color:hsl(var(--foreground)/var(--un-text-opacity))'
-            >
-              <samp>{year}</samp>
-            </h2>
-            <p class='px-5 text-muted-foreground'>
-              {posts.length} post{posts.length > 1 && 's'}
-            </p>
-            <ul class='flex flex-col text-start'>
-              {posts.map((post) => <ContentCard class='py-2' contentKind='blog' entry={post} />)}
-            </ul>
-          </div>
-        ))
+        allPosts.length === 0 ? (
+          <p class='site-empty-state'>No posts yet.</p>
+        ) : (
+          allPostsByYear.map(({ year, items }) => (
+            <div class='relative mt-20'>
+              <h2
+                class='absolute -start-6 -top-16 z-0 text-9xl font-bold text-transparent opacity-10'
+                style='-webkit-text-stroke-width:2px;-webkit-text-stroke-color:hsl(var(--foreground)/var(--un-text-opacity))'
+              >
+                <span class='archive-year-mark'>{year}</span>
+              </h2>
+              <p class='px-5 text-muted-foreground'>
+                {items.length} post{items.length > 1 && 's'}
+              </p>
+              <ul class='flex flex-col text-start'>
+                {items.map((item) => <ContentCard class='py-2' item={item} />)}
+              </ul>
+            </div>
+          ))
+        )
       }
     </section>
   </main>
 </PageLayout>
+
+<style>
+  .archive-year-mark {
+    font-family: 'Paralines', 'Satoshi', sans-serif;
+    font-synthesis: none;
+    font-variant-numeric: lining-nums;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    text-rendering: geometricPrecision;
+  }
+</style>

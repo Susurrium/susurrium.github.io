@@ -148,8 +148,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string) {
 function isDarkTheme() {
   return (
     document.documentElement.dataset.theme === 'dark' ||
-    document.documentElement.classList.contains('dark') ||
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    document.documentElement.classList.contains('dark')
   );
 }
 
@@ -173,6 +172,21 @@ function waitForMapLoad(map: MapInstance) {
     map.once('load', onLoad);
     map.on('error', onError);
   });
+}
+
+const chineseMapLabelExpression = [
+  'coalesce',
+  ['get', 'name:zh'],
+  ['get', 'name'],
+  ['get', 'name_en'],
+] as const;
+
+function applyChineseMapLabels(map: MapInstance) {
+  for (const layer of map.getStyle().layers) {
+    if (layer.type !== 'symbol' || layer.id === 'housenumber') continue;
+    if (!layer.layout?.['text-field']) continue;
+    map.setLayoutProperty(layer.id, 'text-field', chineseMapLabelExpression);
+  }
 }
 
 function createAvatarMarker(
@@ -355,14 +369,7 @@ function setupResidenceScene(scene: HTMLElement) {
         return;
       }
       mapLoaded = true;
-      map.addControl(
-        new api.AttributionControl({
-          compact: true,
-          customAttribution:
-            '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a> · <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">© CARTO</a>',
-        }),
-        'top-right',
-      );
+      applyChineseMapLabels(map);
       normalMarker = createNormalMarker(api, map, owner);
       scene.dataset.mapState = 'ready';
       map.resize();
@@ -380,14 +387,14 @@ function setupResidenceScene(scene: HTMLElement) {
       properties: {},
       geometry: { type: 'LineString' as const, coordinates: [owner, shortUser] },
     };
-    const source = globe.getSource('skywt-user-route') as import('maplibre-gl').GeoJSONSource | undefined;
+    const source = globe.getSource('residence-route') as import('maplibre-gl').GeoJSONSource | undefined;
     if (source) source.setData(route);
     else {
-      globe.addSource('skywt-user-route', { type: 'geojson', data: route });
+      globe.addSource('residence-route', { type: 'geojson', data: route });
       globe.addLayer({
-        id: 'skywt-user-route-line',
+        id: 'residence-route-line',
         type: 'line',
-        source: 'skywt-user-route',
+        source: 'residence-route',
         paint: {
           'line-color': '#9ca3af',
           'line-width': 2,
@@ -507,20 +514,13 @@ function setupResidenceScene(scene: HTMLElement) {
         return;
       }
       globe.addControl(new api.NavigationControl({ showZoom: true, showCompass: true }), 'top-right');
-      globe.addControl(
-        new api.AttributionControl({
-          compact: true,
-          customAttribution:
-            '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a> · <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">© CARTO</a>',
-        }),
-        'bottom-right',
-      );
       globeOwnerMarker = createAvatarMarker(api, globe, 'residence', owner, ownerAvatar, '居住地头像');
       globe.on('error', () => {
         if (dialog?.dataset.globeState === 'ready') setGlobeStatus('全球地图部分底图加载失败，仍可旋转查看');
       });
       await withTimeout(waitForMapLoad(globe), 8_500, 'Globe style');
       if (disposed || generation !== globeGeneration || !dialog.open) return;
+      applyChineseMapLabels(globe);
       globe.setProjection({ type: 'globe' });
       setGlobeState('ready');
       globe.resize();
