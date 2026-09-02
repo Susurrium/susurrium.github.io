@@ -57,7 +57,7 @@
 | --- | --- | --- | --- |
 | `develop` | 见最终审计 `run.json` 的 `head.commitSha` | 见最终审计 `run.json` 的 `head.treeSha` | 当前工作分支 |
 | `codex/release-prep` | 见最终审计 `run.json` 的 `head.commitSha` | 见最终审计 `run.json` 的 `head.treeSha` | 与 `develop` 完全同 commit/tree |
-| `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 本地 `develop` 领先 21 个提交；尚未 push |
+| `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 相对本地 `develop` 的 ahead 数以最终交付记录为准；尚未 push |
 | `main` / `origin/main` | `15f5ad110af8ed8f38a1e506dd890d2d921f118f` | `1a5575efca76231469c9f3b50b773226d5fc7caa` | 旧线上基线；没有被本轮修改 |
 
 `git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit；最终 commit/tree 和相对 `origin/develop` 的 ahead 数以最终交付记录为准。两分支之间的提交是本地整合、审计和验证工具链，不代表同数量的额外 topic 分支独立贡献。
