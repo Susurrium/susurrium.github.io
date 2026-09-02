@@ -12,10 +12,10 @@
     "@types/hast": "3.0.5"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "bun node_modules/astro/bin/astro.mjs dev",
     "dev:check": "astro check --watch & astro dev",
     "build": "node scripts/run-sequential.mjs build",
-    "preview": "astro preview",
+    "preview": "bun node_modules/astro/bin/astro.mjs preview",
     "sync": "astro sync",
     "check": "astro check",
     "check:node": "node scripts/check-node-version.mjs",
