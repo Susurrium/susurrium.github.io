@@ -53,8 +53,16 @@ class CdpConnection {
       }
 
       const listeners = this.listeners.get(message.method) ?? []
-      this.listeners.delete(message.method)
-      listeners.forEach(({ resolve }) => resolve(message.params))
+      const remaining = []
+      for (const listener of listeners) {
+        if (listener.predicate && !listener.predicate(message.params)) {
+          remaining.push(listener)
+          continue
+        }
+        listener.resolve(message.params)
+      }
+      if (remaining.length > 0) this.listeners.set(message.method, remaining)
+      else this.listeners.delete(message.method)
     })
 
     socket.addEventListener('close', () => {
@@ -78,7 +86,7 @@ class CdpConnection {
     })
   }
 
-  waitFor(method) {
+  waitFor(method, predicate) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(
         () => reject(new Error(`Timed out waiting for Chrome event: ${method}`)),
@@ -86,6 +94,7 @@ class CdpConnection {
       )
       const listeners = this.listeners.get(method) ?? []
       listeners.push({
+        predicate,
         resolve: (params) => {
           clearTimeout(timeout)
           resolve(params)
@@ -137,7 +146,7 @@ async function evaluate(cdp, expression) {
 }
 
 async function navigate(cdp, url) {
-  const loaded = cdp.waitFor('Page.loadEventFired')
+  const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
   await cdp.call('Page.navigate', { url })
   await loaded
   await delay(100)
@@ -174,6 +183,9 @@ const cdp = await connect(target.webSocketDebuggerUrl)
 
 try {
   await cdp.call('Page.enable')
+  // Chromium 152 no longer emits Page.loadEventFired by default. Lifecycle
+  // events are equivalent and remain available across current CDP versions.
+  await cdp.call('Page.setLifecycleEventsEnabled', { enabled: true })
   await cdp.call('Runtime.enable')
   await cdp.call('Emulation.setDeviceMetricsOverride', {
     width: 390,

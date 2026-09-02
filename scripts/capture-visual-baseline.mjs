@@ -107,8 +107,16 @@ class CdpConnection {
       for (const observer of this.observers.get(message.method) ?? []) observer(message.params)
 
       const listeners = this.listeners.get(message.method) ?? []
-      this.listeners.delete(message.method)
-      listeners.forEach(({ resolve }) => resolve(message.params))
+      const remaining = []
+      for (const listener of listeners) {
+        if (listener.predicate && !listener.predicate(message.params)) {
+          remaining.push(listener)
+          continue
+        }
+        listener.resolve(message.params)
+      }
+      if (remaining.length > 0) this.listeners.set(message.method, remaining)
+      else this.listeners.delete(message.method)
     })
 
     socket.addEventListener('close', () => {
@@ -132,7 +140,7 @@ class CdpConnection {
     })
   }
 
-  waitFor(method) {
+  waitFor(method, predicate) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(
         () => reject(new Error(`Timed out waiting for Chrome event: ${method}`)),
@@ -140,6 +148,7 @@ class CdpConnection {
       )
       const listeners = this.listeners.get(method) ?? []
       listeners.push({
+        predicate,
         resolve: (params) => {
           clearTimeout(timeout)
           resolve(params)
@@ -202,7 +211,7 @@ async function evaluate(cdp, expression) {
 }
 
 async function navigate(cdp, url) {
-  const loaded = cdp.waitFor('Page.loadEventFired')
+  const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
   const result = await cdp.call('Page.navigate', { url })
   if (result.errorText) throw new Error(`Could not navigate to ${url}: ${result.errorText}`)
   await loaded
@@ -210,7 +219,7 @@ async function navigate(cdp, url) {
 }
 
 async function reload(cdp) {
-  const loaded = cdp.waitFor('Page.loadEventFired')
+  const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
   await cdp.call('Page.reload', { ignoreCache: true })
   await loaded
   await delay(350)
