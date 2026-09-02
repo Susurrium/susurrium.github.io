@@ -1,6 +1,6 @@
 # 分支、检查点与工作树对账报告
 
-> **报告状态（2026-09-02，Asia/Shanghai）**：技术历史审计已经完成，内容和个人公开资料的最终确认尚未完成。本报告是发布准备的事实底稿，不是上线授权，也不等同于“所有历史文件都应恢复”。在站长完成本文第 7.4 节的确认前，不得把待确认内容重新公开、推送或部署。
+> **报告状态（2026-09-02，Asia/Shanghai）**：技术历史审计、owner 内容/个人资料/媒体授权决定、最终本地验证和可审计提交均已完成。`develop` 与 `codex/release-prep` 当前同一提交；线上 push、merge、Pages 设置和部署仍未授权。本报告是发布准备的事实底稿，不等同于“所有历史文件都应恢复”。
 
 ## 1. 先给结论
 
@@ -8,11 +8,11 @@
 
 1. **没有发现一个仍可见、包含独有已提交实现的隐藏主题分支。** 当前 `develop` 与 `codex/release-prep` 指向同一个提交；29 个旧 topic 分支在冻结快照时全部指向 `8b05952`，没有独有 commit。`reflog` 和不可达 commit 也只显示整合提交的 amend 版本，没有额外的主题实现提交。
 2. **确实发现了“比当前树更丰富”的历史检查点。** 这些是 Codex 工作流在未提交状态保存的 tree/checkpoint，不是普通分支 commit。最新的丰富检查点有 86 篇 Blog、25 篇 Trace、39 篇 Saying；当前发布树只保留 5 篇 Saying，并将 Blog/Trace 作为正式空集合处理。
-3. **About 的长版个人简介确实曾存在。** blob `c6082808…` 在连续三个检查点中出现，比当前 `src/data/profile.ts` 多一段说明文字。这证明当前简介在“文案内容”上可能落后于一个历史候选，但不能证明长版就是最终应公开的版本；它没有独立 commit，也没有站长在本报告中的公开确认。
+3. **About 的长版个人简介确实曾存在，但已被站长明确 supersede。** blob `c6082808…` 在连续三个检查点中出现，比当前 `src/data/profile.ts` 多一段说明文字；这证明历史候选曾更丰富，但不构成自动恢复依据。站长已选择 `KEEP_CUSTOM` 新文案，当前实现只采用确认记录中的四段文字。
 4. **技术架构并非简单落后。** 当前 About 和 Home 通过同一份 `profileIntro` 数据渲染，旧组件、旧路由和旧资源已被新架构替代。不能用整棵旧 tree 覆盖当前树，否则会重新引入旧身份、旧链接、废弃路由和临时预览文件。
-5. **处理原则是“逐路径、逐事实决策”，不是机械合并。** 临时物、生成预览和已被替代的运行时代码可以排除；真实内容、个人事实、外部媒体和授权事项必须进入 `USER_CONFIRM` 清单；未分类项数量必须为零后才能形成发布提交。
+5. **处理原则是“逐路径、逐事实决策”，不是机械合并。** 临时物、生成预览和已被替代的运行时代码已按机器矩阵排除；93 个真实历史内容、个人事实、外部媒体和授权事项已由站长在 owner 记录中明确决定；机器矩阵仍必须保持 `UNCLASSIFIED=0`。
 
-因此，当前最稳妥的结论是：**技术基线可以继续以 `codex/release-prep`（与 `develop` 同树）为基础；About 长版及历史内容进入待确认队列，不直接 cherry-pick 或整树恢复。**
+因此，当前最稳妥的结论是：**技术基线继续以 `codex/release-prep`（与 `develop` 同树）为基础；About 采用已确认的新文案，93 个历史内容不恢复；最终本地审计、验证和可审计提交已经完成，仍不自动 push 或部署。**
 
 ## 2. 审计范围、基准和证据
 
@@ -28,7 +28,7 @@
 | 对等发布分支 | `codex/release-prep` |
 | Git 版本 | `git version 2.54.0.windows.1` |
 | 审计工具 | `scripts/branch-state-audit.mjs`（只读扫描；不 checkout、reset、clean 或写入索引） |
-| 审计输出目录（分类器版本 1，最终 HEAD 校验） | `E:\code\branch-state-audit-final-20260902-1115` |
+| 审计输出目录（分类器版本 1，最终 HEAD 校验） | 见外部 owner 工作单的“本次执行交付记录”；该记录保存最终目录、文件哈希和计数 |
 | 比较范围 | 所有可见 refs、reflog、提供的 bundles、两个外部快照；仓库全路径 |
 
 最终外部审计运行的 `run.json` 是 refs、source、state、tree、path、fsck、快照证据、分类、错误和警告计数的唯一权威；外部交付记录逐项保存该文件及每个 CSV 的 SHA-256。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
@@ -100,12 +100,12 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 
 ### 5.1 机器矩阵的读法
 
-最终审计归并出 935 个独立变化路径决定：
+最终审计归并出 936 个独立变化路径决定：
 
 | 独立路径状态 | 数量 | 含义 |
 | --- | ---: | --- |
-| `CHANGED` | 173 | 当前和历史都存在，但 blob/mode 不同；通常是架构演进，需检查是否有语义回退 |
-| `CURRENT_MISSING` | 272 | 当前树新增、历史树没有；通常是当前架构、测试或文档的新增 |
+| `CHANGED` | 174 | 当前和历史都存在，但 blob/mode 不同；通常是架构演进，需检查是否有语义回退 |
+| `CURRENT_MISSING` | 273 | 当前树新增、历史树没有；通常是当前架构、测试或文档的新增 |
 | `HISTORICAL_MISSING` | 615 | 历史树有、当前树没有；只是候选，不是自动恢复或自动删除结论 |
 
 124 个路径在不同 state 中同时出现多个状态（例如先存在、后被重命名或再次新增），所以三类数字不能简单相加当作互斥文件数。完整 blob/mode/state 证据在 `path-diffs.csv`，来源别名在 `refs.csv`，state 去重在 `states.csv`。
@@ -116,18 +116,18 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 | --- | ---: | --- | --- |
 | `QUARANTINE_TEMP` | 404 | 移出仓库并外部保留；窄规则忽略，不进入提交 | `.tmp-favicon-c-preview/*` 305、`.tmp-favicon-preview/*` 23、`.tmp-tnxg/*`/`.tmp-tnxg.html` 28、根目录截图/日志/HTML/头像预览等 48 |
 | `REJECT_ORPHAN_DOC_ASSET` | 3 | 不纳入站点资源；外部保留来源 | `.github/assets/body.webp`、`header.webp`、`lighthouse-score.png` |
-| `USER_CONFIRM_CONTENT` | 93 | 逐篇由站长确认公开、脱敏、版权和 URL 后再决定 | 86 篇真实 Blog、4 篇非预览 Trace、3 篇非预览 Saying |
+| `USER_CONFIRM_CONTENT` | 93 | 机器分类为真实内容候选；本次 owner 覆盖决定为 `ALL_REJECT`，不恢复 | 86 篇真实 Blog、4 篇非预览 Trace、3 篇非预览 Saying |
 | `REJECT_GENERATED_CONTENT` | 55 | 生成的卡片预览，不恢复为正式文章 | 20 个 `card-preview-trace-*`、35 个 `card-preview-saying-*` |
 | `REJECT_DRAFT_CONTENT` | 2 | 草稿只进入外部归档/隔离区，不进入发布树 | 1 个 `draft-*` Trace、1 个 `draft-*` Saying |
 | `REJECT_SUPERSEDED_RUNTIME` | 24 | 当前有明确替代实现；除非发现行为回归，不恢复旧文件 | 20 个旧组件、4 个旧页面 |
 | `REJECT_UNUSED_ASSET` / `REJECT_SIDE_EFFECT_WORKFLOW` / `REJECT_GENERATED_STATE` | 34 | 无当前引用、旧媒体或有副作用的自动写回；外部保留 | 21 个旧工具 SVG、4 个旧项目 JPG、7 个旧 public/media 资源、1 个 link workflow、1 个 `scripts/link-health.json`（合计按文件归并为 34） |
 
-上表合计 615。审计工具已输出 `path-decisions.csv`，把每个独立路径映射到上述类别；最终 HEAD 校验的 `UNCLASSIFIED=0`。由于最终审计文档本身也属于当前树，路径决定数会随提交树变化；交付时以本文指定的最终输出目录中的 `run.json`、CSV 和哈希为唯一权威。若后续出现无法归类的路径，发布门禁应停止，而不是把它默认为删除。
+上表合计 615。审计工具已输出 `path-decisions.csv`，把每个独立路径映射到上述类别；最终 HEAD 校验的 `UNCLASSIFIED=0`。由于最终审计文档本身也属于当前树，路径决定数会随提交树变化；交付时以外部 owner 工作单所列最终输出目录中的 `run.json`、CSV 和哈希为唯一权威。若后续出现无法归类的路径，发布门禁应停止，而不是把它默认为删除。
 
 ### 5.3 当前独有和同路径变化
 
-- 272 个 `CURRENT_MISSING` 主要是当前的新布局、动态路由、数据模型、测试、文档和生产资源；它们按当前 import/测试引用确认后保留。
-- 173 个 `CHANGED` 主要是同一路径在重构中的内容或配置变化；应以当前实现为候选，并对个人事实、外部链接和授权单独审阅。
+- 273 个 `CURRENT_MISSING` 主要是当前的新布局、动态路由、数据模型、测试、文档和生产资源；它们按当前 import/测试引用确认后保留。
+- 174 个 `CHANGED` 主要是同一路径在重构中的内容或配置变化；应以当前实现为候选，并对个人事实、外部链接和授权单独审阅。
 - 当前代码没有引用被列为旧 runtime 的路径；运行 `rg`/构建检查应继续作为门槛，防止误删后出现隐式 glob 或动态 import 依赖。
 
 ## 6. 旧运行时与资源的逐项替代关系
@@ -179,15 +179,17 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 
 ### 7.1 当前 About 的技术状态
 
-当前 `src/data/profile.ts` 的 blob 为 `100a5a9a431cc2c6113fba4100c22b6a05ac12e2`（494 bytes），内容为：
+当前工作树 `src/data/profile.ts` 的 blob 为 `7e4e547b0253068730932b45e61f577baf6c7675`（827 bytes；提交后以最终 commit tree 为准），内容为：
 
 ```text
 role: Developer / Designer / Blogger
-你好，我是 Susurrium，目前在北京大学医学部学习。
-我平时喜欢写代码、做设计，也常常因为好奇去折腾一些新工具和新想法。
+你好，我是 Susurrium，一个目前就读于北京大学医学部非典型医学牲。
+一边被<del>分化生化物化</del>药理药代药动折磨，一边在<del>完成CS231n 的 Assignment</del>查找loss 不下降原因时心态崩溃。
+非常佩服A神，于是选择用相同的模版做了这个博客。
+最喜欢的游戏的<del>那个夏天的</del>ow。
 ```
 
-`src/pages/about/index.astro` 和 `src/components/home/ProfileIntro.astro` 都从该数据导入；因此当前不会出现 Home/About 两份简介漂移。`scripts/verify-phase2.mjs` 对当前文案和旧身份残留有断言，构建与测试可验证技术一致性。
+站长决定为 `KEEP_CUSTOM`；`~~...~~` 的原始标记见 owner 记录，实现层用 `<del>` 保持视觉语义。`src/pages/about/index.astro` 和 `src/components/home/ProfileIntro.astro` 都从该数据导入；因此当前不会出现 Home/About 两份简介漂移。`scripts/verify-phase2.mjs` 对四段文案和旧身份残留有断言，构建与测试可验证技术一致性。
 
 ### 7.2 历史长版候选
 
@@ -199,33 +201,30 @@ blob `c608280867e605c138b3370cf1bf882f526d254e`（SHA-256：`18acdde27e25b4b47b3
 
 它保留当前两句，并在第二句后追加“做过的项目、遇到的问题，以及一些零散的思考……如果刚好能对别人有用，那就更好了”的长版说明。连续三个检查点说明这不是一次随机编辑，但仍然只是工作流候选：没有独立 commit、没有 merge 记录，也没有站长确认其公开意图。该 blob 的来源还可由 Codex session JSONL 复核；session provenance 不是授权。
 
+该历史长版现在明确记为 `REJECT`；站长确认的新四段文案优先级高于所有检查点候选，历史 blob 继续只作为可恢复证据保存。
+
 较早的 blob `ae1393114d9569d8eb0e2959bf1a66dccb102f22`（425 bytes）是“你好，我叫 Susurrium……记录正在学习、思考和制作的东西”的旧短版，视为被当前文案 supersede，不自动恢复。更早的 inline About 版本（例如 `c7a391c91f2c05107234a98f5ce2d74e6491e391`）包含 Arthals、旧学校阶段、博士计划、LLM/Embodied AI、Minecraft 及旧社交账号等事实；这些必须视为过期/高风险身份资料，除非站长逐项重新确认，不能复制到新页面。
 
 ### 7.3 Education / Experience
 
 | 项目 | 当前 blob/状态 | 历史候选 | 决定 |
 | --- | --- | --- | --- |
-| Education | `src/data/education.ts` = `c59244fb2da8779c85a599bfb7d2fc9c991ec99c`；北京大学、医学部、`2025-09`、current | blob `1199f10fcc3c4d5d00ebdbf0419a9f9c18610e25` 写有“医学部 · 计算机科学技术双学位” | 架构保留；双学位、日期和公开链接须 `USER_CONFIRM` |
-| Experience | `src/data/experience.ts` = `90a54e790f6c2f2c0908ff5c632d03a158334b7b`；当前为空并注明“无确认条目” | 旧 About inline 有 2024-09-11 北京大学《计算机系统导论》课程助教及 `https://slide.huh.moe/` | 不自动恢复；日期、身份、链接和公开许可须确认 |
+| Education | `src/data/education.ts` = `c59244fb2da8779c85a599bfb7d2fc9c991ec99c`；北京大学、医学部、`2025-09`、current | blob `1199f10fcc3c4d5d00ebdbf0419a9f9c18610e25` 写有“医学部 · 计算机科学技术双学位” | 学校、院系、current、起始月份 `KEEP`；双学位 `REJECT` |
+| Experience | `src/data/experience.ts` = `90a54e790f6c2f2c0908ff5c632d03a158334b7b`；当前为空并注明“无确认条目” | 旧 About inline 有 2024-09-11 北京大学《计算机系统导论》课程助教及 `https://slide.huh.moe/` | 助教经历和链接均 `REJECT`，不恢复 |
 
-### 7.4 发布前必须由站长回答的清单
+### 7.4 站长决定已记录
 
-以下不是让 Git 或模型代答的事实问题；在收到明确答复前保持 `USER_CONFIRM`：
-
-1. About 使用当前短版，还是恢复长版？是否需要改写措辞、语气或“对别人有用”的表述？
-2. 是否公开“北京大学医学部”以及“目前在读/current”状态？公开到学校、院系还是更粗粒度？
-3. 是否公开“计算机科学技术双学位”？起始月份 `2025-09` 是否准确？
-4. 是否恢复旧的北京大学 2021、人大附中 2014 教育记录？这些日期是否应公开？
-5. 是否公开课程助教经历、`2024-09-11` 日期及 `slide.huh.moe` 链接？
-6. 所有社交链接、项目链接、头像、二维码、视频和文字是否有权公开再分发？Paralines 字体是否有可留档授权？
-
-确认方式建议采用一条可追溯的 commit message、签字文档或 issue，逐项标记 `KEEP` / `EDIT` / `REJECT`；只说“看起来可以”不足以覆盖个人事实和第三方权利。
+上述问题已由站长在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)
+和外部工作单中逐项回答：About=`KEEP_CUSTOM`；学校、院系、current、`2025-09`=`KEEP`；
+双学位、旧教育、助教经历及其链接=`REJECT`；93 个历史内容=`ALL_REJECT`；媒体/链接/字体
+范围=`OWNER_CONFIRMED`；Residence=`CITY`。后续若新增或改变公开资料，必须建立新的逐项
+owner 记录，不能沿用本次确认推断。
 
 ## 8. 内容、隐私、授权和临时物的处理
 
-### 8.1 真实内容不能统称为“已确认删除”
+### 8.1 真实内容已明确不恢复（保留外部证据）
 
-历史中 86 篇 Blog、4 篇非预览 Trace、3 篇非预览 Saying 是真实内容候选，不是临时卡片。旧发布文档把“Blog 85、Trace 5、Saying 3”统称为已确认删除是不准确的：它们可以暂不进入当前候选，但应记录为 `USER_CONFIRM` 或 `ARCHIVE_PENDING_OWNER`，并在隔离区/bundle 中保留。逐篇审阅至少检查：个人邮箱、本地路径、基础设施信息、外部链接、版权和是否仍符合当前站点定位。
+历史中 86 篇 Blog、4 篇非预览 Trace、3 篇非预览 Saying 是真实内容候选，不是临时卡片。站长已明确决定 `ALL_REJECT`：它们不进入当前候选、不生成路由、不进入 RSS/Pagefind；原始文件和对象继续在隔离区/bundle 中保留，未来若要恢复必须重新逐路径确认。该决定不等于从 Git 历史脱敏或永久删除。
 
 ### 8.2 可以确定排除的内容
 
@@ -262,12 +261,12 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 
 ### 9.2 最终发布提交门槛
 
-发布准备提交可以是一个整合提交，也可以按代码、内容/媒体、测试/文档拆分；关键是最终 tree 唯一且可复现。提交正文应包含：基线 SHA、纳入范围、明确移除项、隔离项、验证命令、无 push/deploy 声明，以及本报告和机器矩阵的路径。
+发布准备提交可以是一个整合提交，也可以按代码、内容/媒体、测试/文档拆分；关键是最终 tree 唯一且可复现。提交正文应包含：基线 SHA、纳入范围、明确移除项、隔离项、验证命令、无 push/deploy 声明，以及本报告和机器矩阵的路径。本轮已按该门槛完成一个本地整合提交；精确 SHA/tree、审计目录和 bundle 坐标见外部 owner 工作单的最终执行记录。
 
-在提交前必须同时满足：
+本轮提交前已同时满足：
 
-- `path-decisions.csv` 覆盖最终审计发现的 935 个独立变化路径决定；`UNCLASSIFIED=0`。
-- 真实内容、个人事实、外部资源和字体授权均有 owner 决定；未确认项不进入 index。
+- 新一轮 `path-decisions.csv` 覆盖最终 HEAD 发现的全部独立变化路径；机器 `UNCLASSIFIED=0`，具体数量以新 `run.json` 为准。
+- 真实内容、个人事实、外部资源和字体授权均有 owner 决定；owner 记录未授权的新增项不得进入 index。
 - `git diff --check`、`git diff --cached --check`、`git show --check HEAD` 全部无输出。
 - 干净临时 worktree 重新安装依赖并运行 build、Astro check、全部测试、dry-run link check、严格发布门禁和浏览器生命周期脚本。
 - `git status --porcelain=v2` 只显示允许的 ignored 构建缓存；没有截图、profile、preview、日志、bundle 或外部快照误入仓库。
@@ -282,14 +281,14 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 | `E:\code\blog-susurrium-before-release-20260902-021211.bundle` | 149,138,991 | `37B45488B9B36B5F1AB4961C01CB6577A138D070D344CEEA35AF34DD58F1BEA6` | 发布整理前完整 refs（77 advertised heads） |
 | `E:\code\blog-susurrium-before-develop-sync-20260902-083331.bundle` | 147,590,541 | `3A475F3416A88D3ED977A288A45D2991936E1581109FC72532F3F4061CE84359` | develop 同步前，保留旧 develop |
 | `E:\code\blog-susurrium-history-audit-20260902-092106.bundle` | 147,590,797 | `06A0B0B3E3AF4B5AD9041D8B6BF60B41F5A10861B092454E62115F0F488D5BEA` | 历史审计期间 refs |
-| `E:\code\blog-susurrium-release-final-20260902-043328.bundle` | 147,590,311 | `36A7C0C6CD695826C1AE6184175225813C315CBE30E7F38ABCA1416C82E599D4` | 当前整合基线的既有封存；最终文档/工具提交后需重新生成新的 final bundle |
-| `E:\code\blog-susurrium-final-audit-20260902-1115.bundle` | 以外部交付记录为准 | 以外部交付记录为准 | 包含最终交付 commit/tree 的新增封存 |
+| `E:\code\blog-susurrium-release-final-20260902-043328.bundle` | 147,590,311 | `36A7C0C6CD695826C1AE6184175225813C315CBE30E7F38ABCA1416C82E599D4` | 当前整合基线的历史封存 |
+| 最终审计 bundle | 见外部 owner 工作单的“本次执行交付记录” | 见外部 owner 工作单的“本次执行交付记录” | 包含最终交付 commit/tree 的新增封存；已通过 `git bundle verify` |
 
 旧 bundle 不会因新提交失效；它们保存的是对应时刻的对象和 refs。本次交付追加带最终 commit/tree 的 final bundle，而不是覆盖旧文件；其字节数、SHA-256 和 `git bundle verify` 输出见外部交付记录。
 
 ### 10.2 审计矩阵文件
 
-最终 HEAD（含本报告最后一次修订）的机器矩阵输出目录固定为 `E:\code\branch-state-audit-final-20260902-1115`；运行命令、版本、计数、分类和警告写入其中的 `run.json`。文件职责如下：
+本轮 owner 决定和代码/文档变更后已生成新的、唯一的最终审计目录。目录路径、`run.json`/CSV 哈希和最终计数记录在外部 owner 工作单的“本次执行交付记录”；此前目录只作为历史证据保留。
 
 | 文件 | 内容 |
 | --- | --- |
@@ -313,26 +312,25 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 
 生产 preview 上的浏览器复核也已完成：`bun run verify:phase6:browser` 与 `bun run verify:browser:lifecycle` 均为 0 failures、0 runtime exceptions/console errors，覆盖空 Blog、Trace/Saying taxonomy、搜索过滤、暗色 Home、入口动画、音乐状态持久化、About/Links、Saying detail、search 和 reduced-motion。仓库没有 `agent-browser` 可执行文件，因此按浏览器验证 skill 的目标使用本机 Chrome DevTools Protocol 脚本完成；Chrome 152 不发出旧的 `Page.loadEventFired`，脚本已改为等待启用后的 lifecycle `load` 事件，这一兼容性修复已纳入审计提交。
 
-### 11.2 尚未解除的阻塞
+### 11.2 尚未解除的交付事项
 
-当前阻塞不是“找不到历史”，而是：
+内容和资料决定以及本地技术交付已经完成；剩余事项仅是线上边界：
 
-- About 长版或短版的公开选择未确认；
-- Education 双学位/日期、旧教育经历和 TA 经历未确认；
-- 93 个真实历史内容尚未逐篇确认是否恢复、脱敏或永久不公开；
-- 图片、视频、二维码、外部链接和 Paralines 字体授权仍需证据；
-- 若恢复任何候选内容，还必须重新执行相同的内容、隐私、授权和运行时门禁。
+- 最终分支审计、干净验证环境构建/检查/测试/链接 dry-run/严格门禁/浏览器回归均已通过，未分类计数为零；
+- 已检查差异并创建包含基线/决定/验证证据的本地可审计提交，`codex/release-prep` 与 `develop` 已同步；
+- push、merge、Pages 设置和部署仍未授权，必须另行得到明确线上指令；
+- 若未来要恢复任何历史内容，必须为具体路径建立新的 `KEEP`/`EDIT` 记录并重跑门禁。
 
-在这些问题解决前，状态应写成“技术候选可复核，公开发布待站长确认”，不能标记为最终发布完成。
+因此当前状态应写成“owner 决定已记录，本地技术发布候选已完成审计、验证和提交；线上尚未发布”。
 
 ## 12. 后续执行顺序
 
-1. 保持 `develop` 与 `codex/release-prep` 同步，不在 `main` 或远端上操作。
-2. （本次交付执行）在最终 HEAD、两快照和四个旧 bundle 上，按第 10.2 节路径生成最终审计目录；实际 commit/tree、计数、分类、警告和 SHA-256 以 `run.json`、CSV 与外部交付记录为准。
-3. （已完成）文档已修正把旧 Blog/Trace/Saying 写成“已确认删除”的表述，并链接本报告。
-4. 请站长按第 7.4 节逐项给出 `KEEP` / `EDIT` / `REJECT`，优先处理 About、Education、Experience，再处理 93 篇历史内容。
-5. 仅恢复得到明确 `KEEP` 的路径，采用小批次提交和测试；不要整树 cherry-pick。
-6. （技术验证已完成）干净验证 worktree 已通过完整构建、测试、严格门禁和浏览器检查；交付前执行 `git diff --check`、`git diff --cached --check`、`git show --check HEAD`、状态和 bundle 校验，并把结果留在外部交付记录。
-7. 生成带最终 commit/tree 的新 bundle，记录最终 commit/tree、审计输出文件 SHA-256 与 `git bundle verify` 结果；保留旧 bundle，最后才考虑删除已核对且无独有内容的旧分支。
+1. （已完成）保持 `develop` 与 `codex/release-prep` 同步，不在 `main` 或远端上操作。
+2. （已完成）在最终 HEAD、两快照、旧 bundle 和 owner 记录范围上生成唯一审计目录，并保存 `run.json`、CSV 与哈希。
+3. （已完成）将 owner 工作单、About 实现和决定账本写入/同步，并明确 93 个历史内容全部不恢复。
+4. （已完成）在干净环境重跑安装、构建、Astro check、全量测试、链接 dry-run、严格门禁和浏览器回归。
+5. （已完成）检查工作树和暂存区，只暂存已审核的源代码、测试与文档；提交后再次检查 commit/tree、状态和 bundle。
+6. （已完成）创建包含基线、纳入/排除范围、owner 决定、验证命令及“不 push/不部署”声明的本地提交，并把 `codex/release-prep` 指向同一提交。
+7. （已完成）生成带最终 commit/tree 的新 bundle，记录 SHA-256 与 `git bundle verify`；旧 bundle 已保留，线上动作等待另行授权。
 
-本报告的核心判定是：**历史完整性问题已经被证据化，About 的落后候选已经定位；剩下的是明确的内容所有者决策和最终可复现验证，而不是继续盲目寻找一个“神秘分支”。**
+本报告的核心判定是：**历史完整性问题已经被证据化，About 的落后候选已经定位并由站长以新文案取代；内容取舍已经形成可追溯决定，最终可复现验证、本地提交和封存均已完成，当前只剩明确的线上授权边界，而不是继续盲目寻找一个“神秘分支”。**

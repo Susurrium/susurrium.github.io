@@ -678,7 +678,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 
 验收命令：`bun run ci`（含 `test:all`）、`bun run links:check:dry` 与 `bun run release:gate --strict`。线上发布还需验证 GitHub Actions 成功、`https://susurrium.github.io/` 可访问，以及 canonical、RSS、sitemap 与 404 均指向最终域名。
 
-状态：本地 CI、生产产物审计、移动端目录浏览器回归和真实 ClientRouter 跨页生命周期回归均已实现并按候选构建验证；后者包含入口重放、公共音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion、Blog/Trace 公共 Opening Media 滚动恢复、直接暗色 Home 的透明 iframe 合成和无未捕获异常。Home 的 Saying 与 Blog Timeline 在对应集合为空时整段不渲染，Blog/Trace/Saying 归档仍保留明确空状态；Timeline 按 Asia/Shanghai 选择不晚于当前年的最新有文年份。Links 的 Friend Circle 已从输出和请求路径移除，但历史代码可保留。Waline、生产 Umami、CodeTime 和公共音乐按已登记例外保留；未知远程媒体由严格门禁逐项列出。候选提交前仍需完成干净 worktree 验证、素材/隐私权利复核和视觉人工检查。当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
+状态：本地 CI、生产产物审计、移动端目录浏览器回归和真实 ClientRouter 跨页生命周期回归均已实现并按候选构建验证；后者包含入口重放、公共音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion、Blog/Trace 公共 Opening Media 滚动恢复、直接暗色 Home 的透明 iframe 合成和无未捕获异常。Home 的 Saying 与 Blog Timeline 在对应集合为空时整段不渲染，Blog/Trace/Saying 归档仍保留明确空状态；Timeline 按 Asia/Shanghai 选择不晚于当前年的最新有文年份。Links 的 Friend Circle 已从输出和请求路径移除，但历史代码可保留。Waline、生产 Umami、CodeTime 和公共音乐按已登记例外保留；未知远程媒体由严格门禁逐项列出。候选已完成干净 worktree 验证、素材/隐私权利复核记录和自动化视觉/浏览器检查；当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
 
 ## 20. 主要风险与处理
 

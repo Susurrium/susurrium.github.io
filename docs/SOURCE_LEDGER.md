@@ -1,12 +1,12 @@
 # 来源与复用台账
 
-> 台账版本：1.6｜冻结日期：2026-08-27｜release-prep 更新：2026-09-02｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–6 已按本台账落地，当前候选的纳入/排除与待确认项见 [RELEASE_PREP_AUDIT.zh-CN.md](./RELEASE_PREP_AUDIT.zh-CN.md)
+> 台账版本：1.7｜冻结日期：2026-08-27｜release-prep 更新：2026-09-02｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–6 已按本台账落地，当前候选的纳入/排除与 owner 决定见 [RELEASE_PREP_AUDIT.zh-CN.md](./RELEASE_PREP_AUDIT.zh-CN.md) 与 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)
 
 ## 1. 作用与边界
 
 本文档回答每个模块的四个问题：从哪里来、锁定到哪个版本、直接复用到什么程度、为了本博客允许改什么。
 
-用户已确认对列出的参考网站和组件取得所需授权。本台账仍保留公开来源、版本、哈希和必要差异，目的是保证实现可复现、后续可维护，并防止把“参考视觉”“历史封装”和“本项目新代码”混为一体。第三方字体、图片、视频、头像和二维码的公开再分发权不由项目许可证自动覆盖；候选中仍待最终复核的项目集中列在 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+用户已确认对列出的参考网站和组件取得所需授权，并在 2026-09-02 的 owner 工作单中确认当前候选媒体、字体、链接和位置范围。本台账仍保留公开来源、版本、哈希和必要差异，目的是保证实现可复现、后续可维护，并防止把“参考视觉”“历史封装”和“本项目新代码”混为一体。第三方许可证/授权证据仍应按 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) 与 owner 记录留档；项目许可证本身不扩大素材授权。
 
 生产站默认不热链参考站资源。已确认的例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、CodeTime 徽章、Waline、构建期 GitHub 贡献数据和现有友链头像；这些服务/路径在门禁中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
 
@@ -164,7 +164,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | 本地运行时     | `public/vendor/maplibre-gl@5.24.0/maplibre-gl.js`（1,056,837 bytes；SHA-256 `45a9b07a9189ce56054c620a947ccf41e291e58c95e9b61533b740aaa65ee5cb`）与 `maplibre-gl.css`（70,024 bytes；SHA-256 `ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732`） |
 | 外部运行时     | 只允许 CARTO/OSM 地图请求；Geolocation 仅在用户打开 Globe 后由浏览器授权流程使用              |
 
-飞机、云影、地图回退图和访客头像已经从 `HIST-RESIDENCE` 固定快照复制到 `public/media/residence/` 并由 `verify:phase5` 核验哈希。访客头像仍为 597 bytes，SHA-256 `415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351`。当前候选只公开 `39.9, 116.4` 的城市级坐标（`publicPrecision: 'city'`），不记录或输出历史的精确居住地；更细粒度位置和 owner marker image 在上线前待站长确认。MapLibre 固定为 `5.24.0`（BSD-3-Clause）：npm 依赖保留精确 TypeScript 类型，已经构建好的 UMD JS/CSS 本地惰性加载。此调整避免 Vite 在每个静态入口构建时重复处理约 1 MiB 的第三方运行时，不改变地图算法或加载时机，并兼容 GitHub Pages 的纯静态输出。
+飞机、云影、地图回退图和访客头像已经从 `HIST-RESIDENCE` 固定快照复制到 `public/media/residence/` 并由 `verify:phase5` 核验哈希。访客头像仍为 597 bytes，SHA-256 `415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351`。当前候选只公开 `39.9, 116.4` 的城市级坐标（`publicPrecision: 'city'`），该粒度已由 owner 确认；不记录或输出历史的精确居住地。MapLibre 固定为 `5.24.0`（BSD-3-Clause）：npm 依赖保留精确 TypeScript 类型，已经构建好的 UMD JS/CSS 本地惰性加载。此调整避免 Vite 在每个静态入口构建时重复处理约 1 MiB 的第三方运行时，不改变地图算法或加载时机，并兼容 GitHub Pages 的纯静态输出。
 
 当前公开仓库中未找到与 SkyWT 当前居住地动图一一对应的可维护源码，因此不能把同作者的其他 Daydreamer/Map 组件误记为真源，也不重写为 React/Framer。
 
@@ -243,7 +243,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ### 6.1.1 当前用户图库（2026-08-30）
 
-用户已确认将 `E:\UserData\Desktop\blog_image` 中的全部 54 张图片投入当前本地候选。原图统一转为 WebP（保持原始构图，宽度上限 1920px）并写入 `public/images/home-media/`；因此生产页面不再依赖桌面路径。公开再分发权、图中第三方角色/Logo/水印的许可仍需站长在部署前确认。三组资源池在 `src/data/home-media.ts` 中保持独立：
+用户已确认将 `E:\UserData\Desktop\blog_image` 中的全部 54 张图片投入当前本地候选，并在 owner 工作单中确认当前候选的媒体公开范围。原图统一转为 WebP（保持原始构图，宽度上限 1920px）并写入 `public/images/home-media/`；因此生产页面不再依赖桌面路径。图中第三方角色/Logo/水印的来源证据仍应随 owner 记录留档。三组资源池在 `src/data/home-media.ts` 中保持独立：
 
 | 资源池 | 数量 | 当前配置 |
 | ------ | ---: | -------- |
@@ -303,7 +303,7 @@ Saying 与 Trace 两个清单的并集恰好覆盖 54 个源文件且各自不�
 | `public/media/entrance-waterfall-poster.webp`      | 209,276 | `39d7ee3b42f3fb48d4d546973418bf564061c67a9549e6a98b738494febfd2a4` |
 | `public/media/entrance-waterfall-poster-mobile.webp` | 49,362 | `f946e566bfd85df014f7f8dc6a202d9f9832fb1bc7a734109cb6780e2ceafabf` |
 
-旧的 `entrance-loop*` / `entrance-poster.webp` 文件已从本候选删除，仅作为历史快照信息记录，不应与本候选的 waterfall 媒体混用；原件保存在发布隔离区，可按快照/bundle 恢复。上述新媒体的来源/公开权利仍按 `THIRD_PARTY_NOTICES.md` 待最终确认。
+旧的 `entrance-loop*` / `entrance-poster.webp` 文件已从本候选删除，仅作为历史快照信息记录，不应与本候选的 waterfall 媒体混用；原件保存在发布隔离区，可按快照/bundle 恢复。上述新媒体的 owner 决定已记录，来源/许可证据仍按 `THIRD_PARTY_NOTICES.md` 和 owner 记录留档。
 
 实现文件为 `src/data/entrance.ts`、`src/components/entrance/EntranceScene.astro`、`src/components/entrance/EntranceTypedText.astro` 和 `src/layouts/EntranceLayout.astro`。`HIST-ENTRANCE` 的场景、视频降级、页面可见性与键盘进入逻辑直接复用；必要差异为删除 `sessionStorage` 跳过、用 `location.replace()` 进入 `/home`、补充 `AbortController` 清理与缓存视频 `play()` 成功后的就绪状态。`XYX-TYPING` 的锁定文字参数以本地 `typed.js@2.1.0` 实现，版本和完整性见 §5.2。
 
@@ -398,4 +398,4 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 - Phase 5 的静态 SHA/产物检查和专业模块纯函数回归；浏览器回归结果随本阶段提交记录。
 - Phase 6 的 `BASE-FOOTER` 本地安全适配、noindex/sitemap/RSS 修复、生产产物审计、严格发布门禁和移动端目录浏览器回归。
 
-最终个人位置、头像、文案和真实内容仍按发布清单替换；在严格发布门禁通过且用户确认上线前，不得启用自动部署或将测试产物发布到 Pages。
+最终个人位置、头像、文案和真实内容的本轮决定已按 owner 工作单落地（93 个历史内容不恢复）；未来新增内容仍按发布清单逐项确认。在严格发布门禁通过且用户另行确认上线前，不得启用自动部署或将测试产物发布到 Pages。

@@ -6,7 +6,7 @@
 
 - 上游：`zhuozhiyongde/Arthals-Ink@15f5ad110af8ed8f38a1e506dd890d2d921f118f`。
 - 当前：本仓库当前提交的静态 `dist` 或生产预览。
-- 对照映射：上游 `/` 对当前 `/home`；其余 `/blog/`、文章详情、Blog 标签（当前 `/blog/tags`，上游 `/tags/`）、`/archives/`、`/search/`、`/about/` 与 `/links/` 一一对应。Trace/Saying 标签分别位于 `/traces/tags`、`/sayings/tags`，不参与跨类型对照。
+- 对照映射：上游 `/` 对当前 `/home`；其余 canonical 路径 `/blog`、文章详情、Blog 标签（当前 `/blog/tags`，上游 `/tags`）、`/archives`、`/search`、`/about` 与 `/links` 一一对应。当前候选采用 `trailingSlash: 'never'`，因此采集脚本使用无尾斜杠 URL；Trace/Saying 标签分别位于 `/traces/tags`、`/sayings/tags`，不参与跨类型对照。
 
 上游所用 Astro 5/Vite 在本机 Node 24 下会发生模块传输超时；这是上游工具链与当前运行时的兼容性问题，不是当前站点的构建错误。建立对照产物时使用隔离 Node 22：
 
@@ -27,6 +27,17 @@ bun run build
 3. 在当前仓库运行 `bun run capture:visual-baseline`。
 4. 打开 `artifacts/visual-baseline/manifest.json`，确认默认 7 个共享页面 × 4 个视口/主题 × 2 个站点 × 顶部/底部，共 **112** 张截图均已生成；如果通过 `VISUAL_CURRENT_BLOG_DETAIL_PATH` 和（可选的）GitHub 详情环境变量提供详情页，再按 manifest 中实际页面数核对（最多 9 页、144 张）。同时确认无意外运行时异常。
 5. 成对检查同名的 `upstream-*` 与 `current-*` 图片。未在下表登记的字号、间距、颜色、圆角、壳层布局、Header/Footer 结构或交互变化均应作为回归处理。
+
+本轮 2026-09-02 的本地执行记录为
+`E:\code\blog-susurrium-visual-baseline-final-20260902-1620`：manifest 报告
+`expectedCaptures=112`、`captures=56`、PNG 文件 112 张、运行时异常 0。代表性
+人工复核已查看当前 Home（桌面/移动、明色）、About（桌面/移动、明色）和
+Links（桌面/移动、明色），确认 Header、主内容、About 删除线语义、卡片布局、
+移动端折行和 Links 花瓣效果均有实际渲染，不是空壳或框架 404。manifest 中的
+11 条 browser resource error 只出现在 Links 页，来源是现有友链
+`www.george-blog.top` 的过期 TLS/连接关闭；这与 `links:check:dry` 已登记的单一
+外部 TLS 例外一致，不是本地应用运行时异常。完整线上发布视觉签字仍属于站长的
+发布授权边界。
 
 截图是复核证据而非提交物，默认位于被忽略的 `artifacts/` 路径。这样最终替换个人内容、题图、视频和音乐时，不会让包含测试身份或上游素材的二进制文件进入 Git 历史。
 
@@ -49,6 +60,8 @@ bun run build
 
 ## 发布前复核
 
-当前 release-prep 候选的截图仍只作为仓库外人工证据；提交后应在干净验证 worktree
-重新采集，并同时完成 `bun run ci`、`bun run links:check:dry` 与
-`bun run release:gate --strict`。只有截图复核、浏览器回归、严格发布门禁都通过，且用户明确授权发布，才可以开启 `main` 推送部署并修改 GitHub Pages 生产状态。
+当前 release-prep 候选的截图作为仓库外人工证据保留；本轮已在干净候选树对应的
+生产预览完成采集、代表性人工复核，并同时通过 `bun run ci`、
+`bun run links:check:dry` 与 `bun run release:gate --strict`。只有截图复核、
+浏览器回归、严格发布门禁都通过，且用户明确授权发布，才可以开启 `main` 推送
+部署并修改 GitHub Pages 生产状态。

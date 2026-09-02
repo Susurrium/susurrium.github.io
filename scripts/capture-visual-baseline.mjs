@@ -29,19 +29,19 @@ const outputDirectory = path.resolve(process.env.VISUAL_OUTPUT_DIR ?? 'artifacts
 
 const pagePairs = [
   { id: 'home', label: 'Home', upstreamPath: '/', currentPath: '/home' },
-  { id: 'blog-list', label: 'Blog list', upstreamPath: '/blog/', currentPath: '/blog' },
+  { id: 'blog-list', label: 'Blog list', upstreamPath: '/blog', currentPath: '/blog' },
   {
     id: 'blog-tags',
     label: 'Blog tags',
     // Arthals has one Blog taxonomy route; this project scopes it under the
     // Blog namespace and deliberately removes the old aggregate /tags route.
-    upstreamPath: '/tags/',
+    upstreamPath: '/tags',
     currentPath: '/blog/tags'
   },
-  { id: 'archives', label: 'Archives', upstreamPath: '/archives/', currentPath: '/archives' },
-  { id: 'search', label: 'Search', upstreamPath: '/search/', currentPath: '/search' },
-  { id: 'about', label: 'About', upstreamPath: '/about/', currentPath: '/about' },
-  { id: 'links', label: 'Links', upstreamPath: '/links/', currentPath: '/links' }
+  { id: 'archives', label: 'Archives', upstreamPath: '/archives', currentPath: '/archives' },
+  { id: 'search', label: 'Search', upstreamPath: '/search', currentPath: '/search' },
+  { id: 'about', label: 'About', upstreamPath: '/about', currentPath: '/about' },
+  { id: 'links', label: 'Links', upstreamPath: '/links', currentPath: '/links' }
 ]
 
 // Detail captures are content-dependent. Keep them opt-in so deleting all
@@ -210,18 +210,57 @@ async function evaluate(cdp, expression) {
   return result.result.value
 }
 
+async function waitForReadyDocument(cdp, { expectedUrl, previousTimeOrigin } = {}) {
+  const expected = expectedUrl ? new URL(expectedUrl) : undefined
+  const expectedPath = expected?.pathname.replace(/\/+$/, '') || expected?.pathname
+  const deadline = Date.now() + 20000
+  let lastState
+  while (Date.now() < deadline) {
+    try {
+      lastState = await evaluate(
+        cdp,
+        `({
+          href: location.href,
+          readyState: document.readyState,
+          timeOrigin: performance.timeOrigin
+        })`
+      )
+      const actual = new URL(lastState.href)
+      const actualPath = actual.pathname.replace(/\/+$/, '') || actual.pathname
+      const pathMatches = !expected || (actual.origin === expected.origin && actualPath === expectedPath)
+      const reloadCompleted =
+        previousTimeOrigin === undefined || lastState.timeOrigin !== previousTimeOrigin
+      if (
+        pathMatches &&
+        reloadCompleted &&
+        (lastState.readyState === 'interactive' || lastState.readyState === 'complete')
+      ) {
+        return lastState
+      }
+    } catch {
+      // The execution context can disappear briefly while Chromium commits a
+      // navigation. Retry until the new document is inspectable or the bound
+      // timeout below expires.
+    }
+    await delay(100)
+  }
+  throw new Error(
+    `Timed out waiting for document readiness${expectedUrl ? ` at ${expectedUrl}` : ''}` +
+      `${lastState ? ` (last state: ${JSON.stringify(lastState)})` : ''}`
+  )
+}
+
 async function navigate(cdp, url) {
-  const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
   const result = await cdp.call('Page.navigate', { url })
   if (result.errorText) throw new Error(`Could not navigate to ${url}: ${result.errorText}`)
-  await loaded
+  await waitForReadyDocument(cdp, { expectedUrl: url })
   await delay(350)
 }
 
 async function reload(cdp) {
-  const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
+  const previousTimeOrigin = await evaluate(cdp, 'performance.timeOrigin')
   await cdp.call('Page.reload', { ignoreCache: true })
-  await loaded
+  await waitForReadyDocument(cdp, { previousTimeOrigin })
   await delay(350)
 }
 
@@ -328,6 +367,9 @@ async function capturePage({ page, variant, side, rootUrl, pathname }) {
 
   try {
     await cdp.call('Page.enable')
+    // Chromium 152 no longer emits Page.loadEventFired by default. Enable
+    // lifecycle events before navigate/reload waits below.
+    await cdp.call('Page.setLifecycleEventsEnabled', { enabled: true })
     await cdp.call('Runtime.enable')
     await cdp.call('Log.enable')
     cdp.observe('Runtime.exceptionThrown', ({ exceptionDetails }) => {

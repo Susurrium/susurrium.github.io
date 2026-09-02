@@ -315,8 +315,11 @@ if (existsSync(distFile('home/index.html'))) {
   const profileSegment = segmentAfter(home, 'data-home-profile-intro', 'data-home-writing-grid')
   expect(
     profileSegment.includes('Developer / Designer / Blogger') &&
-      profileSegment.includes('你好，我是 Susurrium，目前在北京大学医学部学习。') &&
-      profileSegment.includes('我平时喜欢写代码、做设计，也常常因为好奇去折腾一些新工具和新想法。'),
+      profileSegment.includes('你好，我是 Susurrium，一个目前就读于北京大学医学部非典型医学牲。') &&
+      profileSegment.includes('<del>分化生化物化</del>药理药代药动') &&
+      profileSegment.includes('<del>完成CS231n 的 Assignment</del>查找loss 不下降原因时心态崩溃。') &&
+      profileSegment.includes('非常佩服A神，于是选择用相同的模版做了这个博客。') &&
+      profileSegment.includes('<del>那个夏天的</del>ow。'),
     'Home ProfileIntro renders the canonical About introduction copy'
   )
   expect(
@@ -395,8 +398,11 @@ if (existsSync(distFile('home/index.html'))) {
   const about = readDist('about/index.html')
   expect(
     about.includes('Developer / Designer / Blogger') &&
-      about.includes('你好，我是 Susurrium，目前在北京大学医学部学习。') &&
-      about.includes('我平时喜欢写代码、做设计，也常常因为好奇去折腾一些新工具和新想法。'),
+      about.includes('你好，我是 Susurrium，一个目前就读于北京大学医学部非典型医学牲。') &&
+      about.includes('<del>分化生化物化</del>药理药代药动') &&
+      about.includes('<del>完成CS231n 的 Assignment</del>查找loss 不下降原因时心态崩溃。') &&
+      about.includes('非常佩服A神，于是选择用相同的模版做了这个博客。') &&
+      about.includes('<del>那个夏天的</del>ow。'),
     'About renders the same canonical introduction copy as Home ProfileIntro'
   )
   expect(
