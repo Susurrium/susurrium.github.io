@@ -21,9 +21,9 @@
 | 项目 | 值 |
 | --- | --- |
 | 仓库 | `E:\code\blog_susurrium` |
-| 最终比较 HEAD | `9179f9559e09fe658eeecb4a1b7ece464453edb2` |
-| 最终 tree | `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` |
-| 最终提交父项 | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` |
+| 最终比较 HEAD | 以最终审计 `run.json` 的 `head.commitSha` 为准（见外部交付记录） |
+| 最终 tree | 以最终审计 `run.json` 的 `head.treeSha` 为准（见外部交付记录） |
+| 最终提交父项 | 以最终 bundle 和外部交付记录中的 `git log -1` 为准 |
 | 当前工作分支 | `develop` |
 | 对等发布分支 | `codex/release-prep` |
 | Git 版本 | `git version 2.54.0.windows.1` |
@@ -31,7 +31,7 @@
 | 审计输出目录（分类器版本 1，最终 HEAD 校验） | `E:\code\branch-state-audit-final-20260902-1115` |
 | 比较范围 | 所有可见 refs、reflog、提供的 bundles、两个外部快照；仓库全路径 |
 
-最终外部审计运行的 `run.json` 记录了 `refs=49`、`sourceRecords=483`、`states=76`、`uniqueTrees=72`、`pathRows=22680`、`fsckObjects=4316`、`snapshotEvidenceRecords=3523`、`sourceErrors=0`、`warnings=0`；路径分类器记录 `pathDecisions=935`、`unclassifiedPathDecisions=0`、`unclassifiedRuntimeCandidates=0`。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
+最终外部审计运行的 `run.json` 是 refs、source、state、tree、path、fsck、快照证据、分类、错误和警告计数的唯一权威；外部交付记录逐项保存该文件及每个 CSV 的 SHA-256。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
 
 ### 2.2 发现的来源
 
@@ -55,12 +55,12 @@
 
 | ref | commit | tree | 与当前 `HEAD` 的关系 |
 | --- | --- | --- | --- |
-| `develop` | `9179f9559e09fe658eeecb4a1b7ece464453edb2` | `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` | 当前工作分支 |
-| `codex/release-prep` | `9179f9559e09fe658eeecb4a1b7ece464453edb2` | `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` | 与 `develop` 完全同 commit/tree |
+| `develop` | 见最终审计 `run.json` 的 `head.commitSha` | 见最终审计 `run.json` 的 `head.treeSha` | 当前工作分支 |
+| `codex/release-prep` | 见最终审计 `run.json` 的 `head.commitSha` | 见最终审计 `run.json` 的 `head.treeSha` | 与 `develop` 完全同 commit/tree |
 | `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 本地 `develop` 领先 21 个提交；尚未 push |
 | `main` / `origin/main` | `15f5ad110af8ed8f38a1e506dd890d2d921f118f` | `1a5575efca76231469c9f3b50b773226d5fc7caa` | 旧线上基线；没有被本轮修改 |
 
-`git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit。`develop` 到当前远端基线的 21 个提交是本地整合、审计和验证工具链，不代表 21 个额外 topic 分支的独立贡献。
+`git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit；最终 commit/tree 和相对 `origin/develop` 的 ahead 数以最终交付记录为准。两分支之间的提交是本地整合、审计和验证工具链，不代表同数量的额外 topic 分支独立贡献。
 
 ### 3.2 旧 topic 分支、reflog 与不可达 commit
 
@@ -72,7 +72,7 @@ reflog 中可见的整合链为：
 c02c1ac → fa11c29 → 6fec4f8 → 23c6742 → 4ccd418 → 7b6c1ae
 → 4f35a38 → 84e023b → 53fb7bf → c1c1874 → bb494e6 → b5a584b
 → e6cce21 → 8b05952 → 5fabdb5 → a879563 → be416c8 → d48d8ff
-→ beaf2b3 → c829426 → 9179f95
+→ beaf2b3 → c829426 → 本次最终交付提交（完整 reflog 见审计 `refs.csv`）
 ```
 
 不可达的 15 个 commit 都是 `5fabdb5` 整合提交的 amend 版本，父项为 `8b05952`；没有发现隐藏的独立主题 commit。amend 历史仍可由 reflog/bundle 复核，但不应把早期 SHA 当作最终发布对象。
@@ -90,7 +90,7 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 | `46b579b64f2374886012f1998afbb3888c3ef35b` | 826 | 296 | 95 | Blog 86 / Trace 5 / Saying 4 | 8 | 长版仍在 |
 | `76300e78e6245b10b8de372e04cd3a5fa819c30d` | 984 | 354 | 150 | Blog 86 / Trace 25 / Saying 39 | 9 | 最丰富的已发现工作树 |
 | 整合前基线 `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` | 445 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 审计工具提交前的整合树 |
-| 最终 HEAD `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` | 447 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 最终发布准备树；增加审计/验证工具和文档 |
+| 最终 HEAD（tree 见最终审计 `run.json`） | 447 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 最终发布准备树；增加审计/验证工具和文档 |
 
 时间戳由 checkpoint ref 名称中的 Unix 毫秒值给出；上述关键点约对应北京时间 2026-08-29 至 2026-09-02。`76300e78…` 与整合前基线 tree `2667580f…` 的差异为：历史独有 568 条 state-path 行、当前独有 29 条、同路径内容变化 98 条；按独立路径归并后，历史独有候选为 150 个 content、404 个临时/产物、3 个 README 遗留截图、58 个运行时/运维项。
 
@@ -283,8 +283,9 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 | `E:\code\blog-susurrium-before-develop-sync-20260902-083331.bundle` | 147,590,541 | `3A475F3416A88D3ED977A288A45D2991936E1581109FC72532F3F4061CE84359` | develop 同步前，保留旧 develop |
 | `E:\code\blog-susurrium-history-audit-20260902-092106.bundle` | 147,590,797 | `06A0B0B3E3AF4B5AD9041D8B6BF60B41F5A10861B092454E62115F0F488D5BEA` | 历史审计期间 refs |
 | `E:\code\blog-susurrium-release-final-20260902-043328.bundle` | 147,590,311 | `36A7C0C6CD695826C1AE6184175225813C315CBE30E7F38ABCA1416C82E599D4` | 当前整合基线的既有封存；最终文档/工具提交后需重新生成新的 final bundle |
+| `E:\code\blog-susurrium-final-audit-20260902-1115.bundle` | 以外部交付记录为准 | 以外部交付记录为准 | 包含最终交付 commit/tree 的新增封存 |
 
-旧 bundle 不会因新提交失效；它们保存的是对应时刻的对象和 refs。最终交付时应追加一份带最终 commit/tree 的 bundle，而不是覆盖旧文件。
+旧 bundle 不会因新提交失效；它们保存的是对应时刻的对象和 refs。本次交付追加带最终 commit/tree 的 final bundle，而不是覆盖旧文件；其字节数、SHA-256 和 `git bundle verify` 输出见外部交付记录。
 
 ### 10.2 审计矩阵文件
 
@@ -320,7 +321,6 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 - Education 双学位/日期、旧教育经历和 TA 经历未确认；
 - 93 个真实历史内容尚未逐篇确认是否恢复、脱敏或永久不公开；
 - 图片、视频、二维码、外部链接和 Paralines 字体授权仍需证据；
-- 最终文档提交后仍需按第 10.2 节指定目录重跑矩阵，并把实际计数与 SHA-256 写入交付记录；
 - 若恢复任何候选内容，还必须重新执行相同的内容、隐私、授权和运行时门禁。
 
 在这些问题解决前，状态应写成“技术候选可复核，公开发布待站长确认”，不能标记为最终发布完成。
@@ -328,11 +328,11 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 ## 12. 后续执行顺序
 
 1. 保持 `develop` 与 `codex/release-prep` 同步，不在 `main` 或远端上操作。
-2. （工具和文档已提交）在最终 HEAD、两快照和四个旧 bundle 上，按第 10.2 节路径再跑一次审计，核对源文件哈希、分类计数与 `UNCLASSIFIED=0`，并保留新的最终输出目录。
+2. （本次交付执行）在最终 HEAD、两快照和四个旧 bundle 上，按第 10.2 节路径生成最终审计目录；实际 commit/tree、计数、分类、警告和 SHA-256 以 `run.json`、CSV 与外部交付记录为准。
 3. （已完成）文档已修正把旧 Blog/Trace/Saying 写成“已确认删除”的表述，并链接本报告。
 4. 请站长按第 7.4 节逐项给出 `KEEP` / `EDIT` / `REJECT`，优先处理 About、Education、Experience，再处理 93 篇历史内容。
 5. 仅恢复得到明确 `KEEP` 的路径，采用小批次提交和测试；不要整树 cherry-pick。
-6. （技术验证已完成）干净验证 worktree 已通过完整构建、测试、严格门禁和浏览器检查；最终 HEAD 仍需在文档提交后做轻量复核：`git diff --check`、`git diff --cached --check`、`git show --check HEAD`、状态和 bundle 校验。
+6. （技术验证已完成）干净验证 worktree 已通过完整构建、测试、严格门禁和浏览器检查；交付前执行 `git diff --check`、`git diff --cached --check`、`git show --check HEAD`、状态和 bundle 校验，并把结果留在外部交付记录。
 7. 生成带最终 commit/tree 的新 bundle，记录最终 commit/tree、审计输出文件 SHA-256 与 `git bundle verify` 结果；保留旧 bundle，最后才考虑删除已核对且无独有内容的旧分支。
 
 本报告的核心判定是：**历史完整性问题已经被证据化，About 的落后候选已经定位；剩下的是明确的内容所有者决策和最终可复现验证，而不是继续盲目寻找一个“神秘分支”。**
