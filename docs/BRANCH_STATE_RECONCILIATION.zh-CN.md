@@ -21,29 +21,29 @@
 | 项目 | 值 |
 | --- | --- |
 | 仓库 | `E:\code\blog_susurrium` |
-| 提交前比较 HEAD | `5fabdb5fd5fbdddc97f2b631ee68f5432bde5791` |
-| 提交前 tree | `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` |
-| 当前提交父项 | `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be` |
+| 最终比较 HEAD | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` |
+| 最终 tree | `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` |
+| 最终提交父项 | `beaf2b3ccf07bdab5a8da3e1bd928c1443c3325e` |
 | 当前工作分支 | `develop` |
 | 对等发布分支 | `codex/release-prep` |
 | Git 版本 | `git version 2.54.0.windows.1` |
 | 审计工具 | `scripts/branch-state-audit.mjs`（只读扫描；不 checkout、reset、clean 或写入索引） |
-| 审计输出目录（分类器版本 1，提交前校验） | `E:\code\branch-state-audit-20260902-100215-classified-v2` |
+| 审计输出目录（分类器版本 1，最终 HEAD 校验） | `E:\code\branch-state-audit-final-20260902-1115` |
 | 比较范围 | 所有可见 refs、reflog、提供的 bundles、两个外部快照；仓库全路径 |
 
-当前外部审计运行的 `run.json` 记录了 `refs=49`、`sourceRecords=442`、`states=69`、`uniqueTrees=67`、`pathRows=22340`、`fsckObjects=4315`、`snapshotEvidenceRecords=3523`、`sourceErrors=0`、`warnings=0`；路径分类器记录 `pathDecisions=933`、`unclassifiedPathDecisions=0`、`unclassifiedRuntimeCandidates=0`。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
+最终外部审计运行的 `run.json` 记录了 `refs=49`、`sourceRecords=477`、`states=75`、`uniqueTrees=71`、`pathRows=22674`、`fsckObjects=4316`、`snapshotEvidenceRecords=3523`、`sourceErrors=0`、`warnings=0`；路径分类器记录 `pathDecisions=935`、`unclassifiedPathDecisions=0`、`unclassifiedRuntimeCandidates=0`。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
 
 ### 2.2 发现的来源
 
 审计同时读取了三类来源：
 
-- **Git refs / reflog**：3 个本地分支、3 个 `origin` refs、1 个 tag、115 条 reflog 记录，以及工作流检查点 refs。
+- **Git refs / reflog**：3 个本地分支、3 个 `origin` refs、1 个 tag、150 条 reflog 记录，以及工作流检查点 refs。
 - **冻结快照**：
   - `E:\code\release-prep-snapshot-20260902-021211`：冻结时 HEAD 为 `8b05952`；记录 staged 9 项、unstaged 199 项、untracked 2959 项。快照中的 `untracked.txt` 共 175,485 bytes，SHA-256 为 `84046F7BCAD6E22B29FB94F917A994039AF08ACC1F1C65466B65CD293F4EDBF5`；`snapshot.json` SHA-256 为 `2FCF7C423C35C7AA31E6CBBA17F302A96CD7F1151F09E7D8D17E687FA14A7BA3`。
   - `E:\code\develop-sync-snapshot-20260902-083331`：记录 `develop` 从 `86ef868` 本地快进到 `5fabdb5`，没有 push、merge 到 `main`、部署或历史改写；`RESULT.md` SHA-256 为 `A0612672663FCB9E6247B686E7EA21C5BD08DEC30663A2089F7C96299B58497F`。
 - **完整 bundle**：均已 `git bundle verify` 通过，保留在仓库外，不应删除或覆盖（哈希见第 10 节）。
 
-`fsck --full --no-reflogs --unreachable` 发现 4,315 个对象，其中 15 个不可达 commit、881 个 tree、3,419 个 blob。默认审计只把不可达 commit 纳入 state；内部 subtree tree 作为对象清单保留，不把 881 个目录节点误当成 881 个独立版本。若要逐个检视 subtree，应先由路径所属的可达 commit/tree 定位，不能把孤立 tree 当作产品意图。
+`fsck --full --no-reflogs --unreachable` 的最终运行发现 4,316 个对象，其中 15 个不可达 commit、881 个 tree、3,420 个 blob。默认审计只把不可达 commit 纳入 state；内部 subtree tree 作为对象清单保留，不把 881 个目录节点误当成 881 个独立版本。若要逐个检视 subtree，应先由路径所属的可达 commit/tree 定位，不能把孤立 tree 当作产品意图。
 
 ### 2.3 上游边界
 
@@ -55,12 +55,12 @@
 
 | ref | commit | tree | 与当前 `HEAD` 的关系 |
 | --- | --- | --- | --- |
-| `develop` | `5fabdb5fd5fbdddc97f2b631ee68f5432bde5791` | `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` | 当前工作分支 |
-| `codex/release-prep` | `5fabdb5fd5fbdddc97f2b631ee68f5432bde5791` | `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` | 与 `develop` 完全同 commit/tree |
-| `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 本地 `develop` 领先 15 个提交；尚未 push |
+| `develop` | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` | `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` | 当前工作分支 |
+| `codex/release-prep` | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` | `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` | 与 `develop` 完全同 commit/tree |
+| `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 本地 `develop` 领先 20 个提交；尚未 push |
 | `main` / `origin/main` | `15f5ad110af8ed8f38a1e506dd890d2d921f118f` | `1a5575efca76231469c9f3b50b773226d5fc7caa` | 旧线上基线；没有被本轮修改 |
 
-`git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit。`develop` 到当前基线的 15 个提交是本地整合链，不代表 15 个额外 topic 分支的独立贡献。
+`git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit。`develop` 到当前远端基线的 20 个提交是本地整合、审计和验证工具链，不代表 20 个额外 topic 分支的独立贡献。
 
 ### 3.2 旧 topic 分支、reflog 与不可达 commit
 
@@ -71,7 +71,8 @@ reflog 中可见的整合链为：
 ```text
 c02c1ac → fa11c29 → 6fec4f8 → 23c6742 → 4ccd418 → 7b6c1ae
 → 4f35a38 → 84e023b → 53fb7bf → c1c1874 → bb494e6 → b5a584b
-→ e6cce21 → 8b05952 → 5fabdb5
+→ e6cce21 → 8b05952 → 5fabdb5 → a879563 → be416c8 → d48d8ff
+→ beaf2b3 → c829426
 ```
 
 不可达的 15 个 commit 都是 `5fabdb5` 整合提交的 amend 版本，父项为 `8b05952`；没有发现隐藏的独立主题 commit。amend 历史仍可由 reflog/bundle 复核，但不应把早期 SHA 当作最终发布对象。
@@ -88,9 +89,10 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 | `54ebb1f69515a793f21530dcc0c53bdff9037f30` | 819 | 296 | 95 | Blog 86 / Trace 5 / Saying 4 | 7 | 个人资料长版首次可核对 |
 | `46b579b64f2374886012f1998afbb3888c3ef35b` | 826 | 296 | 95 | Blog 86 / Trace 5 / Saying 4 | 8 | 长版仍在 |
 | `76300e78e6245b10b8de372e04cd3a5fa819c30d` | 984 | 354 | 150 | Blog 86 / Trace 25 / Saying 39 | 9 | 最丰富的已发现工作树 |
-| 当前 `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` | 445 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 当前发布候选 |
+| 整合前基线 `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` | 445 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 审计工具提交前的整合树 |
+| 最终 HEAD `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` | 447 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 最终发布准备树；增加审计/验证工具和文档 |
 
-时间戳由 checkpoint ref 名称中的 Unix 毫秒值给出；上述关键点约对应北京时间 2026-08-29 至 2026-09-02。`76300e78…` 与当前树的差异为：历史独有 568 条 state-path 行、当前独有 29 条、同路径内容变化 98 条；按独立路径归并后，历史独有候选为 150 个 content、404 个临时/产物、3 个 README 遗留截图、58 个运行时/运维项。
+时间戳由 checkpoint ref 名称中的 Unix 毫秒值给出；上述关键点约对应北京时间 2026-08-29 至 2026-09-02。`76300e78…` 与整合前基线 tree `2667580f…` 的差异为：历史独有 568 条 state-path 行、当前独有 29 条、同路径内容变化 98 条；按独立路径归并后，历史独有候选为 150 个 content、404 个临时/产物、3 个 README 遗留截图、58 个运行时/运维项。
 
 这条时间线支持“有历史候选被裁掉”的担心，但不支持“某个分支有一个未合并的完整新功能”这一更强断言。必须继续按路径和功能边界审阅。
 
@@ -98,12 +100,12 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 
 ### 5.1 机器矩阵的读法
 
-审计归并出 933 个独立路径：
+最终审计归并出 935 个独立变化路径决定：
 
 | 独立路径状态 | 数量 | 含义 |
 | --- | ---: | --- |
 | `CHANGED` | 172 | 当前和历史都存在，但 blob/mode 不同；通常是架构演进，需检查是否有语义回退 |
-| `CURRENT_MISSING` | 270 | 当前树新增、历史树没有；通常是当前架构、测试或文档的新增 |
+| `CURRENT_MISSING` | 272 | 当前树新增、历史树没有；通常是当前架构、测试或文档的新增 |
 | `HISTORICAL_MISSING` | 615 | 历史树有、当前树没有；只是候选，不是自动恢复或自动删除结论 |
 
 124 个路径在不同 state 中同时出现多个状态（例如先存在、后被重命名或再次新增），所以三类数字不能简单相加当作互斥文件数。完整 blob/mode/state 证据在 `path-diffs.csv`，来源别名在 `refs.csv`，state 去重在 `states.csv`。
@@ -120,11 +122,11 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 | `REJECT_SUPERSEDED_RUNTIME` | 24 | 当前有明确替代实现；除非发现行为回归，不恢复旧文件 | 20 个旧组件、4 个旧页面 |
 | `REJECT_UNUSED_ASSET` / `REJECT_SIDE_EFFECT_WORKFLOW` / `REJECT_GENERATED_STATE` | 34 | 无当前引用、旧媒体或有副作用的自动写回；外部保留 | 21 个旧工具 SVG、4 个旧项目 JPG、7 个旧 public/media 资源、1 个 link workflow、1 个 `scripts/link-health.json`（合计按文件归并为 34） |
 
-上表合计 615。审计工具已输出 `path-decisions.csv`，把每个独立路径映射到上述类别；提交前校验的 `UNCLASSIFIED=0`。最终提交后会再次运行同一命令并以最终 `run.json` 为准。若后续出现无法归类的路径，发布门禁应停止，而不是把它默认为删除。
+上表合计 615。审计工具已输出 `path-decisions.csv`，把每个独立路径映射到上述类别；最终 HEAD 校验的 `UNCLASSIFIED=0`。由于最终审计文档本身也属于当前树，路径决定数会随提交树变化；交付时以本文指定的最终输出目录中的 `run.json`、CSV 和哈希为唯一权威。若后续出现无法归类的路径，发布门禁应停止，而不是把它默认为删除。
 
 ### 5.3 当前独有和同路径变化
 
-- 270 个 `CURRENT_MISSING` 主要是当前的新布局、动态路由、数据模型、测试、文档和生产资源；它们按当前 import/测试引用确认后保留。
+- 272 个 `CURRENT_MISSING` 主要是当前的新布局、动态路由、数据模型、测试、文档和生产资源；它们按当前 import/测试引用确认后保留。
 - 172 个 `CHANGED` 主要是同一路径在重构中的内容或配置变化；应以当前实现为候选，并对个人事实、外部链接和授权单独审阅。
 - 当前代码没有引用被列为旧 runtime 的路径；运行 `rg`/构建检查应继续作为门槛，防止误删后出现隐式 glob 或动态 import 依赖。
 
@@ -264,7 +266,7 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 
 在提交前必须同时满足：
 
-- `path-decisions.csv` 覆盖所有 933 个独立路径；`UNCLASSIFIED=0`。
+- `path-decisions.csv` 覆盖最终审计发现的 935 个独立变化路径决定；`UNCLASSIFIED=0`。
 - 真实内容、个人事实、外部资源和字体授权均有 owner 决定；未确认项不进入 index。
 - `git diff --check`、`git diff --cached --check`、`git show --check HEAD` 全部无输出。
 - 干净临时 worktree 重新安装依赖并运行 build、Astro check、全部测试、dry-run link check、严格发布门禁和浏览器生命周期脚本。
@@ -286,29 +288,29 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 
 ### 10.2 审计矩阵文件
 
-目录 `E:\code\branch-state-audit-20260902-100215-classified-v2` 中的文件职责如下：
+最终 HEAD（含本报告最后一次修订）的机器矩阵输出目录固定为 `E:\code\branch-state-audit-final-20260902-1115`；运行命令、版本、计数、分类和警告写入其中的 `run.json`。文件职责如下：
 
-| 文件 | 内容 | 当前 SHA-256 |
-| --- | --- | --- |
-| `report.md` | 人类可读 state/source/分类摘要 | `A81A532DD02C30F9C96F48EFD31AB98DE5ACA9B2B2E86C8BDE96F0D4CEC1D4EB` |
-| `run.json` | 命令、版本、计数、分类、警告 | `575A60E0CBD1DE43DAFB56222B7E104B103FD5DBD47933F8B0904F4BD0C311FF` |
-| `refs.csv` | 每个 ref/source alias 的 commit/tree 解析 | `8A56BBAE232F8BD8721C6849CD68C702DB804CF3460816B979206188F9549914` |
-| `states.csv` | 去重后的 commit/tree state | `883879A5321ACB55BF72BC19A779644BF0C710EDA151D9A31D5CCBDEBA0E3ACE` |
-| `path-diffs.csv` | 每个变化路径的 blob/mode/status | `37C3486F5622EB701BECB5AA67F6F96EA15539C2DA0CD3516E4AB699877BFC0A` |
-| `unreachable.csv` | fsck 对象清单 | `B749C2EC29432700A30918FC6905483C2370A580CA9753B2F7DF394E41483D77` |
-| `sources.csv` | bundle/快照来源和哈希 | `7AC69F41E1DDA2177483F3F469AE78CA5D1231D49225631E3617B0DC3D8DCA17` |
-| `path-decisions.csv` | 每个独立变化路径的分类/决策/理由 | `36B45199596D6BC68BF99EA0176599E34F2D00A1E656B1167F5CA338613BD1A4` |
-| `snapshot-evidence.csv` | 快照中的 status/untracked/patch 路径记录 | `AA8B52957C8B55F23770F7A848A23E8450BE321EA790E8AC38A8917DB0A8316B` |
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 人类可读 state/source/分类摘要 |
+| `run.json` | 命令、版本、计数、分类、警告 |
+| `refs.csv` | 每个 ref/source alias 的 commit/tree 解析 |
+| `states.csv` | 去重后的 commit/tree state |
+| `path-diffs.csv` | 每个变化路径的 blob/mode/status |
+| `unreachable.csv` | fsck 对象清单 |
+| `sources.csv` | bundle/快照来源和哈希 |
+| `path-decisions.csv` | 每个独立变化路径的分类/决策/理由 |
+| `snapshot-evidence.csv` | 快照中的 status/untracked/patch 路径记录 |
 
-这些哈希对应本报告编写时的外部运行；脚本加入路径分类器、文档最终提交或 HEAD 改变后，必须重新运行并在交付记录中替换为新哈希，避免把旧计数冒充最终证据。
+最终输出文件的 SHA-256 以交付记录中对该目录的逐项计算为准；此前 `branch-state-audit-20260902-100215-classified-v2` 等目录只作为过程证据保留，不得拿其旧计数代替最终 HEAD 结果。
 
 ## 11. 验证状态和当前阻塞
 
 ### 11.1 已有技术验证证据
 
-`develop-sync-snapshot-20260902-083331/RESULT.md` 记录在当时整合树上通过：直接 Astro build（21 pages、Pagefind 5 pages/126 words）、Astro check（181 files、0 diagnostics）、11 个测试文件（75 tests、317 expects、0 failures）、asset budget（248 dist files、31.25 MiB、0 failures）、`links:check:dry`（9 个 HTTP 200，`www.george-blog.top` 一个已登记 TLS 例外）、`release:gate --strict`、`verify:phase6:browser` 和 `verify:browser:lifecycle`（0 failures/0 console errors）。
+`develop-sync-snapshot-20260902-083331/RESULT.md` 记录了整合树上的早期通过证据；随后在最终提交候选的干净 detached worktree 中又实际复核了完整链路：`bun install --frozen-lockfile` 成功；`bun run check` 为 0 diagnostics（182 files）；`bun run test:all` 为 75 tests / 317 expects / 0 failures；`bun run build` 通过（21 pages，Pagefind 5 pages / 126 words）；`bun run links:check:dry` 为 9 个 HTTP 200，`www.george-blog.top` 的 TLS 错误按既有规则登记为例外；`bun run release:gate --strict`、`bun run check:assets`（248 dist files、31.25 MiB、0 failures）和 `bun run ci` 均以退出码 0 完成。asset budget 的 12 条大图提示是 advisory，不是失败。
 
-但这份记录对应的是旧的整合树，不能替代最终文档/工具提交后的 clean-worktree 重跑。`bun run ci` 在本机曾遇到 Node → Bun → Astro 子进程在 `Building static entrypoints` 停止输出的 Windows launcher 问题；直接 Astro 和 CI 等价步骤通过，不能把 launcher 现象写成 package-level `ci` 已通过。最终交付必须记录实际命令、退出码和环境限制。
+生产 preview 上的浏览器复核也已完成：`bun run verify:phase6:browser` 与 `bun run verify:browser:lifecycle` 均为 0 failures、0 runtime exceptions/console errors，覆盖空 Blog、Trace/Saying taxonomy、搜索过滤、暗色 Home、入口动画、音乐状态持久化、About/Links、Saying detail、search 和 reduced-motion。仓库没有 `agent-browser` 可执行文件，因此按浏览器验证 skill 的目标使用本机 Chrome DevTools Protocol 脚本完成；Chrome 152 不发出旧的 `Page.loadEventFired`，脚本已改为等待启用后的 lifecycle `load` 事件，这一兼容性修复已纳入审计提交。
 
 ### 11.2 尚未解除的阻塞
 
@@ -318,19 +320,19 @@ git show 76300e78e6245b10b8de372e04cd3a5fa819c30d:src/content/blog/<slug>.md
 - Education 双学位/日期、旧教育经历和 TA 经历未确认；
 - 93 个真实历史内容尚未逐篇确认是否恢复、脱敏或永久不公开；
 - 图片、视频、二维码、外部链接和 Paralines 字体授权仍需证据；
-- 最终提交后仍需在最终 HEAD 上重跑矩阵并确认 `UNCLASSIFIED=0`；
-- 文档中任何“已确认删除”或“CI 已通过”的旧表述必须与新证据一致。
+- 最终文档提交后仍需按第 10.2 节指定目录重跑矩阵，并把实际计数与 SHA-256 写入交付记录；
+- 若恢复任何候选内容，还必须重新执行相同的内容、隐私、授权和运行时门禁。
 
 在这些问题解决前，状态应写成“技术候选可复核，公开发布待站长确认”，不能标记为最终发布完成。
 
 ## 12. 后续执行顺序
 
 1. 保持 `develop` 与 `codex/release-prep` 同步，不在 `main` 或远端上操作。
-2. （已完成提交前校验）审计脚本已输出 `path-decisions.csv`；最终提交后在最终 HEAD、两快照和四个 bundle 上再跑一次，核对源文件哈希与 `UNCLASSIFIED=0`。
+2. （工具和文档已提交）在最终 HEAD、两快照和四个旧 bundle 上，按第 10.2 节路径再跑一次审计，核对源文件哈希、分类计数与 `UNCLASSIFIED=0`，并保留新的最终输出目录。
 3. （已完成）文档已修正把旧 Blog/Trace/Saying 写成“已确认删除”的表述，并链接本报告。
 4. 请站长按第 7.4 节逐项给出 `KEEP` / `EDIT` / `REJECT`，优先处理 About、Education、Experience，再处理 93 篇历史内容。
 5. 仅恢复得到明确 `KEEP` 的路径，采用小批次提交和测试；不要整树 cherry-pick。
-6. 在干净验证 worktree 运行完整构建、测试、严格门禁和浏览器检查；通过后检查 staged 清单、`git diff --check` 与 ignored 状态。
-7. 生成最终 bundle、记录最终 commit/tree/SHA-256；保留旧 bundle，最后才考虑删除已核对且无独有内容的旧分支。
+6. （技术验证已完成）干净验证 worktree 已通过完整构建、测试、严格门禁和浏览器检查；最终 HEAD 仍需在文档提交后做轻量复核：`git diff --check`、`git diff --cached --check`、`git show --check HEAD`、状态和 bundle 校验。
+7. 生成带最终 commit/tree 的新 bundle，记录最终 commit/tree、审计输出文件 SHA-256 与 `git bundle verify` 结果；保留旧 bundle，最后才考虑删除已核对且无独有内容的旧分支。
 
 本报告的核心判定是：**历史完整性问题已经被证据化，About 的落后候选已经定位；剩下的是明确的内容所有者决策和最终可复现验证，而不是继续盲目寻找一个“神秘分支”。**
