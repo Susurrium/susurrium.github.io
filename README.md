@@ -2,7 +2,7 @@
 
 Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongde/Arthals-Ink) 的真实 Fork 开发。站点主体延续 Arthals 的视觉与架构，并在独立开发阶段接入已确认的入口动画、三类内容、三类卡片和装饰效果。
 
-当前状态：`codex/release-prep` 正在固化为可审计的本地候选基线。当前候选可在空 Blog/Trace 集合下构建，尚未对外上线；素材权利、个人资料和最终内容仍需站长单独确认。
+当前状态：`codex/release-prep` 正在固化为可审计的本地候选基线（目前与 `develop` 同一提交）。当前候选可在空 Blog/Trace 集合下构建，尚未对外上线；素材权利、个人资料和最终内容仍需站长单独确认。历史分支、checkpoint 与工作树的逐路径对账见 [分支/检查点对账报告](./docs/BRANCH_STATE_RECONCILIATION.zh-CN.md)。
 
 ## 锁定基线
 
@@ -29,7 +29,7 @@ bun run dev
 bun run ci
 ```
 
-`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、全部 `test/` 测试、发布就绪审计和资源体积检查。当前候选的 Blog/Trace 目录可以为空，旧上游文章已从候选树移除并保存在仓库外快照中。`bun run release:gate --strict` 必须在新构建后运行；它按最终渲染 DOM 检查 SEO、资源、旧身份和未登记外部媒体。
+`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、全部 `test/` 测试、发布就绪审计和资源体积检查。当前候选的 Blog/Trace 目录可以为空；历史文章暂未纳入当前发布树，但仍保存在仓库外快照/bundle 中，是否恢复须按对账报告逐篇确认。`bun run release:gate --strict` 必须在新构建后运行；它按最终渲染 DOM 检查 SEO、资源、旧身份和未登记外部媒体。
 
 ## 分支
 

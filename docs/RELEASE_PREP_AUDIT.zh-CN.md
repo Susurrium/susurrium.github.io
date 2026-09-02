@@ -1,6 +1,6 @@
 # Release-prep 候选树审计记录
 
-> 本文件记录 `codex/release-prep` 的本地发布准备候选，不代表已经获得线上发布授权。候选树可以构建、测试和复核，但在个人资料、素材权利、公开位置粒度和内容取舍完成最终确认前，不得推送或部署。
+> 本文件记录 `codex/release-prep` 的本地发布准备候选，不代表已经获得线上发布授权。候选树可以构建、测试和复核，但在个人资料、素材权利、公开位置粒度和内容取舍完成最终确认前，不得推送或部署。历史分支、checkpoint 与工作树的完整对账以 [BRANCH_STATE_RECONCILIATION.zh-CN.md](./BRANCH_STATE_RECONCILIATION.zh-CN.md) 为准；本文件中的旧数量或早期措辞不得解释为站长已确认删除内容。
 
 ## 1. 范围与不可变边界
 
@@ -8,14 +8,15 @@
 | --- | --- |
 | 项目目录 | `E:\\code\\blog_susurrium` |
 | 候选分支 | `codex/release-prep` |
-| 工作树基线 | `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be` (`fix: load MapLibre public bundle as a script`) |
+| 当前比较基线 | `5fabdb5fd5fbdddc97f2b631ee68f5432bde5791` (`chore: consolidate local project into release baseline`) |
+| 历史整理起点 | `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be` (`fix: load MapLibre public bundle as a script`) |
 | 远端操作 | 本轮不 push、不 merge、不部署、不修改 Pages 设置 |
 | 历史操作 | 未对 `main`、`develop` 或工作树基线做 reset/clean/历史改写；候选分支整理期间曾多次 amend，最终 SHA 以交付时记录为准；原始分支先核对再决定是否删除 |
 | 可恢复快照 | `E:\\code\\release-prep-snapshot-20260902-021211` 与 `E:\\code\\blog-susurrium-before-release-20260902-021211.bundle` |
 | 临时隔离区 | `E:\\code\\release-prep-quarantine-20260902-021422` |
-| 最终候选封存 | `E:\\code\\blog-susurrium-release-final-20260902-043328.bundle`（最终 SHA 固定后生成并用 `git bundle verify` 校验） |
+| 既有候选封存 | `E:\\code\\blog-susurrium-release-final-20260902-043328.bundle`（历史候选证据；本次对账完成后须重新生成最终 bundle） |
 
-快照包含工作树二进制补丁、索引补丁、未跟踪路径清单、分支/工作树记录和完整 bundle。隔离区中的文件没有被删除；需要复核时按快照中的相对路径恢复即可。原始 85 篇 Blog、5 篇 Trace、3 篇旧 Saying 和 4 个旧聚合路由的删除只影响候选树，不会抹除 Git 历史。
+快照包含工作树二进制补丁、索引补丁、未跟踪路径清单、分支/工作树记录和完整 bundle。隔离区中的文件没有被删除；需要复核时按快照中的相对路径恢复即可。历史快照中出现的 85 篇 Blog、5 篇 Trace、3 篇旧 Saying 以及后续 checkpoint 中出现的更多内容，均只表示“曾存在于候选状态”，不表示已经获得永久删除或不公开的确认；它们仍由外部快照/bundle 保留。
 
 候选分支在整理过程中为修正文档与门禁实现曾多次 amend；早期候选提交仍可通过该分支 reflog 恢复；表中初始快照/bundle 用于恢复候选前的基线与原始工作树，最终候选由表中单独列出的最终 bundle 封存。本记录不把“候选分支提交对象未保持不变”表述为受保护历史未被改写；最终可审计对象以本次交付时的 commit/tree SHA 为准。未执行 `git gc` 或 Git 对象 prune；验证 worktree 移除后仅执行了 `git worktree prune` 清理失效登记信息。
 
@@ -25,28 +26,29 @@
 
 - 当前页面实际 import 的 Astro 组件、布局、路由、数据、样式和运行时脚本。
 - `src/content/blog/.gitkeep` 与 `src/content/traces/.gitkeep`：空集合是受测试覆盖的正式状态；Blog/Trace 页面保留空状态、导航和 RSS 边界。
-- 5 篇当前 Saying 内容。出处不确定的短句在正文中保留明确说明，不把说明伪装成确定的作者事实。
+- 5 篇当前 Saying 候选内容。出处不确定的短句在正文中保留明确说明，不把说明伪装成确定的作者事实；上线前仍需站长确认公开范围。
 - 生产引用的入口视频/海报、54 张 Home WebP、`tracer-companion.webp`、`social-card.webp`、实际使用的工具 SVG 和当前 favicon/头像/二维码。它们的来源与公开再分发权仍由站长在发布前逐项确认。
 - `AbrilFatface-Regular.ttf` 及随附的 SIL OFL 文本；`Paralines-Regular.otf` 也暂纳入以保持当前视觉可重建，但在 `THIRD_PARTY_NOTICES.md` 标为发布阻断的权利复核项。
 - 全部 11 个 `test/*.test.ts`；`test:all` 已成为 `bun run ci` 的统一测试门槛。
 - 卡片/ Hero 裁剪工作台源代码作为受支持的内部开发工具纳入（路由不在导航和 sitemap 中）。它不是安全边界；若不希望公开访问，部署前应从发布产物中移除或增加访问控制。生成的截图、预览和浏览器草稿不纳入。
-- 工作台生成的 `src/content/sayings/card-preview-saying-*.md` 与 `src/content/traces/card-preview-trace-*.md` 仅用于临时填充真实卡片；已加入根限定 `.gitignore`，但忽略规则不是清理措施，审阅完成后仍须移出。
+- 工作台生成的 `src/content/sayings/card-preview-saying-*.md` 与 `src/content/traces/card-preview-trace-*.md` 仅用于临时填充真实卡片；已加入根限定 `.gitignore`，但忽略规则不是清理措施，审阅完成后仍须移出。它们与 `draft-*` 属于可明确拒绝进入发布树的生成/草稿文件；其余历史内容必须走下方的站长确认流程。
 
 ### 候选树中明确排除但保留在隔离区
 
 - `.github/workflows/check-links.yml`：原文件包含每日 schedule、`contents: write`、自动 commit/push，与本轮“手动、可审计、无自动写回”边界冲突。
 - `scripts/link-health.json`：运行生成的状态快照；保留 `scripts/check-links.mjs` 作为人工工具，验证时只用 `links:check:dry`。
-- `public/images/social-card.png`、旧 `entrance-loop*`/`entrance-poster.webp` 和未被 About 引用的旧工具图标：当前代码没有引用；候选已删除，原文件按相对路径保存在隔离区 `unused-assets-before-remove/`，可从 bundle/快照恢复。
-- 上游遗留的 4 张项目测试图与 `public/images/RDFZ.svg`：只服务于已停用的旧首页组件/宽 glob，不属于当前 Projects/Education 页面；候选已删除，`scripts/asset-budget-legacy.json` 已清空旧的临时豁免条目。已被新首页替换且无活动引用的 `LegacyHome.astro` 及其 `ProjectCard`、`Section`、`SkillLayout` 配套死组件也从候选移除；原件已在隔离区留存并可由快照/bundle 恢复。
+- `public/images/social-card.png`、旧 `entrance-loop*`/`entrance-poster.webp` 和未被 About 引用的旧工具图标：当前代码没有引用；本候选暂不纳入，原文件按相对路径保存在隔离区 `unused-assets-before-remove/`，可从 bundle/快照恢复。是否重新使用仍需素材来源/权利复核。
+- 上游遗留的 4 张项目测试图与 `public/images/RDFZ.svg`：只服务于已停用的旧首页组件/宽 glob，不属于当前 Projects/Education 页面；本候选暂不纳入，`scripts/asset-budget-legacy.json` 已清空旧的临时豁免条目。已被新首页替换且无活动引用的 `LegacyHome.astro` 及其 `ProjectCard`、`Section`、`SkillLayout` 配套死组件也从候选移除；原件已在隔离区留存并可由快照/bundle 恢复。
 - `.github/assets/body.webp`、`header.webp`、`lighthouse-score.png`：来自上游 README 的历史截图（原始来源 commit `fd5a9cd`），当前 README 已不再引用，也不是站点构建资源；候选已移出并保存在隔离区 `historical-readme-assets-before-remove/`，可由快照/bundle 恢复。
 - 根目录截图、浏览器 profile、临时 HTML/日志、`.tmp-*`、卡片/ Hero 预览、头像缓存和所有构建/视觉产物。已有 `artifacts/`、`dist-*`、`dist/` 与 `.astro/` 输出已整体移至隔离区的 `artifacts-before-remove/`、`dist-outputs-before-remove/` 和 `astro-cache-final-before-remove/`；构建输出仍可在本机生成，但不进入 Git。仅为依赖安装保留的 `node_modules/` 仍是根目录忽略缓存。
 
-### 有意从候选内容中移除
+### 暂不纳入候选、等待逐项确认
 
-- 旧上游 Blog 85 篇、旧 Trace 5 篇、旧 Saying 3 篇：这些文件含个人邮箱、本地路径或基础设施痕迹，当前站点没有运行时依赖。它们的原始内容可从 bundle 和快照恢复；若未来要重新公开，必须另行逐篇审阅和脱敏。
-- 旧 `/tags` 聚合路由、旧 Saying/Trace index 路由：已由按 collection 作用域的分页和标签路由替代；本候选不提供旧 URL redirect。
-- 已被新首页完全替换、无活动 import 的旧首页组件：`src/components/home/LegacyHome.astro`、`ProjectCard.astro`、`Section.astro`、`SkillLayout.astro`。删除前的校验副本位于隔离区 `legacy-components-before-remove/`。
 
+- 历史状态中的 86 篇 Blog、25 篇 Trace、39 篇 Saying（其中一部分是 `card-preview-*` 或 `draft-*`）是内容候选，不是临时文件的同义词。当前工作树保留 5 篇当前 Saying 候选；其余真实正文标记为 `USER_CONFIRM_CONTENT`，在站长逐篇确认公开范围、隐私、许可和元数据前，不恢复到发布树。删除当前候选中的文件不等于从 Git 历史脱敏或永久删除。
+- `card-preview-*` 与 `draft-*` 生成/草稿文件可直接拒绝进入发布树，但仍以外部快照/bundle 作为可追溯证据。
+- 旧 `/tags` 聚合路由、旧 Saying/Trace index 路由：已由按 collection 作用域的分页和标签路由替代；这是运行时架构替代，不代表相关历史内容被判定为不公开。本候选不提供旧 URL redirect，除非另行批准兼容策略。
+- 已被新首页完全替换、无活动 import 的旧首页组件：`src/components/home/LegacyHome.astro`、`ProjectCard.astro`、`Section.astro`、`SkillLayout.astro`。这是当前架构的 superseded runtime 决定；删除前的校验副本位于隔离区 `legacy-components-before-remove/`。
 ## 3. 安全、隐私与权利边界
 
 - Residence 候选仅公开北京城市级坐标（39.9, 116.4），并在数据与测试中锁定 `publicPrecision: 'city'`；不会把约 10 米级坐标写入新的候选提交。更细粒度坐标、文案和头像必须由站长明确批准。

@@ -4,9 +4,9 @@
 
 ## 当前 release-prep 候选（2026-09-02）
 
-- 分支：`codex/release-prep`；工作树基线：`8b05952ca54ca32843cdbbcc2f815b6d61a5a9be`。
+- 分支：`codex/release-prep`（当前与 `develop` 同一提交）；当前基线：`5fabdb5fd5fbdddc97f2b631ee68f5432bde5791`；历史整理起点为 `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be`。
 - 本轮只在本地整理，不 push、不 merge、不部署、不修改 Pages 设置。
-- 旧上游 Blog/Trace/Saying 内容和旧聚合路由已从候选树移除；原始文件保存在仓库外快照和 bundle 中，删除不等于历史脱敏。
+- 历史 Blog/Trace/Saying 内容和旧聚合路由暂不纳入当前候选；原始文件保存在仓库外快照和 bundle 中。真实内容是否恢复须以[分支/检查点对账报告](./BRANCH_STATE_RECONCILIATION.zh-CN.md)的逐篇确认结果为准，暂不纳入不等于历史脱敏或永久删除。
 - Blog、Trace 目录以 `.gitkeep` 保留，空集合行为已纳入 phase 1/2、RSS、分页和浏览器验证；当前 Saying 候选为 5 篇。
 - 当前静态构建约生成 21 个页面；数量以提交后干净 worktree 的最新日志为准，不沿用下方历史 164 页数字。
 - 当前候选的自动链接写回 workflow 被排除；部署仅手动触发，链接检查使用 `links:check:dry`。
@@ -183,8 +183,8 @@ Phase 0 至此完成。后续功能阶段以此冻结基线为准；当前实际
 ## 10. 当前发布状态（release-prep 候选）
 
 Phase 0 的记录只证明了本地准备完成，不等同于站点已上线。当前候选以
-`codex/release-prep` 为唯一整理对象：旧上游内容和旧聚合路由已明确从候选树排除，
-Blog/Trace 空集合行为有代码、测试和浏览器证据；原始文件保存在仓库外快照中。
+`codex/release-prep` 为当前整理对象（与 `develop` 同树）：历史内容和旧聚合路由暂不纳入，
+Blog/Trace 空集合行为有代码、测试和浏览器证据；原始文件保存在仓库外快照中，内容恢复仍待站长确认。
 
 候选提交后必须在干净验证 worktree 中依次运行 `bun install --frozen-lockfile`、
 `bun run ci`、`bun run links:check:dry`、`bun run release:gate --strict` 和两项浏览器

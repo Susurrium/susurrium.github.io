@@ -55,6 +55,10 @@ artifacts/
 /browser-diagnosis.png
 /entrance-mobile-preview.png
 /timeline-compact-test.png
+/timeline-*.png
+/timeline-*.html
+/timeline-*.log
+/preview-*.png
 /shot*.png
 /tmp-*.png
 /scripts/link-health.json

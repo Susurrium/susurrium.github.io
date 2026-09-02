@@ -2,7 +2,7 @@
 
 > 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：`codex/release-prep` 候选已完成本地整理，尚未上线；这里只处理由站长亲自决定或提供的最终资料。
 
-这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前候选的 Blog/Trace 集合为空，旧内容已在仓库外快照中保留。后续替换资料时只改下表指定的入口，再通过既有门禁验证。
+这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前候选的 Blog/Trace 集合为空，历史内容已在仓库外快照/bundle 中保留，但是否恢复须以[分支/检查点对账报告](./BRANCH_STATE_RECONCILIATION.zh-CN.md)的逐篇确认结果为准。后续替换资料时只改下表指定的入口，再通过既有门禁验证。
 
 ## 1. 必须由站长提供或确认的资料
 
@@ -54,7 +54,7 @@ Links 的 Friend Circle 已关闭：页面不输出标题、空占位区、状�
 
 ## 4. 逐项替换顺序
 
-1. 在 `codex/release-prep` 或其后继分支替换站点身份和静态页面；当前候选已经移除确认不公开的旧 Blog/Trace/Saying 与旧聚合路由，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料和二维码在上线前仍需逐项复核。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
+1. 在 `codex/release-prep` 或其后继分支替换站点身份和静态页面；当前候选暂不纳入历史 Blog/Trace/Saying 内容与旧聚合路由，原始内容仍可从外部快照恢复。真实内容是否公开必须按对账报告逐篇确认；Projects、公开链接、个人资料和二维码在上线前仍需逐项复核。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
 2. 本次图库已完成本地化；若后续继续替换，请在 `public/images/home-media/` 生成同源 WebP，并同步更新 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使复用同一批图，也要保持独立，避免一次替换误伤另一种卡片策略。Media 的装饰斜边参考由 `src/data/home-media.ts` 的 `cardCutSideByFilename` 按文件名固定，不要恢复按索引奇偶交替。图片源内容的保留侧不能再从斜边方向推断；请使用本地 `/tools/card-crop-review` 统一裁剪工作台逐张拖动/缩放与正式卡片同步的两个斜边框，确认后导出 JSON，并用 `scripts/apply-card-crops.mjs` 应用到 `src/data/card-crop-selections.generated.ts`。未确认的图继续使用安全回退。
 3. 填写居住地并确认公共音乐配置；确认音频不自动播放，只在用户点击后播放。
 4. 运行下方的完整验证。候选验证必须在干净 worktree 中执行 `bun run ci`、`bun run links:check:dry` 和 `bun run release:gate --strict`；不要把最终资料写入白名单，也不要删除检查来“通过”。
