@@ -21,9 +21,9 @@
 | 项目 | 值 |
 | --- | --- |
 | 仓库 | `E:\code\blog_susurrium` |
-| 最终比较 HEAD | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` |
-| 最终 tree | `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` |
-| 最终提交父项 | `beaf2b3ccf07bdab5a8da3e1bd928c1443c3325e` |
+| 最终比较 HEAD | `9179f9559e09fe658eeecb4a1b7ece464453edb2` |
+| 最终 tree | `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` |
+| 最终提交父项 | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` |
 | 当前工作分支 | `develop` |
 | 对等发布分支 | `codex/release-prep` |
 | Git 版本 | `git version 2.54.0.windows.1` |
@@ -31,7 +31,7 @@
 | 审计输出目录（分类器版本 1，最终 HEAD 校验） | `E:\code\branch-state-audit-final-20260902-1115` |
 | 比较范围 | 所有可见 refs、reflog、提供的 bundles、两个外部快照；仓库全路径 |
 
-最终外部审计运行的 `run.json` 记录了 `refs=49`、`sourceRecords=477`、`states=75`、`uniqueTrees=71`、`pathRows=22674`、`fsckObjects=4316`、`snapshotEvidenceRecords=3523`、`sourceErrors=0`、`warnings=0`；路径分类器记录 `pathDecisions=935`、`unclassifiedPathDecisions=0`、`unclassifiedRuntimeCandidates=0`。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
+最终外部审计运行的 `run.json` 记录了 `refs=49`、`sourceRecords=483`、`states=76`、`uniqueTrees=72`、`pathRows=22680`、`fsckObjects=4316`、`snapshotEvidenceRecords=3523`、`sourceErrors=0`、`warnings=0`；路径分类器记录 `pathDecisions=935`、`unclassifiedPathDecisions=0`、`unclassifiedRuntimeCandidates=0`。`path-diffs.csv` 只省略未变化行；未变化行按每个 state 计数，因此“行数”不能直接当作“独立文件数”。
 
 ### 2.2 发现的来源
 
@@ -55,12 +55,12 @@
 
 | ref | commit | tree | 与当前 `HEAD` 的关系 |
 | --- | --- | --- | --- |
-| `develop` | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` | `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` | 当前工作分支 |
-| `codex/release-prep` | `c8294261aaa5f64b461c59e4fa6a239ee788c4b8` | `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` | 与 `develop` 完全同 commit/tree |
-| `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 本地 `develop` 领先 20 个提交；尚未 push |
+| `develop` | `9179f9559e09fe658eeecb4a1b7ece464453edb2` | `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` | 当前工作分支 |
+| `codex/release-prep` | `9179f9559e09fe658eeecb4a1b7ece464453edb2` | `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` | 与 `develop` 完全同 commit/tree |
+| `origin/develop` | `86ef868d5a5a6e7082e5fe4b937c59dbec5297e3` | `9d62e0b93857aad3c6b880869b6a9b4e0f27ffb0` | 本地 `develop` 领先 21 个提交；尚未 push |
 | `main` / `origin/main` | `15f5ad110af8ed8f38a1e506dd890d2d921f118f` | `1a5575efca76231469c9f3b50b773226d5fc7caa` | 旧线上基线；没有被本轮修改 |
 
-`git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit。`develop` 到当前远端基线的 20 个提交是本地整合、审计和验证工具链，不代表 20 个额外 topic 分支的独立贡献。
+`git log --left-right --cherry-pick develop...codex/release-prep` 为空，说明两者没有互相独有的 commit。`develop` 到当前远端基线的 21 个提交是本地整合、审计和验证工具链，不代表 21 个额外 topic 分支的独立贡献。
 
 ### 3.2 旧 topic 分支、reflog 与不可达 commit
 
@@ -72,7 +72,7 @@ reflog 中可见的整合链为：
 c02c1ac → fa11c29 → 6fec4f8 → 23c6742 → 4ccd418 → 7b6c1ae
 → 4f35a38 → 84e023b → 53fb7bf → c1c1874 → bb494e6 → b5a584b
 → e6cce21 → 8b05952 → 5fabdb5 → a879563 → be416c8 → d48d8ff
-→ beaf2b3 → c829426
+→ beaf2b3 → c829426 → 9179f95
 ```
 
 不可达的 15 个 commit 都是 `5fabdb5` 整合提交的 amend 版本，父项为 `8b05952`；没有发现隐藏的独立主题 commit。amend 历史仍可由 reflog/bundle 复核，但不应把早期 SHA 当作最终发布对象。
@@ -90,7 +90,7 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 | `46b579b64f2374886012f1998afbb3888c3ef35b` | 826 | 296 | 95 | Blog 86 / Trace 5 / Saying 4 | 8 | 长版仍在 |
 | `76300e78e6245b10b8de372e04cd3a5fa819c30d` | 984 | 354 | 150 | Blog 86 / Trace 25 / Saying 39 | 9 | 最丰富的已发现工作树 |
 | 整合前基线 `2667580fa7c719ae2de8d98f3d701eaca99cbf6d` | 445 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 审计工具提交前的整合树 |
-| 最终 HEAD `3bacb88fdd1dbc4472205ecf747b7f847827bd6e` | 447 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 最终发布准备树；增加审计/验证工具和文档 |
+| 最终 HEAD `26d28cbf38424e5f4a5fa6449cc017c9a97e0442` | 447 | 184 | 7 | Blog `.gitkeep` / Trace `.gitkeep` / Saying 5 | 11 | 最终发布准备树；增加审计/验证工具和文档 |
 
 时间戳由 checkpoint ref 名称中的 Unix 毫秒值给出；上述关键点约对应北京时间 2026-08-29 至 2026-09-02。`76300e78…` 与整合前基线 tree `2667580f…` 的差异为：历史独有 568 条 state-path 行、当前独有 29 条、同路径内容变化 98 条；按独立路径归并后，历史独有候选为 150 个 content、404 个临时/产物、3 个 README 遗留截图、58 个运行时/运维项。
 
@@ -104,7 +104,7 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 
 | 独立路径状态 | 数量 | 含义 |
 | --- | ---: | --- |
-| `CHANGED` | 172 | 当前和历史都存在，但 blob/mode 不同；通常是架构演进，需检查是否有语义回退 |
+| `CHANGED` | 173 | 当前和历史都存在，但 blob/mode 不同；通常是架构演进，需检查是否有语义回退 |
 | `CURRENT_MISSING` | 272 | 当前树新增、历史树没有；通常是当前架构、测试或文档的新增 |
 | `HISTORICAL_MISSING` | 615 | 历史树有、当前树没有；只是候选，不是自动恢复或自动删除结论 |
 
@@ -127,7 +127,7 @@ Codex 检查点是保存了某一时刻完整 tree 的工作流对象；它们�
 ### 5.3 当前独有和同路径变化
 
 - 272 个 `CURRENT_MISSING` 主要是当前的新布局、动态路由、数据模型、测试、文档和生产资源；它们按当前 import/测试引用确认后保留。
-- 172 个 `CHANGED` 主要是同一路径在重构中的内容或配置变化；应以当前实现为候选，并对个人事实、外部链接和授权单独审阅。
+- 173 个 `CHANGED` 主要是同一路径在重构中的内容或配置变化；应以当前实现为候选，并对个人事实、外部链接和授权单独审阅。
 - 当前代码没有引用被列为旧 runtime 的路径；运行 `rg`/构建检查应继续作为门槛，防止误删后出现隐式 glob 或动态 import 依赖。
 
 ## 6. 旧运行时与资源的逐项替代关系
