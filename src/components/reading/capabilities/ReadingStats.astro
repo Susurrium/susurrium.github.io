@@ -1,0 +1,86 @@
+---
+/**
+ * Shared static reading metrics. The component renders metric children inside
+ * the established metadata row and leaves taxonomy tags to the caller's
+ * separate capability via the default slot.
+ */
+import { formatContentDate } from '@/lib/content'
+import type { ReadingStatsData } from '@/lib/content-layer/reading-data'
+import {
+  isReadingFeatureVisible,
+  type ReadingMetadataVariant,
+  type ReadingStatsConfig
+} from '@/lib/content-layer/reading-policy'
+
+import { FormattedDate, Icon } from 'astro-pure/user'
+
+interface Props {
+  config: ReadingStatsConfig
+  data: ReadingStatsData
+  variant?: ReadingMetadataVariant
+}
+
+const { config, data, variant = 'article' } = Astro.props as Props
+const showPublishedDate = isReadingFeatureVisible(config.publishedDate, Boolean(data.publishedAt))
+const showUpdatedDate = isReadingFeatureVisible(config.updatedDate, Boolean(data.updatedAt))
+const showReadingTime = isReadingFeatureVisible(config.readingTime, Boolean(data.readingTime))
+const showLanguage = isReadingFeatureVisible(config.language, Boolean(data.language))
+const dateTimeOptions: Intl.DateTimeFormatOptions = { month: 'short' }
+---
+
+<div
+  class='flex flex-wrap gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'
+  data-reading-stats
+>
+  {
+    (showPublishedDate || showUpdatedDate) && (
+      <div class='flex items-center gap-1'>
+        <Icon name='calendar' class='size-5' />
+        {showPublishedDate &&
+          data.publishedAt &&
+          (variant === 'blog' ? (
+            <FormattedDate class='font-sans' date={data.publishedAt} {dateTimeOptions} />
+          ) : (
+            <time datetime={data.publishedAt.toISOString()}>
+              {formatContentDate(data.publishedAt)}
+            </time>
+          ))}
+        {showUpdatedDate && data.updatedAt && (
+          <div class='flex items-center gap-1'>
+            {showPublishedDate && data.publishedAt && <span> / </span>}
+            <span>
+              {showPublishedDate && data.publishedAt ? 'Updated' : 'Updated '}
+              {variant === 'blog' ? (
+                <FormattedDate class='font-sans' date={data.updatedAt} {dateTimeOptions} />
+              ) : (
+                <time datetime={data.updatedAt.toISOString()}>
+                  {formatContentDate(data.updatedAt)}
+                </time>
+              )}
+            </span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  {
+    showReadingTime && (
+      <div class='flex items-center gap-1'>
+        <Icon name='time' class='size-5' />
+        {data.readingTime}
+      </div>
+    )
+  }
+
+  {
+    showLanguage && (
+      <span class='flex items-center gap-1'>
+        <Icon name='earth' class='size-5' />
+        {data.language}
+      </span>
+    )
+  }
+
+  <slot />
+</div>

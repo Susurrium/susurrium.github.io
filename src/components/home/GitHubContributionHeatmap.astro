@@ -1,0 +1,89 @@
+---
+/**
+ * HAN-HEATMAP's compact 53-week GitHub contribution presentation.
+ * DOM, levels, labels and interaction follow the locked source; only the
+ * username and local theme-token bridge belong to this project.
+ */
+import {
+  createGitHubContributionHeatmapSkeleton,
+  getGitHubContributionHeatmap
+} from '@/data/github-contributions'
+import '@/assets/styles/github-contribution-heatmap.css'
+
+interface Props {
+  class?: string
+  username?: string
+}
+
+const { class: className, username = 'Susurrium' } = Astro.props
+const normalizedUsername = username.trim()
+const fetchedHeatmap = normalizedUsername ? await getGitHubContributionHeatmap(normalizedUsername) : null
+const heatmap = fetchedHeatmap ?? createGitHubContributionHeatmapSkeleton()
+const profileHref = `https://github.com/${encodeURIComponent(normalizedUsername)}`
+const contributionSummary = fetchedHeatmap && heatmap.total > 0
+  ? `${heatmap.total.toLocaleString('en-US')} contributions in the last year`
+  : 'GitHub contribution heatmap'
+const compactContributionCount = fetchedHeatmap && heatmap.total > 0
+  ? `${Intl.NumberFormat('en-US', { maximumFractionDigits: 1, notation: 'compact' })
+      .format(heatmap.total)
+      .toLowerCase()} contributions`
+  : 'contributions'
+const heatmapStyle = `--contribution-heatmap-week-count: ${heatmap.weekCount};`
+const legendLevels = [0, 1, 2, 3, 4]
+const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, (_, weekIndex) => ({
+  days: heatmap.days.slice(weekIndex * 7, weekIndex * 7 + 7),
+  hoverDelay: `${weekIndex * 10}ms`
+}))
+---
+
+{
+  normalizedUsername && (
+    <a
+      class:list={['contribution-heatmap-link', className]}
+      data-card-surface='standard'
+      data-contribution-heatmap-state={fetchedHeatmap ? 'ready' : 'fallback'}
+      href={profileHref}
+      target='_blank'
+      rel='noopener noreferrer'
+      style={heatmapStyle}
+      aria-label={`View ${normalizedUsername}'s GitHub profile: ${contributionSummary}`}
+    >
+      <span class='contribution-heatmap-summary'>{contributionSummary}</span>
+      <div class='contribution-heatmap-calendar' aria-hidden='true'>
+        <div class='contribution-heatmap-months'>
+          {heatmap.months.map((month) => (
+            <span class='contribution-heatmap-month' style={`grid-column: ${month.weekIndex + 1};`}>
+              {month.label}
+            </span>
+          ))}
+        </div>
+        <div class='contribution-heatmap-grid'>
+          {heatmapWeeks.map((week) => (
+            <span class='contribution-heatmap-week' style={`--contribution-heatmap-hover-delay: ${week.hoverDelay};`}>
+              {week.days.map((day) => (
+                <span
+                  class='contribution-heatmap-cell'
+                  data-level={day.level}
+                  data-blank={day.isBlank ? 'true' : undefined}
+                  title={day.label || undefined}
+                />
+              ))}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div class='contribution-heatmap-footer' aria-hidden='true'>
+        <span class='contribution-heatmap-count'>{compactContributionCount}</span>
+        <span class='contribution-heatmap-legend'>
+          <span class='contribution-heatmap-legend-label'>Less</span>
+          <span class='contribution-heatmap-legend-scale'>
+            {legendLevels.map((level) => (
+              <span class='contribution-heatmap-legend-cell' data-level={level} />
+            ))}
+          </span>
+          <span class='contribution-heatmap-legend-label'>More</span>
+        </span>
+      </div>
+    </a>
+  )
+}

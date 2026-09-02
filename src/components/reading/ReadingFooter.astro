@@ -1,0 +1,43 @@
+---
+/** Shared detail-page bottom composition selected by page capabilities. */
+import { toReadingFooterData } from '@/lib/content-layer/reading-data'
+import {
+  isReadingFeatureVisible,
+  type ReadingFooterConfig
+} from '@/lib/content-layer/reading-policy'
+import type { RenderablePageItem } from '@/lib/content-layer/types'
+
+import Copyright from '@/components/reading/ContentCopyright.astro'
+import { Comment } from '@/components/waline'
+import { integ } from '@/site-config'
+
+import ReadingRelated from './ReadingRelated.astro'
+
+interface Props {
+  config: ReadingFooterConfig
+  item: RenderablePageItem
+  relatedItems: readonly RenderablePageItem[]
+}
+
+const { config, item, relatedItems } = Astro.props as Props
+const footerData = toReadingFooterData(
+  item,
+  relatedItems,
+  Boolean(integ.waline.enable),
+  config.comments
+)
+const showCopyright = isReadingFeatureVisible(config.copyright, Boolean(footerData.copyright.title))
+const showComments = isReadingFeatureVisible(config.comments, footerData.commentsEnabled)
+---
+
+{showCopyright && <Copyright data={footerData.copyright} />}
+
+<ReadingRelated
+  current={item}
+  items={footerData.relatedItems}
+  mode={config.related}
+  navigation={footerData.navigation}
+  variant={config.relatedVariant}
+/>
+
+{showComments && <Comment class='mt-3 sm:mt-6' />}

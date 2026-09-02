@@ -2,7 +2,7 @@
 import { type ImageMetadata } from 'astro'
 import { Image } from 'astro:assets'
 
-import type { iconsType } from 'astro-pure/types'
+import type { IconsType } from 'astro-pure/types'
 import { Icon } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
 
@@ -21,37 +21,72 @@ const { class: className, methods, ...props } = Astro.props
 <div class={cn('flex flex-col justify-center gap-4 sm:flex-row', className)} {...props}>
   {
     methods.map((item) => (
-      <div class='sponsorship-card relative justify-center overflow-hidden rounded-xl border bg-white'>
-        <div class='sponsorship-card-icon absolute bottom-0 end-0 start-0 top-0 flex items-center justify-center transition-opacity'>
-          <Icon class='size-20' name={item.icon as iconsType} />
-        </div>
-        <Image
-          class='sponsorship-card-img mx-auto my-0 max-w-60 blur-sm transition-opacity'
-          src={item.image}
-          alt={item.name}
-          loading='lazy'
-        />
-      </div>
+      <details
+        class='sponsorship-card site-card-surface site-card-surface--interactive relative justify-center overflow-hidden rounded-xl border'
+        data-card-surface='standard'
+      >
+        <summary
+          class='sponsorship-card-trigger relative m-0 list-none cursor-pointer p-0 focus:outline-none'
+          aria-label={`${item.name} QR code`}
+        >
+          <span
+            class='sponsorship-card-icon absolute bottom-0 end-0 start-0 top-0 z-10 flex items-center justify-center transition-opacity'
+            aria-hidden='true'
+          >
+            <Icon class='size-20' name={item.icon as IconsType} />
+          </span>
+          <Image
+            class='sponsorship-card-img mx-auto my-0 block max-w-60 bg-white blur-sm transition-opacity'
+            src={item.image}
+            alt={`${item.name} QR code`}
+            loading='lazy'
+          />
+        </summary>
+      </details>
     ))
   }
 </div>
 
 <style>
   .sponsorship-card {
-    & .sponsorship-card-img {
-      opacity: 0.3;
-      --un-blur: blur(4px);
-      filter: var(--un-blur);
-    }
+    min-width: 0;
+  }
 
-    &:hover {
-      & .sponsorship-card-icon {
-        opacity: 0;
-      }
-      & .sponsorship-card-img {
-        opacity: 1;
-        --un-blur: blur(0);
-      }
+  .sponsorship-card > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .sponsorship-card > summary::marker {
+    content: '';
+  }
+
+  .sponsorship-card .sponsorship-card-img {
+    opacity: 0.3;
+    --un-blur: blur(4px);
+    filter: var(--un-blur);
+  }
+
+  .sponsorship-card:is(:hover, :focus-within) .sponsorship-card-icon,
+  .sponsorship-card[open] .sponsorship-card-icon {
+    opacity: 0;
+  }
+
+  .sponsorship-card:is(:hover, :focus-within) .sponsorship-card-img,
+  .sponsorship-card[open] .sponsorship-card-img {
+    opacity: 1;
+    --un-blur: blur(0);
+  }
+
+  .sponsorship-card:focus-within {
+    border-color: hsl(var(--ring) / 0.7);
+    outline: 2px solid hsl(var(--ring) / 0.35);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sponsorship-card .sponsorship-card-icon,
+    .sponsorship-card .sponsorship-card-img {
+      transition: none;
     }
   }
 </style>

@@ -24,7 +24,9 @@ import config from '@/site-config'
     }
   }
 
-  const abort = await loadPageview()
-  // After 500ms, if the network request has not been completed, cancel this operation
-  setTimeout(() => abort(), 500)
+  // Waline's `pageviewCount` does not return a cancellation function.  Start
+  // the optional request without manufacturing an `abort()` call; PageInfo
+  // only renders this component when the integration has explicitly been
+  // enabled with a reviewed server configuration.
+  void loadPageview()
 </script>

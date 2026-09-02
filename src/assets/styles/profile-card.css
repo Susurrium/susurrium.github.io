@@ -1,0 +1,115 @@
+/* Shared visual core for the standalone Home card and About timeline cards. */
+.profile-card {
+  position: relative;
+  display: block;
+  min-height: 7.5rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  color: hsl(var(--foreground));
+  text-decoration: none;
+}
+
+.profile-card:is(:hover, :focus-visible, :focus-within) {
+  background-color: var(--site-card-background-hover, hsl(var(--muted) / 0.9));
+  box-shadow: var(--site-card-shadow-hover, 0 0 2rem hsl(var(--foreground) / 0.18));
+}
+
+.profile-card:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
+
+.profile-card--compact {
+  min-height: 6rem;
+  border-radius: 0.9rem;
+}
+
+.profile-card__image {
+  position: absolute;
+  z-index: 0;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 38%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 68%);
+  mask-image: linear-gradient(to right, transparent 0%, black 68%);
+}
+
+.profile-card--compact .profile-card__image {
+  opacity: 0.3;
+}
+
+.profile-card__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(72%, 30rem);
+  min-height: 7.5rem;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 1.1rem 0.8rem;
+}
+
+.profile-card--compact .profile-card__content {
+  width: min(74%, 30rem);
+  min-height: 6rem;
+  padding: 0.75rem 0.95rem 0.7rem;
+}
+
+.profile-card:not(.profile-card--has-image) .profile-card__content {
+  width: 100%;
+}
+
+.profile-card__title {
+  color: hsl(var(--primary));
+  font-size: 1.1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.profile-card--compact .profile-card__title {
+  font-size: 1.05rem;
+}
+
+.profile-card__subtitle {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.profile-card__description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.profile-card__date {
+  margin-top: auto;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 480px) {
+  .profile-card__content {
+    width: 84%;
+    padding-inline: 0.95rem;
+  }
+
+  .profile-card__image {
+    width: 54%;
+    opacity: 0.25;
+  }
+
+  .profile-card--compact .profile-card__content {
+    width: 84%;
+    padding-inline: 0.85rem;
+  }
+
+  .profile-card--compact .profile-card__image {
+    width: 48%;
+  }
+}

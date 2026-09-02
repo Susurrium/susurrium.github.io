@@ -1,4 +1,6 @@
 ---
+import type { EffectProfile } from '@/data/effects'
+
 import { BackToTop } from 'astro-pure/components/pages'
 import type { SiteMeta } from 'astro-pure/types'
 import { Button, Icon } from 'astro-pure/user'
@@ -7,33 +9,75 @@ import PageLayout from '@/layouts/BaseLayout.astro'
 import { integ } from '@/site-config'
 
 interface Props {
-  meta: SiteMeta
+  meta: SiteMeta & {
+    noindex?: boolean
+    articleModifiedDate?: string
+  }
   highlightColor?: string
   back?: string
+  /** Render the sidebar controls only when the page supplied a TOC. */
+  sidebar?: boolean
+  pagefindBody?: boolean
+  contentType?: string
+  effectProfile?: EffectProfile
+  musicMode?: 'full' | 'compact'
 }
 
-const { meta, highlightColor, back = '/', ...props } = Astro.props
+const {
+  meta,
+  highlightColor,
+  back = '/home',
+  sidebar = false,
+  pagefindBody = false,
+  contentType,
+  effectProfile,
+  musicMode,
+  ...props
+} = Astro.props
+const hasPageBackground = Astro.slots.has('page-background')
 ---
 
-<PageLayout {meta} {highlightColor} {...props}>
+<PageLayout {meta} {highlightColor} {effectProfile} {musicMode} {...props}>
+  {
+    hasPageBackground && (
+      <Fragment slot='page-background'>
+        <slot name='page-background' />
+      </Fragment>
+    )
+  }
+
   <Button title='Back' href={back} variant='back' />
   <main class='mt-6 items-start gap-x-10 md:flex'>
     {/* Sidebar */}
-    <aside
-      class='animate top-20 min-w-48 basis-60 overflow-y-scroll max-md:hidden z-40 fixed md:sticky md:order-2 lg:shrink-0 max-md:border max-md:px-4 max-md:py-3 max-md:bg-muted max-md:rounded-xl'
-      style='height:calc(100vh - 7rem);'
-      id='sidebar'
-    >
-      <slot name='sidebar' />
-    </aside>
-    <div
-      id='sidebar-shade'
-      class='fixed top-0 start-0 w-full h-full'
-      style='display:none;background-color:#00000091;z-index:31'
-    >
-    </div>
+    {
+      sidebar && (
+        <>
+          <aside
+            class='animate top-20 min-w-48 basis-60 overflow-y-scroll max-md:hidden z-40 fixed md:sticky md:order-2 lg:shrink-0 max-md:border max-md:px-4 max-md:py-3 max-md:bg-muted max-md:rounded-xl'
+            style='height:calc(100vh - 7rem);'
+            id='sidebar'
+            aria-label='Table of contents'
+            tabindex='-1'
+          >
+            <slot name='sidebar' />
+          </aside>
+          <button
+            type='button'
+            id='sidebar-shade'
+            class='fixed top-0 start-0 h-full w-full border-0 p-0'
+            style='display:none;background-color:#00000091;z-index:31'
+            aria-label='Close table of contents'
+          />
+        </>
+      )
+    }
 
-    <article class='min-w-0 grow'>
+    <article
+      class='min-w-0 grow'
+      data-pagefind-body={pagefindBody ? '' : undefined}
+      data-pagefind-meta={contentType ? `content-type:${contentType}` : undefined}
+      data-pagefind-filter={contentType ? `content-type:${contentType}` : undefined}
+    >
       {/* Content header */}
       <div id='content-header' class='animate'>
         <slot name='header' />
@@ -57,56 +101,137 @@ const { meta, highlightColor, back = '/', ...props } = Astro.props
     <div class='flex-1 text-muted-foreground md:min-w-[50ch]'>
       <slot name='bottom' />
     </div>
-    <div class='min-w-48 basis-60'>
-      <slot name='bottom-sidebar' />
-    </div>
+    {
+      sidebar && (
+        <div class='min-w-48 basis-60'>
+          <slot name='bottom-sidebar' />
+        </div>
+      )
+    }
   </div>
 
   <BackToTop header='content-header' content='content'>
-    <button
-      slot='other-icons'
-      aria-label='Toggle sidebar'
-      class='size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 md:hidden sm:size-12'
-      id='sidebar-btn'
-    >
-      <Icon name='list' />
-    </button>
+    {
+      sidebar && (
+        <button
+          slot='other-icons'
+          aria-label='Toggle sidebar'
+          aria-controls='sidebar'
+          aria-expanded='false'
+          class='size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 md:hidden sm:size-12'
+          id='sidebar-btn'
+          type='button'
+        >
+          <Icon name='list' />
+        </button>
+      )
+    }
   </BackToTop>
 </PageLayout>
 
-<script>
-  // Toggle sidebar visibility on button click
-  const sidebarButton = document.getElementById('sidebar-btn')
-  const sidebar = document.getElementById('sidebar')
-  const sidebarShade = document.getElementById('sidebar-shade') as HTMLElement
+<script is:inline data-astro-rerun>
+  // Detail pages are replaced by ClientRouter. Re-run this binding for the
+  // new sidebar nodes after every navigation and abort the previous document
+  // listener set. The IIFE is essential: Astro runs a data-astro-rerun inline
+  // script in the same global realm after each swap, so top-level `const`
+  // declarations would otherwise collide.
+  ;(() => {
+    const sidebarButton = document.getElementById('sidebar-btn')
+    const sidebar = document.getElementById('sidebar')
+    const sidebarShade = document.getElementById('sidebar-shade')
+    if (!sidebarButton || !sidebar || !sidebarShade) return
 
-  if (sidebarShade) {
-    sidebarShade.addEventListener('click', () => {
-      toggleSidebar()
-    })
-  }
+    const controllerKey = '__susurriumSidebarAbortController'
+    const previousController = Reflect.get(window, controllerKey)
+    if (previousController instanceof AbortController) previousController.abort()
 
-  function toggleSidebar() {
-    if (sidebar && sidebar.classList.contains('show')) {
-      sidebar.classList.remove('show')
-      sidebarShade.style.display = 'none'
-    } else if (sidebar) {
-      sidebar.classList.add('show')
-      sidebarShade.style.display = 'block'
+    const controller = new AbortController()
+    Reflect.set(window, controllerKey, controller)
+    const { signal } = controller
+    const mobileQuery = window.matchMedia('(max-width: 767px)')
+    let lastFocusedElement = null
+
+    const focusableSelector =
+      'a[href], area[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+    const focusableSidebarElements = () =>
+      Array.from(sidebar.querySelectorAll(focusableSelector)).filter(
+        (element) => element instanceof HTMLElement && element.getClientRects().length > 0
+      )
+
+    const isOpen = () => mobileQuery.matches && sidebar.classList.contains('show')
+
+    const setSidebarOpen = (open, { restoreFocus = true } = {}) => {
+      const mobile = mobileQuery.matches
+      const nextOpen = mobile && open
+
+      if (nextOpen && !isOpen() && document.activeElement instanceof HTMLElement) {
+        lastFocusedElement = document.activeElement
+      }
+
+      sidebar.classList.toggle('show', nextOpen)
+      sidebar.toggleAttribute('inert', mobile && !nextOpen)
+      sidebar.setAttribute('aria-hidden', String(mobile && !nextOpen))
+      sidebarShade.style.display = nextOpen ? 'block' : 'none'
+      sidebarButton.setAttribute('aria-expanded', String(nextOpen))
+
+      if (nextOpen) {
+        window.requestAnimationFrame(() => {
+          const [firstFocusable] = focusableSidebarElements()
+          ;(firstFocusable ?? sidebar).focus()
+        })
+      } else if (restoreFocus && lastFocusedElement?.isConnected) {
+        lastFocusedElement.focus()
+        lastFocusedElement = null
+      }
     }
-  }
 
-  sidebarButton?.addEventListener('click', () => {
-    toggleSidebar()
-  })
+    const toggleSidebar = () => setSidebarOpen(!isOpen())
+
+    const trapSidebarFocus = (event) => {
+      if (!isOpen()) return
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setSidebarOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab') return
+      const focusableElements = focusableSidebarElements()
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        sidebar.focus()
+        return
+      }
+
+      const firstFocusable = focusableElements[0]
+      const lastFocusable = focusableElements.at(-1)
+      if (event.shiftKey && document.activeElement === firstFocusable) {
+        event.preventDefault()
+        lastFocusable.focus()
+      } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+        event.preventDefault()
+        firstFocusable.focus()
+      }
+    }
+
+    sidebarShade.addEventListener('click', () => setSidebarOpen(false), { signal })
+    sidebarButton.addEventListener('click', toggleSidebar, { signal })
+    document.addEventListener('keydown', trapSidebarFocus, { signal })
+    mobileQuery.addEventListener('change', () => setSidebarOpen(false, { restoreFocus: false }), {
+      signal
+    })
+    setSidebarOpen(false, { restoreFocus: false })
+  })()
 </script>
 <style>
-  @media (min-width: 769px) {
+  @media (min-width: 768px) {
     #sidebar-shade {
       display: none !important;
     }
   }
-  @media (max-width: 769px) {
+  @media (max-width: 767px) {
     aside.show {
       display: block !important;
       opacity: 1;
@@ -147,9 +272,15 @@ const { meta, highlightColor, back = '/', ...props } = Astro.props
       animation: 300ms fade-in;
     }
   }
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     aside {
       min-width: 55vw !important;
+    }
+  }
+  @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+    aside,
+    #sidebar-shade {
+      animation: none !important;
     }
   }
 </style>

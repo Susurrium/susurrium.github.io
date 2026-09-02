@@ -1,6 +1,7 @@
 // @ts-check
 
 import { rehypeHeadingIds } from '@astrojs/markdown-remark'
+import sitemap from '@astrojs/sitemap'
 // Adapter
 // import vercel from '@astrojs/vercel'
 // import node from '@astrojs/node'
@@ -10,7 +11,6 @@ import { defineConfig } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
-import UnoCSS from 'unocss/astro'
 
 // Others
 // import { visualizer } from 'rollup-plugin-visualizer'
@@ -32,7 +32,7 @@ import config from './src/site.config.ts'
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
-  site: 'https://arthals.ink',
+  site: 'https://susurrium.github.io',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
   trailingSlash: 'never',
@@ -57,8 +57,15 @@ export default defineConfig({
   },
 
   integrations: [
-    // astro-pure will automatically add sitemap, mdx & unocss
-    // sitemap(),
+    // Register sitemap explicitly so replayable/noindex utility pages are not
+    // submitted to crawlers. Keep this list in sync with route-level `noindex`
+    // metadata because the sitemap integration cannot inspect rendered head
+    // props.
+    sitemap({
+      filter: (page) =>
+        !new Set(['/', '/404', '/search', '/tools/card-crop-review']).has(new URL(page).pathname)
+    }),
+    // astro-pure will automatically add mdx & unocss
     // mdx(),
     AstroPureIntegration(config)
     // (await import('@playform/compress')).default({
@@ -74,10 +81,7 @@ export default defineConfig({
   // Prefetch Options
   prefetch: true,
   // Server Options
-  server: {
-    host: true,
-    allowedHosts: ['arthals.ink']
-  },
+  server: { host: true },
   // Markdown Options
   markdown: {
     remarkPlugins: [remarkMath, remarkAlert],
@@ -113,6 +117,13 @@ export default defineConfig({
     contentIntellisense: true
   },
   vite: {
+    // Browser audit profiles are generated under `artifacts/`; they contain
+    // locked Chromium session files on Windows and must not be watched.
+    server: {
+      watch: {
+        ignored: ['**/artifacts/**']
+      }
+    },
     plugins: [
       //   visualizer({
       //     emitFile: true,

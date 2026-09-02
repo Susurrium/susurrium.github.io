@@ -1,0 +1,647 @@
+---
+import '@pagefind/default-ui/css/ui.css'
+
+import { getContentTypeDefinition } from '@/lib/content-layer/registry'
+import type { ContentTagBrowserEntry } from '@/lib/content-layer/tags'
+
+interface Props {
+  browserEntries?: readonly ContentTagBrowserEntry[]
+}
+
+const { browserEntries = [] } = Astro.props
+const filterEntries = browserEntries.map((entry) => ({
+  ...entry,
+  definition: getContentTypeDefinition(entry.kind)
+}))
+---
+
+<site-search>
+  <div class='search-layout'>
+    <details class='search-filter-drawer' data-search-filter-drawer>
+      <summary class='search-filter-summary'>
+        <span>筛选结果</span>
+        <span class='search-filter-summary-value' data-search-filter-summary>全部内容</span>
+      </summary>
+      <aside class='search-filter-panel' data-search-filter-root aria-label='搜索筛选'>
+        <div class='search-filter-heading'>
+          <div>
+            <p class='search-filter-kicker'>筛选范围</p>
+            <h2>筛选结果</h2>
+          </div>
+          <button type='button' class='search-filter-clear' data-search-filter-clear disabled>
+            清除
+          </button>
+        </div>
+
+        <p class='search-filter-description'>先按内容类型定位，再用标签缩小结果范围。</p>
+
+        <div
+          class='search-filter-types'
+          role='tablist'
+          aria-label='内容类型'
+          data-search-filter-types
+        >
+          <button
+            type='button'
+            role='tab'
+            class='search-filter-type is-active'
+            data-search-filter-type='all'
+            data-search-filter-value=''
+            aria-selected='true'
+          >
+            <span>All</span>
+            <span class='search-filter-count'>全部</span>
+          </button>
+          {
+            filterEntries.map(({ definition, kind, tags }) => (
+              <button
+                type='button'
+                role='tab'
+                class='search-filter-type'
+                data-search-filter-type={kind}
+                data-search-filter-value={definition.label}
+                aria-selected='false'
+                aria-controls={`search-filter-tags-${kind}`}
+              >
+                <span>{definition.label}</span>
+                <span class='search-filter-count'>{tags.length} 个标签</span>
+              </button>
+            ))
+          }
+        </div>
+
+        <p class='search-filter-hint' data-search-filter-hint>
+          选择内容类型后，这里会显示对应的标签。
+        </p>
+
+        <div class='search-filter-tag-panels'>
+          {
+            filterEntries.map(({ definition, kind, tags }) => (
+              <section
+                id={`search-filter-tags-${kind}`}
+                class='search-filter-tags'
+                data-search-filter-tags={kind}
+                aria-label={`${definition.label} 标签`}
+                hidden
+              >
+                <h3>{definition.label} 标签</h3>
+                {tags.length > 0 ? (
+                  <ul>
+                    {tags.map(({ count, tag }, index) => {
+                      const inputId = `search-filter-${kind}-${index}`
+                      return (
+                        <li>
+                          <label for={inputId}>
+                            <input
+                              id={inputId}
+                              type='checkbox'
+                              value={tag}
+                              data-search-filter-tag
+                              data-search-filter-kind={kind}
+                            />
+                            <span class='search-filter-tag-name'>{tag}</span>
+                            <span class='search-filter-tag-count'>{count}</span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <p class='search-filter-empty'>暂无可用标签。</p>
+                )}
+              </section>
+            ))
+          }
+        </div>
+      </aside>
+    </details>
+
+    <aside class='form my-4 search-form'>
+      {
+        import.meta.env.DEV ? (
+          <div
+            class='w-full rounded-xl border-2 bg-transparent px-4 py-2 pe-3 outline-none focus:border-foreground'
+            role='status'
+          >
+            开发模式下尚未生成 Pagefind 索引，请运行 bun run build && bun run preview 体验搜索。
+          </div>
+        ) : (
+          <div id='site-search' data-pagefind-root />
+        )
+      }
+    </aside>
+  </div>
+</site-search>
+
+<script>
+  type PagefindFilters = Record<string, string | string[]>
+
+  type PagefindInstance = {
+    destroy?: () => void
+    triggerFilters?: (filters: PagefindFilters) => void
+  }
+
+  type PagefindResult = {
+    url: string
+    meta?: Record<string, string>
+    sub_results?: Array<{
+      url: string
+      meta?: Record<string, string>
+    }>
+  }
+
+  type PagefindConstructor = new (options: {
+    element: HTMLElement
+    baseUrl: string
+    bundlePath: string
+    showImages: boolean
+    showSubResults: boolean
+    processResult: (result: PagefindResult) => void
+  }) => PagefindInstance
+
+  const formatURL = (path: string) => path.replace(/(.)\/(#.*)?$/, '$1$2')
+
+  const normalizeResult = (result: PagefindResult) => {
+    result.url = formatURL(result.url)
+
+    if (result.meta?.['content-type']) {
+      result.meta.type ??= result.meta['content-type']
+      delete result.meta['content-type']
+    }
+
+    result.sub_results?.forEach((subResult) => {
+      subResult.url = formatURL(subResult.url)
+      if (subResult.meta?.['content-type']) {
+        subResult.meta.type ??= subResult.meta['content-type']
+        delete subResult.meta['content-type']
+      }
+    })
+  }
+
+  class SiteSearch extends HTMLElement {
+    private controller: AbortController | null = null
+    private filterController: AbortController | null = null
+    private pagefind: PagefindInstance | null = null
+    private initializing = false
+    private generation = 0
+    private selectedType = ''
+    private selectedTags = new Set<string>()
+    private pendingFilters: PagefindFilters = {}
+
+    connectedCallback() {
+      this.disconnect()
+      this.bindFilterControls()
+
+      if (import.meta.env.DEV) return
+
+      this.controller = new AbortController()
+      const { signal } = this.controller
+
+      // The component can be inserted after DOMContentLoaded by Astro's
+      // ClientRouter. Initialize immediately and keep a page-load retry for
+      // swaps where the target is not connected until the new page settles.
+      document.addEventListener('astro:page-load', this.initialize, { signal })
+      this.initialize()
+    }
+
+    disconnectedCallback() {
+      this.disconnect()
+    }
+
+    private disconnect() {
+      this.controller?.abort()
+      this.controller = null
+      this.filterController?.abort()
+      this.filterController = null
+      this.generation += 1
+      this.initializing = false
+      this.pagefind?.destroy?.()
+      this.pagefind = null
+      this.selectedType = ''
+      this.selectedTags.clear()
+      this.pendingFilters = {}
+    }
+
+    private bindFilterControls() {
+      const filterRoot = this.querySelector<HTMLElement>('[data-search-filter-root]')
+      if (!filterRoot) return
+
+      this.filterController = new AbortController()
+      const { signal } = this.filterController
+      const typeButtons = Array.from(
+        filterRoot.querySelectorAll<HTMLButtonElement>('[data-search-filter-type]')
+      )
+      const tagInputs = Array.from(
+        filterRoot.querySelectorAll<HTMLInputElement>('[data-search-filter-tag]')
+      )
+      const clearButton = filterRoot.querySelector<HTMLButtonElement>('[data-search-filter-clear]')
+      const drawer = this.querySelector<HTMLDetailsElement>('[data-search-filter-drawer]')
+      const desktopQuery = window.matchMedia('(min-width: 768px)')
+      if (drawer) {
+        drawer.open = desktopQuery.matches
+        desktopQuery.addEventListener(
+          'change',
+          (event) => {
+            drawer.open = event.matches
+          },
+          { signal }
+        )
+      }
+
+      const params = new URLSearchParams(window.location.search)
+      const requestedType = params.get('type') ?? ''
+      if (
+        requestedType &&
+        requestedType !== 'all' &&
+        typeButtons.some((button) => button.dataset.searchFilterType === requestedType)
+      ) {
+        this.selectedType = requestedType
+        params.getAll('tag').forEach((tag) => {
+          if (
+            tagInputs.some(
+              (input) => input.dataset.searchFilterKind === requestedType && input.value === tag
+            )
+          ) {
+            this.selectedTags.add(tag)
+          }
+        })
+      }
+
+      typeButtons.forEach((button) => {
+        button.addEventListener(
+          'click',
+          () => this.selectType(button.dataset.searchFilterType ?? 'all'),
+          { signal }
+        )
+      })
+      tagInputs.forEach((input) => {
+        input.addEventListener('change', () => this.toggleTag(input), { signal })
+      })
+      clearButton?.addEventListener('click', () => this.clearFilters(), { signal })
+
+      this.updateFilterUI()
+    }
+
+    private selectType(type: string) {
+      this.selectedType = type === 'all' ? '' : type
+      this.selectedTags.clear()
+      this.updateFilterUI()
+      this.applyFilters()
+    }
+
+    private toggleTag(input: HTMLInputElement) {
+      if (input.checked) this.selectedTags.add(input.value)
+      else this.selectedTags.delete(input.value)
+      this.updateFilterUI()
+      this.applyFilters()
+    }
+
+    private clearFilters() {
+      this.selectedType = ''
+      this.selectedTags.clear()
+      this.updateFilterUI()
+      this.applyFilters()
+    }
+
+    private updateFilterUI() {
+      const filterRoot = this.querySelector<HTMLElement>('[data-search-filter-root]')
+      if (!filterRoot) return
+
+      const typeButtons = Array.from(
+        filterRoot.querySelectorAll<HTMLButtonElement>('[data-search-filter-type]')
+      )
+      typeButtons.forEach((button) => {
+        const active = (button.dataset.searchFilterType ?? 'all') === (this.selectedType || 'all')
+        button.classList.toggle('is-active', active)
+        button.setAttribute('aria-selected', String(active))
+      })
+
+      filterRoot.querySelectorAll<HTMLElement>('[data-search-filter-tags]').forEach((panel) => {
+        panel.hidden = panel.dataset.searchFilterTags !== this.selectedType
+      })
+
+      filterRoot.querySelectorAll<HTMLInputElement>('[data-search-filter-tag]').forEach((input) => {
+        input.checked = this.selectedType !== '' && this.selectedTags.has(input.value)
+      })
+
+      const activeButton = typeButtons.find(
+        (button) => (button.dataset.searchFilterType ?? 'all') === (this.selectedType || 'all')
+      )
+      const activeLabel = activeButton?.querySelector('span')?.textContent?.trim() ?? '全部内容'
+      const summary = this.querySelector<HTMLElement>('[data-search-filter-summary]')
+      if (summary) summary.textContent = this.selectedType ? activeLabel : '全部内容'
+
+      const hint = filterRoot.querySelector<HTMLElement>('[data-search-filter-hint]')
+      if (hint) {
+        hint.textContent = this.selectedType
+          ? `${activeLabel} 标签可多选，结果会同时满足内容类型与任一所选标签。`
+          : '选择内容类型后，这里会显示对应的标签。'
+      }
+
+      const clearButton = filterRoot.querySelector<HTMLButtonElement>('[data-search-filter-clear]')
+      if (clearButton) clearButton.disabled = !this.selectedType && this.selectedTags.size === 0
+    }
+
+    private applyFilters() {
+      const filters: PagefindFilters = {}
+      const filterRoot = this.querySelector<HTMLElement>('[data-search-filter-root]')
+      const activeButton = filterRoot?.querySelector<HTMLButtonElement>(
+        `[data-search-filter-type="${this.selectedType}"]`
+      )
+      const contentType = activeButton?.dataset.searchFilterValue
+      if (this.selectedType && contentType) filters['content-type'] = contentType
+
+      const tags = [...this.selectedTags]
+      if (tags.length > 0) filters.tag = tags
+
+      this.pendingFilters = filters
+      this.pagefind?.triggerFilters?.(filters)
+
+      const url = new URL(window.location.href)
+      if (this.selectedType) url.searchParams.set('type', this.selectedType)
+      else url.searchParams.delete('type')
+      url.searchParams.delete('tag')
+      tags.forEach((tag) => url.searchParams.append('tag', tag))
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${url.pathname}${url.search}${url.hash}`
+      )
+    }
+
+    private initialize = () => {
+      const root = this.querySelector<HTMLElement>('[data-pagefind-root]')
+      if (!root || this.pagefind || this.initializing) return
+
+      this.initializing = true
+      const generation = this.generation
+      const onIdle =
+        window.requestIdleCallback || ((callback: () => void) => setTimeout(callback, 1))
+
+      onIdle(async () => {
+        try {
+          // @ts-expect-error — Missing types for @pagefind/default-ui package.
+          const { PagefindUI } = (await import('@pagefind/default-ui')) as {
+            PagefindUI: PagefindConstructor
+          }
+
+          if (generation !== this.generation || !this.isConnected || !root.isConnected) return
+
+          this.pagefind = new PagefindUI({
+            element: root,
+            baseUrl: import.meta.env.BASE_URL,
+            bundlePath: import.meta.env.BASE_URL.replace(/\/$/, '') + '/pagefind/',
+            showImages: false,
+            showSubResults: true,
+            processResult: normalizeResult
+          })
+          this.pagefind.triggerFilters?.(this.pendingFilters)
+        } catch (error) {
+          if (generation === this.generation && this.isConnected) {
+            console.error('Unable to initialize Pagefind search.', error)
+          }
+        } finally {
+          if (generation === this.generation) this.initializing = false
+        }
+      })
+    }
+  }
+
+  if (!customElements.get('site-search')) {
+    customElements.define('site-search', SiteSearch)
+  }
+</script>
+
+<style>
+  .search-layout {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .search-filter-drawer {
+    min-width: 0;
+    border: 1px solid hsl(var(--border) / 0.9);
+    border-radius: calc(var(--radius) + 4px);
+    background: hsl(var(--muted) / 0.25);
+  }
+
+  .search-filter-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .search-filter-summary-value {
+    color: hsl(var(--muted-foreground));
+    font-weight: 400;
+  }
+
+  .search-filter-panel {
+    padding: 1rem;
+  }
+
+  .search-filter-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .search-filter-kicker {
+    margin: 0;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .search-filter-heading h2 {
+    margin: 0.2rem 0 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .search-filter-clear {
+    border: 0;
+    padding: 0.15rem 0;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .search-filter-clear:not(:disabled):hover {
+    color: hsl(var(--foreground));
+  }
+
+  .search-filter-clear:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  .search-filter-description,
+  .search-filter-hint,
+  .search-filter-empty {
+    margin: 0;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .search-filter-description {
+    margin-top: 0.8rem;
+  }
+
+  .search-filter-types {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 1rem;
+  }
+
+  .search-filter-type {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    background: transparent;
+    color: hsl(var(--foreground));
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .search-filter-type:hover,
+  .search-filter-type.is-active {
+    border-color: hsl(var(--border));
+    background: hsl(var(--background) / 0.85);
+  }
+
+  .search-filter-type.is-active {
+    box-shadow: inset 3px 0 hsl(var(--primary));
+  }
+
+  .search-filter-count,
+  .search-filter-tag-count {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.7rem;
+  }
+
+  .search-filter-hint {
+    margin-top: 0.8rem;
+  }
+
+  .search-filter-tags {
+    margin-top: 1rem;
+    border-top: 1px solid hsl(var(--border) / 0.75);
+    padding-top: 0.8rem;
+  }
+
+  .search-filter-tags h3 {
+    margin: 0 0 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .search-filter-tags ul {
+    display: grid;
+    gap: 0.15rem;
+    max-height: 21rem;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  .search-filter-tags label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.45rem;
+    padding: 0.35rem 0.4rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .search-filter-tags label:hover {
+    background: hsl(var(--background) / 0.7);
+  }
+
+  .search-filter-tags input {
+    flex: 0 0 auto;
+    accent-color: hsl(var(--primary));
+  }
+
+  .search-filter-tag-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-filter-empty {
+    margin-top: 0.5rem;
+  }
+
+  .search-form {
+    min-width: 0;
+  }
+
+  /* Pagefind's built-in filter list is replaced by the single, scoped panel
+     above. The search engine and its result rendering remain Pagefind-native. */
+  :global(#site-search .pagefind-ui__filter-panel) {
+    display: none !important;
+  }
+
+  :global(#site-search .pagefind-ui__drawer) {
+    display: block;
+  }
+
+  #site-search {
+    --pagefind-ui-scale: 0.8;
+    --pagefind-ui-primary: hsl(var(--primary) / var(--un-bg-opacity, 1));
+    --pagefind-ui-text: hsl(var(--foreground) / var(--un-text-opacity, 1));
+    --pagefind-ui-background: hsl(var(--muted) / var(--un-bg-opacity, 1));
+    --pagefind-ui-border: hsl(var(--border) / var(--un-border-opacity, 1));
+    --pagefind-ui-tag: hsl(var(--muted-foreground) / var(--un-text-opacity, 1));
+    --pagefind-ui-border-width: 2px;
+    --pagefind-ui-border-radius: calc(var(--radius) + 2px);
+    --pagefind-ui-image-border-radius: calc(var(--radius) + 2px);
+    --pagefind-ui-image-box-ratio: 3 / 2;
+    --pagefind-ui-font: sans-serif;
+  }
+
+  @media (min-width: 768px) {
+    .search-layout {
+      grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
+      align-items: start;
+      gap: clamp(1.5rem, 4vw, 3.5rem);
+    }
+
+    .search-filter-summary {
+      display: none;
+    }
+
+    .search-filter-drawer[open] .search-filter-panel {
+      display: block;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .search-form {
+      order: -1;
+      margin-top: 1rem;
+    }
+
+    .search-filter-drawer {
+      margin-top: 0.25rem;
+    }
+  }
+</style>

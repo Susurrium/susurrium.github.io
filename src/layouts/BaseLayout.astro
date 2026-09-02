@@ -1,7 +1,16 @@
 ---
-import { Footer, Header, ThemeProvider } from 'astro-pure/components/basic'
+import { ClientRouter } from 'astro:transitions'
+import { effectProfiles, resolveEffectProfile, type EffectProfile } from '@/data/effects'
+
+import { ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
+import Footer from '@/components/layout/SiteFooter.astro'
 import BaseHead from '@/components/BaseHead.astro'
+import ScrollCompanion from '@/components/effects/ScrollCompanion.astro'
+import VisualEffectsHost from '@/components/effects/VisualEffectsHost.astro'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
+import MusicPlayer from '@/components/MusicPlayer.astro'
+import ViewTransitionRejectionGuard from '@/components/ViewTransitionRejectionGuard.astro'
 import config from '@/site-config'
 
 // Import the global.css file here so that it is included on
@@ -9,39 +18,193 @@ import config from '@/site-config'
 import '@/assets/styles/app.css'
 
 interface Props {
-  meta: SiteMeta
+  meta: SiteMeta & {
+    /** Forward route-specific indexing policy to the shared document head. */
+    noindex?: boolean
+    /** Preserve publication and editorial timestamps for article metadata. */
+    articleModifiedDate?: string
+  }
   highlightColor?: string
+  /** Home overlays the initial transparent header on the Media Hero. */
+  pageKind?: 'home'
+  /** Route-level owner for ambient, petal and click-particle policy. */
+  effectProfile?: EffectProfile
+  /** Article detail views use the compact persistent music treatment. */
+  musicMode?: 'full' | 'compact'
 }
 
 const {
-  meta: { articleDate, description = config.description, ogImage, title },
+  meta: {
+    articleDate,
+    articleModifiedDate,
+    description = config.description,
+    noindex = false,
+    ogImage,
+    title
+  },
   highlightColor,
+  pageKind,
+  effectProfile: effectProfileInput,
+  musicMode = 'full',
   ...props
 } = Astro.props
+const effectProfile = resolveEffectProfile(effectProfileInput)
+const hasPageBackground = Astro.slots.has('page-background')
 ---
 
 <html lang={config.locale.lang}>
   <head>
-    <BaseHead {articleDate} {description} {ogImage} {title} />
+    <BaseHead
+      {articleDate}
+      {articleModifiedDate}
+      {description}
+      {noindex}
+      {ogImage}
+      {title}
+    />
     <ThemeProvider />
-  </head>
+    <Fragment set:html={`<script src="/theme-handoff.js" data-theme-role="write"></script>`} />
+    <script is:inline>
+      // ThemeProvider owns the `dark` class, while a few site-specific visual
+      // layers consume the explicit data attribute. Keep those two contracts
+      // synchronized on first paint, ClientRouter swaps, and theme changes.
+      ;(() => {
+        const installKey = '__susurriumThemeAttributeSyncInstalled'
+        if (window[installKey]) return
+        window[installKey] = true
 
-  <body class='flex justify-center bg-background text-foreground' {...props}>
+        const root = document.documentElement
+        const syncThemeAttribute = () => {
+          root.dataset.theme = root.classList.contains('dark') ? 'dark' : 'light'
+        }
+
+        syncThemeAttribute()
+        document.addEventListener('astro:page-load', syncThemeAttribute)
+        new MutationObserver(syncThemeAttribute).observe(root, {
+          attributeFilter: ['class'],
+          attributes: true
+        })
+      })()
+    </script>
+    <script is:inline>
+      if (window.location.hash === '#from-entrance' && window.location.pathname === '/home') {
+        document.documentElement.dataset.homeHandoff = 'pending'
+        window.history.replaceState(null, '', window.location.pathname + window.location.search)
+      }
+    </script>
+    <ViewTransitionRejectionGuard />
+    <ClientRouter />
+    <style is:inline>
+      @view-transition {
+        navigation: auto;
+      }
+
+      /* Critical first-paint rules are duplicated here because this style is
+         emitted in the head before the shared stylesheet finishes loading. */
+      .home-entry-handoff {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        pointer-events: none;
+        background: var(--document-handoff-surface, rgb(246 245 242));
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      html[data-home-handoff='pending'] .home-entry-handoff {
+        pointer-events: auto;
+        opacity: 1;
+        visibility: visible;
+      }
+    </style>
     {
-      highlightColor && (
-        <div
-          id='highlight-gradient'
-          class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
-          style={`background-image:linear-gradient(${highlightColor},transparent)`}
+      pageKind === 'home' && (
+        <link
+          rel='preload'
+          as='image'
+          href='/images/home-media/thumb-1920-1381117.webp'
+          fetchpriority='high'
         />
       )
     }
-    <div class='w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between'>
-      <Header />
-      <div class="flex-1 w-full">
+    <!-- APlayer/MetingJS runtime follows the reference sites' public-player
+         contract. They are loaded once in the shared layout; the native DOM
+         wrapper below persists across ClientRouter swaps. -->
+    <link
+      rel='stylesheet'
+      href='https://cdn.cbd.int/anzhiyu-theme-static@1.0.0/aplayer/APlayer.min.css'
+      data-music-runtime='aplayer'
+    />
+    <script
+      is:inline
+      defer
+      src='https://cdn.cbd.int/anzhiyu-blog-static@1.0.1/js/APlayer.min.js'
+      data-music-runtime='aplayer'></script>
+    <script
+      is:inline
+      defer
+      src='https://cdn.cbd.int/hexo-anzhiyu-music@1.0.1/assets/js/Meting2.min.js'
+      data-music-runtime='meting'></script>
+  </head>
+
+  <body
+    class='flex justify-center bg-background text-foreground'
+    data-page-kind={pageKind}
+    data-effect-profile={effectProfile}
+    data-music-mode={musicMode}
+    {...props}
+  >
+    {pageKind === 'home' && (
+      <div class='document-handoff home-entry-handoff' data-home-entry-handoff aria-hidden='true'></div>
+    )}
+    <VisualEffectsHost profile={effectProfile} />
+    {effectProfiles[effectProfile].companion && <ScrollCompanion />}
+    {
+      hasPageBackground ? (
+        /* Reading pages supply their selected background through this root-level
+           host. Keeping the slot here preserves the old stacking position while
+           allowing future reading background variants. */
+        <slot name='page-background' />
+      ) : (
+        /* Preserve the legacy BaseLayout contract for non-reading callers. */
+        highlightColor && (
+          <div
+            id='highlight-gradient'
+            class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
+            style={`background-image:linear-gradient(${highlightColor},transparent)`}
+          />
+        )
+      )
+    }
+    <div
+      class:list={[
+        'relative w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between',
+        pageKind === 'home' && 'relative'
+      ]}
+      data-click-burst-zone
+    >
+      <SiteHeader />
+      {
+        /* Keep the page shell out of a stacking context: the Header is a
+          root-level z-50 child and must stay above petals/click effects.
+          Only ordinary content and the Footer occupy the z-20 page layer. */
+      }
+      <div
+        class='relative flex-1 w-full'
+        style='z-index:var(--z-page-content)'
+        data-page-content-layer
+      >
         <slot />
       </div>
-      <Footer/>
+      <div class='relative' style='z-index:var(--z-page-content)' data-page-footer-layer>
+        <Footer />
+      </div>
+    </div>
+    <!-- The persistence directive must live on a native DOM element. Passing
+         it to an Astro component does not emit the runtime marker that
+         ClientRouter uses while swapping page bodies. -->
+    <div transition:persist='susurrium-music-player'>
+      <MusicPlayer />
     </div>
 
     {/* Set highlight color */}
@@ -58,3 +221,45 @@ const {
     </style>
   </body>
 </html>
+
+<style is:global>
+  /* Home starts beneath the transparent site header, matching the Hero's fixed
+     brand area while preserving normal sticky behaviour later. */
+  body[data-page-kind='home'] header-component:not(.not-top) {
+    position: absolute;
+    top: 1rem;
+    right: 0;
+    left: 0;
+    margin-bottom: 0;
+    color: #fff;
+  }
+
+  body[data-page-kind='home'] header-component:not(.not-top) :is(a, button) {
+    color: #fff;
+  }
+
+  body[data-page-kind='home'] header-component:not(.not-top) button {
+    border-color: rgb(255 255 255 / 0.5);
+    background: rgb(0 0 0 / 0.08);
+  }
+
+  body[data-page-kind='home'] header-component:not(.not-top) button:hover {
+    background: rgb(0 0 0 / 0.24);
+  }
+
+  body[data-page-kind='home'] header-component.not-top {
+    position: fixed;
+    top: 1rem;
+    right: max(1rem, calc(50% - 35rem));
+    left: max(1rem, calc(50% - 35rem));
+    margin-bottom: 0;
+    margin-inline: 0;
+  }
+
+  @media (max-width: 639px) {
+    body[data-page-kind='home'] header-component.not-top {
+      right: 1rem;
+      left: 1rem;
+    }
+  }
+</style>

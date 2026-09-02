@@ -1,0 +1,140 @@
+---
+import PageLayout from '@/layouts/BaseLayout.astro'
+import CardCropEditor from '@/components/tools/CardCropEditor.astro'
+import HeroCropEditor from '@/components/tools/HeroCropEditor.astro'
+
+const meta = {
+  description: 'Local media workbench for positioning card crops and Hero focal points.',
+  noindex: true,
+  title: 'Media Crop Workbench'
+}
+---
+
+<PageLayout effectProfile='reading' musicMode='compact' {meta}>
+  <main class='card-crop-review-page' data-page-kind='card-crop-review'>
+    <nav class='media-workbench-tabs' aria-label='媒体编辑模式' data-media-workbench-tabs>
+      <button
+        type='button'
+        class='is-active'
+        role='tab'
+        aria-selected='true'
+        aria-controls='card-crop-panel'
+        data-media-workbench-tab='cards'>卡片裁剪</button
+      >
+      <button
+        type='button'
+        role='tab'
+        aria-selected='false'
+        aria-controls='hero-crop-panel'
+        data-media-workbench-tab='hero'>Hero 定位</button
+      >
+    </nav>
+    <section id='card-crop-panel' data-media-workbench-panel='cards'>
+      <CardCropEditor />
+    </section>
+    <section id='hero-crop-panel' data-media-workbench-panel='hero' hidden>
+      <HeroCropEditor />
+    </section>
+  </main>
+</PageLayout>
+
+<script>
+  const bootMediaWorkbenchTabs = () => {
+    const root = document.querySelector<HTMLElement>('[data-media-workbench-tabs]')
+    if (!root || root.dataset.initialized === 'true') return
+    root.dataset.initialized = 'true'
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-media-workbench-tab]'))
+    const panels = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-media-workbench-panel]')
+    )
+
+    const setMode = (mode: string, updateHash = true) => {
+      const selected = mode === 'hero' ? 'hero' : 'cards'
+      tabs.forEach((tab) => {
+        const active = tab.dataset.mediaWorkbenchTab === selected
+        tab.classList.toggle('is-active', active)
+        tab.setAttribute('aria-selected', String(active))
+        tab.tabIndex = active ? 0 : -1
+      })
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.mediaWorkbenchPanel !== selected
+      })
+      if (updateHash) {
+        const hash = selected === 'hero' ? '#hero-crop' : '#card-crop'
+        if (window.location.hash !== hash) history.replaceState(null, '', hash)
+      }
+    }
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => setMode(tab.dataset.mediaWorkbenchTab ?? 'cards'))
+      tab.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        const index = tabs.indexOf(tab)
+        const next =
+          tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]
+        next.focus()
+        setMode(next.dataset.mediaWorkbenchTab ?? 'cards')
+      })
+    })
+    window.addEventListener('hashchange', () =>
+      setMode(window.location.hash === '#hero-crop' ? 'hero' : 'cards')
+    )
+    setMode(window.location.hash === '#hero-crop' ? 'hero' : 'cards', false)
+  }
+
+  bootMediaWorkbenchTabs()
+  document.addEventListener('astro:page-load', bootMediaWorkbenchTabs)
+</script>
+
+<style is:global>
+  /* The review page is an editorial workbench, not a public reading route. */
+  body:has(.card-crop-review-page) music-player {
+    display: none;
+  }
+
+  .media-workbench-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+    padding: 0.35rem;
+    border: 1px solid hsl(var(--border) / 0.78);
+    border-radius: 999px;
+    background: hsl(var(--card) / 0.55);
+  }
+
+  .media-workbench-tabs button {
+    min-height: 2.2rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+  }
+
+  .media-workbench-tabs button:hover,
+  .media-workbench-tabs button.is-active {
+    border-color: hsl(var(--primary) / 0.55);
+    background: hsl(var(--primary) / 0.13);
+    color: hsl(var(--primary));
+  }
+
+  .media-workbench-tabs button:focus-visible {
+    outline: 3px solid hsl(var(--ring) / 0.7);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 480px) {
+    .media-workbench-tabs {
+      width: 100%;
+    }
+
+    .media-workbench-tabs button {
+      flex: 1 1 0;
+    }
+  }
+</style>

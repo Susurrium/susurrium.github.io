@@ -1,0 +1,589 @@
+---
+/**
+ * Media article-card primitive.
+ * Visual DOM/CSS: Media/Media.github.io@9599a54f23cdfc4606f2f5edc07e8138e050205b
+ * (`.segments > .item`, index.html:118-164 and css/app.css:3827-4161).
+ *
+ * The source site's duplicate inner links are intentionally consolidated into
+ * one semantic card link. Its slanted media and hover geometry remain intact,
+ * while each local asset supplies an editorially fixed cut direction.
+ */
+import { getCardCutSide } from '@/data/home-media'
+import type {
+  CardCutSide,
+  ContentKind,
+  ContentPresentation,
+  ImageSource,
+  ResolvedCardImage
+} from '@/data/home-media'
+import {
+  frameForImageSide,
+  imageSideForFrame,
+  layoutVariantForFrame,
+  type CardCropFrame,
+  type CardCropRuntime,
+  type CardImageSide,
+  type CardLayoutVariant
+} from '@/lib/card-crop/types'
+import { formatContentDate } from '@/lib/content'
+
+import CardMediaFrame from '@/components/cards/CardMediaFrame.astro'
+
+type HeadingLevel = 2 | 3 | 4 | 5 | 6
+
+interface Props {
+  actionLabel?: string
+  class?: string
+  contentId?: string
+  contentType?: ContentKind
+  /** Source-image focal position, e.g. `0% 50%` for keep-left. */
+  cropPosition?: string
+  /** Editor-approved responsive crop transform. */
+  crop?: CardCropRuntime
+  /** Extra class for the shared image element (used by the workbench). */
+  imageClass?: string
+  date?: Date
+  description?: string
+  footerText?: string
+  /**
+   * Card lists need to join the heading outline of their host page. Archive
+   * pages pass `2`; cards nested below a Home section keep the default `3`.
+   */
+  headingLevel?: HeadingLevel
+  href?: string
+  image?: ResolvedCardImage
+  /** `contain` is available to the crop-review tool for difficult assets. */
+  imageFit?: 'cover' | 'contain'
+  imageSource?: ImageSource
+  index?: number
+  /** Decorative diagonal can be reviewed independently from image crop. */
+  diagonalSide?: CardCutSide
+  /** Optional non-visual hooks for workbench/test consumers. */
+  dataAttributes?: Record<string, string | number | boolean | undefined>
+  presentation?: ContentPresentation
+  title: string
+}
+
+const {
+  actionLabel = 'Read',
+  class: className,
+  contentId,
+  contentType,
+  cropPosition = '50% 50%',
+  crop,
+  date,
+  description,
+  footerText,
+  headingLevel = 3,
+  href,
+  image,
+  imageClass,
+  imageFit = 'cover',
+  imageSource = image?.source ?? 'none',
+  index = 0,
+  diagonalSide,
+  dataAttributes,
+  presentation,
+  title
+} = Astro.props as Props
+
+const runtimeCrop = crop ?? image?.crop
+const runtimeCropPosition = runtimeCrop
+  ? `${runtimeCrop.transform.x}% ${runtimeCrop.transform.y}%`
+  : cropPosition
+const runtimeCropFit = runtimeCrop?.fit ?? imageFit
+const runtimeCropZoom = runtimeCrop?.transform.zoom ?? 1
+/**
+ * A confirmed runtime frame (or an explicit queue assignment carried on the
+ * image) is authoritative. `diagonalSide` remains only as a compatibility
+ * input for the crop editor's legacy preview call; it cannot override an
+ * assigned image/frame pair.
+ */
+const frame: CardCropFrame =
+  runtimeCrop?.frame ??
+  (image?.imageSide ? frameForImageSide(image.imageSide) : undefined) ??
+  (diagonalSide ? (diagonalSide === 'left' ? 'diagonal-left' : 'diagonal-right') : undefined) ??
+  (getCardCutSide(image) === 'left' ? 'diagonal-left' : 'diagonal-right')
+const cutSide = frame === 'diagonal-left' ? 'left' : 'right'
+const imageSide: CardImageSide = imageSideForFrame(frame)
+const layoutVariant: CardLayoutVariant = layoutVariantForFrame(frame)
+const cutsLeft = cutSide === 'left'
+const imageIsDecorative = image?.decorative ?? true
+// `index` remains part of the card API for stable fallback IDs; it never
+// participates in the visual direction decision.
+const headingId = `media-card-${contentId ?? `item-${index}`}`
+const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+---
+
+<div class='media-card-container'>
+  <article
+    class:list={[
+      'media-card',
+      'site-card-surface',
+      'site-card-surface--interactive',
+      cutsLeft && 'is-cut-left',
+      className
+    ]}
+    aria-labelledby={headingId}
+    data-content-id={contentId}
+    data-content-type={contentType}
+    data-image-key={image?.key}
+    data-image-file={image?.src?.split(/[/?#]/).pop()}
+    data-image-source={imageSource}
+    data-card-cut-side={cutSide}
+    data-card-image-side={imageSide}
+    data-card-layout-variant={layoutVariant}
+    data-card-image-occurrence={image?.occurrence}
+    data-card-image-repeated={image?.repeated}
+    data-card-image-fit={runtimeCropFit}
+    data-card-image-position={runtimeCropPosition}
+    data-card-image-zoom={runtimeCropZoom}
+    data-card-image-origin={runtimeCropPosition}
+    data-card-crop-frame={frame}
+    data-presentation={presentation}
+    {...dataAttributes}
+    style={`--media-card-image-fit:${runtimeCropFit};--media-card-image-position:${runtimeCropPosition};--media-card-image-zoom:${runtimeCropZoom};--media-card-image-origin:${runtimeCropPosition};`}
+    data-media-card
+  >
+    <a
+      class='media-card__link'
+      href={href}
+      aria-disabled={href ? undefined : 'true'}
+      data-astro-prefetch={href ? true : undefined}
+    >
+      <CardMediaFrame
+        alt={image?.alt}
+        class='media-card__cover'
+        decorative={imageIsDecorative}
+        fit={runtimeCropFit}
+        frame={frame}
+        imageKey={image?.key}
+        imageClass={`media-card__image${imageClass ? ` ${imageClass}` : ''}`}
+        mask={cutSide}
+        src={image?.src}
+        transform={runtimeCrop?.transform}
+        width={640}
+        height={448}
+        style={`--card-media-position:${runtimeCropPosition};--card-media-origin:${runtimeCropPosition};--card-media-zoom:${runtimeCropZoom};`}
+      />
+      <div class='media-card__info'>
+        {
+          date && (
+            <div class='media-card__meta'>
+              <time data-card-date datetime={date.toISOString()}>
+                {formatContentDate(date)}
+              </time>
+            </div>
+          )
+        }
+        <Heading class='media-card__title' id={headingId} data-card-title>{title}</Heading>
+        {
+          description !== undefined && (
+            <p class='media-card__excerpt' data-card-description hidden={!description}>
+              {description}
+            </p>
+          )
+        }
+        <div class:list={['media-card__bottom', href && 'has-action']}>
+          <div class='media-card__footer' data-card-footer>{footerText}</div>
+          {
+            href && (
+              <span class='media-card__button' data-card-action>
+                {actionLabel}
+              </span>
+            )
+          }
+        </div>
+      </div>
+    </a>
+  </article>
+</div>
+
+<style>
+  /* Scoped extraction of Media's `.segments` card system. */
+  .media-card-container {
+    container-type: inline-size;
+  }
+
+  .media-card {
+    --media-card-accent: hsl(var(--primary));
+    --media-card-background: var(--site-card-background);
+    --media-card-copy: hsl(var(--muted-foreground));
+    --media-card-shadow: hsl(var(--foreground) / 0.18);
+    --media-card-pink: #e9546b;
+    --media-card-orange: #f5a623;
+    --media-card-action-width: 9.5rem;
+    --media-card-action-gap: 0.5rem;
+    display: block;
+    width: calc(100% - 2rem);
+    min-width: calc(100% - 2rem);
+    height: 14rem;
+    margin: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--site-card-border);
+    box-shadow: var(--site-card-shadow);
+    transition: all 0.2s ease-in-out 0s;
+  }
+
+  .media-card:is(:hover, :focus-within) {
+    background-color: var(--site-card-background-hover);
+    box-shadow: var(--site-card-shadow-hover);
+  }
+
+  .media-card__link {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .media-card__link:focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 0.25rem;
+  }
+
+  :global(.media-card__cover) {
+    width: 50%;
+    margin-right: 1.5rem;
+    overflow: hidden;
+    border-radius: 0.625rem 0 0 0.625rem;
+  }
+
+  .media-card:is(:hover, :focus-within) :global(.media-card__image) {
+    transform: scale(calc(var(--card-media-zoom, var(--media-card-image-zoom, 1)) * 1.05))
+      rotate(1deg);
+  }
+
+  .media-card__info {
+    position: relative;
+    display: flex;
+    width: 50%;
+    min-width: 0;
+    padding: 1rem 1.5rem 3rem 0;
+    flex-direction: column;
+    perspective: 62.5rem;
+  }
+
+  .media-card__meta {
+    display: flex;
+    min-height: 1rem;
+    justify-content: flex-end;
+    color: var(--media-card-copy);
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .media-card__title {
+    margin: 0.625rem 0;
+    overflow: hidden;
+    color: var(--media-card-accent);
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .media-card__excerpt {
+    display: -webkit-box;
+    max-height: 5rem;
+    margin: 0;
+    overflow: hidden;
+    color: var(--media-card-copy);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Keep the footer and CTA in one shared row. The CTA track is deliberately
+     fixed so its label can never reclaim or overlap the footer's space. */
+  .media-card__bottom {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--media-card-action-width);
+    gap: var(--media-card-action-gap);
+    align-items: end;
+    min-width: 0;
+    /* The info panel supplies the original 3D perspective. Preserve it
+       through this shared footer row so the CTA's translateZ hover lift is
+       rendered instead of flattened at the wrapper boundary. */
+    transform-style: preserve-3d;
+    overflow: visible;
+  }
+
+  .media-card__bottom:not(.has-action) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .media-card__footer {
+    position: static;
+    min-width: 0;
+    max-width: none;
+    margin: 0 0 0.5rem;
+    overflow: hidden;
+    color: var(--media-card-copy);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .media-card__button {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: var(--media-card-action-width);
+    min-width: var(--media-card-action-width);
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    /* Match the card's outer corner while keeping the inward corner rounded. */
+    border-radius: 1rem 0 0.5rem 0;
+    padding: 0.38rem 0.8rem;
+    background-image: linear-gradient(
+      to right,
+      var(--media-card-pink) 0,
+      var(--media-card-orange) 100%
+    );
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    white-space: nowrap;
+    transition: transform 0.2s ease-in-out 0s;
+  }
+
+  .media-card:is(:hover, :focus-within) .media-card__button {
+    transform: translateZ(2.5rem);
+  }
+
+  .media-card.is-cut-left .media-card__link {
+    flex-direction: row-reverse;
+  }
+
+  .media-card.is-cut-left :global(.media-card__cover) {
+    margin-right: auto;
+    margin-left: 1.5rem;
+    border-radius: 0 0.625rem 0.625rem 0;
+  }
+
+  .media-card.is-cut-left .media-card__info {
+    padding: 1rem 0 3rem 1.5rem;
+  }
+
+  .media-card.is-cut-left .media-card__meta {
+    justify-content: flex-start;
+  }
+
+  .media-card.is-cut-left .media-card__bottom.has-action {
+    grid-template-columns: var(--media-card-action-width) minmax(0, 1fr);
+  }
+
+  .media-card.is-cut-left .media-card__bottom.has-action .media-card__footer {
+    grid-column: 2;
+  }
+
+  .media-card.is-cut-left .media-card__bottom.has-action .media-card__button {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .media-card.is-cut-left .media-card__button {
+    border-radius: 0 1rem 0 0.5rem;
+    background-image: linear-gradient(
+      to right,
+      var(--media-card-orange) 0,
+      var(--media-card-pink) 100%
+    );
+  }
+
+  .media-card.is-cut-left:is(:hover, :focus-within) :global(.media-card__image) {
+    transform: scale(calc(var(--card-media-zoom, var(--media-card-image-zoom, 1)) * 1.05))
+      rotate(-1deg);
+  }
+
+  /* Media's original breakpoint is viewport-based. Keep that exact
+     behavior for archive pages, and repeat it as a container query because a
+     Home column can become narrow even on a wide display. */
+  @media (max-width: 767px) {
+    .media-card {
+      width: calc(100% - 1rem);
+      min-width: calc(100% - 1rem);
+      margin: 1rem 0.5rem;
+      height: auto;
+      min-height: 28rem;
+    }
+
+    .media-card__link,
+    .media-card.is-cut-left .media-card__link {
+      flex-direction: column;
+    }
+
+    :global(.media-card__cover),
+    .media-card.is-cut-left :global(.media-card__cover) {
+      width: 100%;
+      height: 14rem;
+      margin: auto;
+      border-radius: 0.625rem 0.625rem 0 0;
+    }
+
+    .media-card__info,
+    .media-card.is-cut-left .media-card__info {
+      width: 100%;
+      height: 14rem;
+      padding: 0 1rem 3rem;
+    }
+
+    .media-card__meta,
+    .media-card.is-cut-left .media-card__meta {
+      justify-content: flex-start;
+      padding-top: 0.8rem;
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .media-card {
+      width: calc(100% - 1rem);
+      min-width: calc(100% - 1rem);
+      margin: 1rem 0.5rem;
+      height: auto;
+      min-height: 28rem;
+    }
+
+    .media-card__link,
+    .media-card.is-cut-left .media-card__link {
+      flex-direction: column;
+    }
+
+    :global(.media-card__cover),
+    .media-card.is-cut-left :global(.media-card__cover) {
+      width: 100%;
+      height: 14rem;
+      margin: auto;
+      border-radius: 0.625rem 0.625rem 0 0;
+    }
+
+    .media-card__info,
+    .media-card.is-cut-left .media-card__info {
+      width: 100%;
+      height: 14rem;
+      padding: 0 1rem 3rem;
+    }
+
+    .media-card__meta,
+    .media-card.is-cut-left .media-card__meta {
+      justify-content: flex-start;
+      padding-top: 0.8rem;
+    }
+  }
+
+  /* Home's Recent/Saying cards use a compact, fixed metadata strip. Keeping
+     this contract local to the Home presentation preserves the archive card
+     proportions while preventing a long tag list from changing card height
+     or pushing the CTA into the image. The bottom row is in normal flow here:
+     its flex order is explicit for both diagonal directions, so the CTA keeps
+     the same edge alignment even when the card content changes. */
+  .media-card:is(.home-recent-card, .home-saying-card) {
+    --media-card-action-width: 5rem;
+    --media-card-footer-height: 1.8rem;
+    --media-card-bottom-bleed: 1.5rem;
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card) .media-card__info {
+    /* The metadata strip is the card's bottom edge; do not leave the old
+       absolute-CTA reservation below it. */
+    padding-bottom: 0;
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card) .media-card__bottom {
+    position: static;
+    display: flex;
+    width: calc(100% + var(--media-card-bottom-bleed));
+    min-height: var(--media-card-footer-height);
+    margin-top: auto;
+    gap: var(--media-card-action-gap);
+    align-items: flex-end;
+    overflow: visible;
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card):not(.is-cut-left)
+    .media-card__bottom {
+    margin-right: calc(-1 * var(--media-card-bottom-bleed));
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card).is-cut-left .media-card__bottom {
+    margin-left: calc(-1 * var(--media-card-bottom-bleed));
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card) .media-card__footer {
+    flex: 1 1 auto;
+    width: auto;
+    height: var(--media-card-footer-height);
+    max-height: var(--media-card-footer-height);
+    margin: 0;
+    overflow: hidden;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card) .media-card__button {
+    flex: 0 0 var(--media-card-action-width);
+    width: var(--media-card-action-width);
+    min-width: var(--media-card-action-width);
+    height: var(--media-card-footer-height);
+    min-height: var(--media-card-footer-height);
+    padding: 0 0.6rem;
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card)
+    .media-card__bottom:not(.has-action)
+    .media-card__footer {
+    flex-basis: 100%;
+  }
+
+  .media-card:is(.home-recent-card, .home-saying-card).is-cut-left
+    .media-card__bottom.has-action
+    .media-card__button {
+    order: -1;
+  }
+
+  @media (max-width: 767px) {
+    .media-card:is(.home-recent-card, .home-saying-card) {
+      --media-card-bottom-bleed: 1rem;
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .media-card:is(.home-recent-card, .home-saying-card) {
+      --media-card-bottom-bleed: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .media-card,
+    :global(.media-card__image),
+    .media-card__button {
+      transition: none;
+    }
+
+    .media-card:is(:hover, :focus-within) :global(.media-card__image),
+    .media-card.is-cut-left:is(:hover, :focus-within) :global(.media-card__image),
+    .media-card:is(:hover, :focus-within) .media-card__button {
+      transform: none;
+    }
+
+    .media-card:is(:hover, :focus-within) :global(.media-card__image),
+    .media-card.is-cut-left:is(:hover, :focus-within) :global(.media-card__image) {
+      transform: scale(var(--card-media-zoom, var(--media-card-image-zoom, 1)));
+    }
+  }
+</style>

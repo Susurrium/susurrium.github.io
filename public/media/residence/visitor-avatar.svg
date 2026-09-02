@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">访客头像</title>
+  <desc id="desc">中性的访客头像占位图</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dbe4ee"/>
+      <stop offset="1" stop-color="#93a6bc"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
+  <circle cx="32" cy="25" r="10" fill="#f8fafc" opacity=".94"/>
+  <path d="M14 55c2.8-10.7 9.4-16 18-16s15.2 5.3 18 16" fill="#f8fafc" opacity=".94"/>
+</svg>

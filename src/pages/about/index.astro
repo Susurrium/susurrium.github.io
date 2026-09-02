@@ -1,11 +1,17 @@
 ---
-import config from 'virtual:config'
+import { educationEntries, toProfileTimelineEntry } from '@/data/education'
+import { experienceEntries } from '@/data/experience'
+import { profileIntro } from '@/data/profile'
 
-import { Button, Collapse, Signature, Spoiler, Timeline } from 'astro-pure/user'
+import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
-import Substats from '@/components/about/Substats.astro'
+import AboutTimeline from '@/components/about/AboutTimeline.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
+import CodeTimeCard from '@/components/CodeTimeCard.astro'
+import ConnectCards from '@/components/ConnectCards.astro'
 import zotero from '@/assets/tools/zotero.png'
+
+const educationTimelineEntries = educationEntries.map(toProfileTimelineEntry)
 
 const headings = [
   {
@@ -15,8 +21,8 @@ const headings = [
   },
   {
     depth: 2,
-    slug: 'social-networks',
-    text: 'Social Networks'
+    slug: 'connect',
+    text: 'Connect'
   },
   {
     depth: 2,
@@ -30,35 +36,29 @@ const headings = [
   },
   {
     depth: 2,
-    slug: 'about-blog',
-    text: 'About Blog'
+    slug: 'sayings',
+    text: 'Sayings'
+  },
+  {
+    depth: 2,
+    slug: 'about-this-site',
+    text: 'About this site'
   }
 ]
 ---
 
-<PageLayout title='About' {headings} comment>
+<PageLayout
+  title='About'
+  description='A personal profile, tools, experience, and selected notes.'
+  {headings}
+  comment
+  effectProfile='about'
+>
+  <CodeTimeCard />
+
   <h2 id='general-talk' class='invisible m-0 h-0'>General Talk</h2>
-  <p class='text-muted-foreground'>Developer / Designer / <del>Medical student </del></p>
-  <p>你好，我叫 Arthals，是一个兴趣使然、热爱编程的医学生。</p>
-  <p>
-    目前就读于北京大学医学部，同时修读计算机科学技术双学位。一边被 <del> 病理病生理药理 </del>
-    内外妇儿折磨，一边在
-    <del> ICS 的 Lab 作业 </del> Pytorch 中 debug 到头秃。
-  </p>
-  <p>我即将在北京大学先进制造与机器人学院攻读博士学位。</p>
-  <p>我的兴趣主要在 Large Language Model / Embodied AI 方向。</p>
-  <p>我喜欢 Minecraft。</p>
-  <div class='flex w-fit gap-x-2'>
-    <!-- <img
-      src='https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fzhuozhiyongde&count_bg=%23000000&title_bg=%23000000&icon=spacex.svg&icon_color=%23E7E7E7&title=Hits&edge_flat=true'
-      class='my-0 rounded-md border'
-    /> -->
-    <img
-      alt='CodeTime Badge'
-      src='https://shields.jannchie.com/endpoint?style=flat&color=222&url=https%3A%2F%2Fapi.codetime.dev%2Fv3%2Fusers%2Fshield%3Fuid%3D20455'
-      class='rounded-md border'
-    />
-  </div>
+  <p class='text-muted-foreground' set:html={profileIntro.role}></p>
+  {profileIntro.paragraphs.map((paragraph) => <p set:html={paragraph}></p>)}
 
   {/* tools */}
   <h2 id='tools'>Tools</h2>
@@ -68,28 +68,28 @@ const headings = [
     title='Productivity'
     tools={[
       {
-        name: 'Arc',
-        description: 'Broswer',
-        href: 'https://arc.net/',
-        icon: import('@/assets/tools/arc.svg?raw')
+        name: 'Obsidian',
+        description: 'Knowledge management',
+        href: 'https://obsidian.md/',
+        icon: import('@/assets/tools/obsidian.svg?raw')
       },
       {
-        name: 'Tailscale',
-        description: 'VPN',
-        href: 'https://tailscale.com/',
-        icon: import('@/assets/tools/tailscale.svg?raw')
+        name: 'Zotero',
+        description: 'Reference management',
+        href: 'https://www.zotero.org/',
+        icon: zotero
       },
       {
         name: 'Typora',
-        description: 'Markdown Editor',
+        description: 'Markdown editor',
         href: 'https://typora.io/',
         icon: import('@/assets/tools/typora.svg?raw')
       },
       {
-        name: 'Zotero',
-        description: 'Reference Management',
-        href: 'https://www.zotero.org/',
-        icon: zotero
+        name: 'NotebookLM',
+        description: 'Source-grounded note-taking',
+        href: 'https://notebooklm.google.com/',
+        icon: import('@/assets/tools/notebooklm.svg?raw')
       }
     ]}
   />
@@ -98,29 +98,29 @@ const headings = [
     title='Development'
     tools={[
       {
-        name: 'Cursor',
-        description: 'AI Code Editor',
-        href: 'https://www.cursor.com/',
-        icon: import('@/assets/tools/cursor.svg?raw'),
-        darkIcon: import('@/assets/tools/cursor_dark.svg?raw')
+        name: 'Codex',
+        description: 'AI coding agent',
+        href: 'https://openai.com/codex/',
+        icon: import('@/assets/tools/codex.svg?raw')
       },
       {
         name: 'VS Code',
-        description: 'IDE',
+        description: 'Code editor',
         href: 'https://code.visualstudio.com/',
         icon: import('@/assets/tools/vscode.svg?raw')
       },
       {
-        name: 'Warp',
-        description: 'Terminal',
-        href: 'https://warp.dev/',
-        icon: import('@/assets/tools/warp.svg?raw')
+        name: 'Claude Code',
+        description: 'Terminal coding agent',
+        href: 'https://www.anthropic.com/claude-code',
+        icon: import('@/assets/tools/claude-code.svg?raw')
       },
       {
-        name: 'LobeChat',
-        description: 'AI Chat',
-        href: 'https://www.lobehub.com/',
-        icon: import('@/assets/tools/lobechat.svg?raw')
+        name: 'Cursor',
+        description: 'AI code editor',
+        href: 'https://www.cursor.com/',
+        icon: import('@/assets/tools/cursor.svg?raw'),
+        darkIcon: import('@/assets/tools/cursor_dark.svg?raw')
       }
     ]}
   />
@@ -130,21 +130,15 @@ const headings = [
     tools={[
       {
         name: 'Photoshop',
-        description: 'Picture Editing',
+        description: 'Image editor',
         href: 'https://www.adobe.com/products/photoshop',
         icon: import('@/assets/tools/photoshop.svg?raw')
       },
-      // {
-      //   name: 'Illustrator',
-      //   description: 'Vector Drawing',
-      //   href: 'https://www.adobe.com/products/illustrator',
-      //   icon: import('@/assets/tools/illustrator.svg?raw')
-      // },
       {
-        name: 'Figma',
-        description: 'Vector Drawing',
-        href: 'https://www.figma.com/',
-        icon: import('@/assets/tools/figma.svg?raw')
+        name: 'Blender',
+        description: '3D creation suite',
+        href: 'https://www.blender.org/',
+        icon: import('@/assets/tools/blender.svg?raw')
       }
     ]}
   />
@@ -153,105 +147,94 @@ const headings = [
     title='Environment'
     tools={[
       {
-        name: 'MacOS Sonoma 14.7.1',
-        description: "MacBook Pro 16'",
-        href: 'https://www.apple.com/macos/',
-        icon: import('@/assets/tools/apple.svg?raw')
+        name: 'Windows 11',
+        description: 'Desktop operating system',
+        href: 'https://www.microsoft.com/windows/windows-11',
+        icon: import('@/assets/tools/windows11.svg?raw')
       },
       {
         name: 'Ubuntu 24.04 LTS',
-        description: 'Linux Distribution',
+        description: 'Linux distribution',
         href: 'https://ubuntu.com/',
         icon: import('@/assets/tools/ubuntu.svg?raw')
+      },
+      {
+        name: 'WSL 2',
+        description: 'Linux subsystem',
+        href: 'https://learn.microsoft.com/windows/wsl/',
+        icon: import('@/assets/tools/wsl.svg?raw')
+      },
+      {
+        name: 'Tailscale',
+        description: 'Mesh VPN',
+        href: 'https://tailscale.com/',
+        icon: import('@/assets/tools/tailscale.svg?raw')
       }
     ]}
   />
 
-  {/* social-networks */}
-  <h2 id='social-networks'>Social Networks</h2>
-  <p>你可以在以下平台找到我：</p>
-  <Substats
-    stats={[
-      {
-        platform: 'GitHub',
-        icon: 'github',
-        link: 'https://github.com/zhuozhiyongde',
-        text: 'followers',
-        api: 'github/zhuozhiyongde'
-      },
-      {
-        platform: 'Zhihu',
-        icon: 'zhihu',
-        color: '#0084ff',
-        link: 'https://www.zhihu.com/people/zhuozhiyongde',
-        text: 'followers',
-        count: 356
-      },
-      {
-        platform: 'Bilibili',
-        icon: 'bilibili',
-        color: '#fe7398',
-        link: 'https://space.bilibili.com/203396427',
-        text: 'followers',
-        count: 280
-      },
-      {
-        platform: 'Steam',
-        icon: 'steam',
-        color: '#50769d',
-        link: 'https://steamcommunity.com/profiles/76561199760864774/',
-        text: 'games',
-        count: 1
-      }
-    ]}
-  />
+  {/* connect */}
+  <!-- Keep the old fragment target without surfacing the retired section name. -->
+  <span id='social-networks' class='sr-only' aria-hidden='true'></span>
+  <h2 id='connect'>Connect</h2>
+  <p>你可以在这里找到我、联系我，或订阅更新：</p>
+  <ConnectCards />
 
   <h2 id='education'>Education</h2>
-  <Timeline
-    events={[
-      {
-        date: '2021-09-01',
-        content: '<a href="https://www.pku.edu.cn"target="_blank">北京大学</a>'
-      },
-      {
-        date: '2014-09-01',
-        content: '<a href="https://www.rdfz.cn/"target="_blank">中国人民大学附属中学</a>'
-      }
-    ]}
-  />
+  <AboutTimeline entries={educationTimelineEntries} emptyText='暂无教育经历记录。' />
 
   <h2 id='experience'>Experience</h2>
-  <Timeline
-    events={[
-      {
-        date: '2024-09-11',
-        content:
-          '<a href="https://slide.huh.moe/"target="_blank">北京大学 · 《计算机系统导论》课程助教</a>'
-      }
-    ]}
+  <AboutTimeline entries={experienceEntries} emptyText='暂未整理可公开的经历。' />
+
+  <h2 id='sayings'>Sayings</h2>
+  <p>
+    这里收藏一些我愿意反复重读的句子。它们来自不同的声音，却在某些时刻，替我说出了难以言明的部分
+    <br />
+    “虽世殊事异，所以兴怀，其致一也”
+  </p>
+  <Button
+    title='View all'
+    href='/sayings'
+    variant='ahead'
+    aria-label='View all Sayings'
+    class='not-prose'
+    data-about-action='ahead'
   />
 
-  {/* about-blog */}
-  <h2 id='about-blog'>About Blog</h2>
-  <p>本站基于以下项目/服务提供商的资源和技术支持：</p>
+  {/* about-this-site */}
+  <span id='about-blog' class='sr-only' aria-hidden='true'></span>
+  <h2 id='about-this-site'>About this site</h2>
+  <p>本站基于以下项目/服务提供商的资源和技术支持，感谢各维护者的工作。</p>
   <ul>
-    <li>域名: <a href='https://cloud.tencent.com/' target='_blank'>Tencent Cloud</a></li>
     <li>
-      框架 & 主题: <a href='https://astro.build/' target='_blank'>Astro</a> + <a
+      框架：<a href='https://astro.build/' target='_blank' rel='noopener noreferrer'>Astro</a>
+    </li>
+    <li>
+      主题：<a
         href='https://github.com/cworld1/astro-theme-pure'
-        target='_blank'>Astro Theme Pure</a
-      >
-    </li>
-    <li>评论系统：<a href='https://waline.js.org' target='_blank'>Waline</a></li>
-    <li>
-      访问量统计：<a href='https://waline.js.org/' target='_blank'>Waline</a> + <a
-        href='https://umami.is/'
-        target='_blank'>Umami</a
+        target='_blank'
+        rel='noopener noreferrer'>Astro Theme Pure</a
       >
     </li>
     <li>
-      粉丝数统计：<a href='https://github.com/spencerwooo/substats' target='_blank'>Substats</a>
+      部署：<a href='https://pages.github.com/' target='_blank' rel='noopener noreferrer'
+        >GitHub Pages</a
+      >
+    </li>
+    <li>
+      浏览量：<a href='https://waline.js.org/' target='_blank' rel='noopener noreferrer'
+        >Waline</a
+      > + <a href='https://vercel.com/' target='_blank' rel='noopener noreferrer'>Vercel</a>
+    </li>
+    <li>
+      访问统计：<a href='https://umami.is/' target='_blank' rel='noopener noreferrer'>Umami Cloud</a>
+    </li>
+    <li>
+      地图：<a
+        href='https://www.openstreetmap.org/copyright'
+        target='_blank'
+        rel='noopener noreferrer'>OpenStreetMap</a
+      > + <a href='https://carto.com/' target='_blank' rel='noopener noreferrer'>CARTO</a>
     </li>
   </ul>
-  {config.signature && <Signature />}
 </PageLayout>

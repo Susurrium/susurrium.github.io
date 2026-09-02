@@ -1,32 +1,58 @@
 ---
 import type { MarkdownHeading } from 'astro'
+import type { EffectProfile } from '@/data/effects'
 
 import { TOC } from 'astro-pure/components/pages'
 import PageLayout from '@/layouts/ContentLayout.astro'
 import { Comment, PageInfo } from '@/components/waline'
+import { integ } from '@/site-config'
 
 interface Props {
   title: string
+  description?: string
+  noindex?: boolean
+  ogImage?: string
   headings?: MarkdownHeading[]
   view?: boolean
   comment?: boolean
+  effectProfile?: EffectProfile
 }
 
-const { title, headings, view, comment: enableComment, ...props } = Astro.props
+const {
+  title,
+  description,
+  noindex,
+  ogImage,
+  headings,
+  view,
+  comment: enableComment,
+  effectProfile,
+  ...props
+} = Astro.props
+const commentsEnabled = integ.waline.enable
 ---
 
-<PageLayout meta={{ title }} {...props}>
+<PageLayout
+  meta={{ title, description, noindex, ogImage }}
+  {effectProfile}
+  sidebar={Boolean(headings?.length)}
+  {...props}
+>
   {headings?.length && <TOC headings={headings} slot='sidebar' />}
 
   <Fragment slot='header'>
     <h1 class='text-2xl font-medium sm:mb-2 sm:text-3xl'>{title}</h1>
-    {(view || enableComment) && <PageInfo {view} comment={enableComment} class='italic' />}
+    {
+      commentsEnabled && (view || enableComment) && (
+        <PageInfo {view} comment={enableComment} class='italic' />
+      )
+    }
   </Fragment>
 
   <slot />
 
   <slot name='bottom' slot='bottom'>
-    {enableComment && <Comment class='mt-3 sm:mt-6' />}
+    {commentsEnabled && enableComment && <Comment class='mt-3 sm:mt-6' />}
   </slot>
 
   <slot name='bottom-sidebar' slot='bottom-sidebar' />

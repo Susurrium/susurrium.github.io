@@ -14,11 +14,11 @@
   animation: 300ms fade-in-up;
   animation-fill-mode: forwards;
 }
-@media (prefers-reduced-motion) {
+@media (prefers-reduced-motion: reduce) {
   .animate {
-    opacity: 0;
-    animation: 100ms fade-in-up;
-    animation-fill-mode: forwards;
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 }
 #content-header {
@@ -63,6 +63,8 @@ span.katex-display {
     padding-top: 0.85rem;
     padding-bottom: 0.85rem;
     padding-inline: 0;
+    /* Unhighlighted Shiki text should use the code block's theme color. */
+    color: inherit;
     background: none;
     overflow-x: scroll;
 
@@ -238,43 +240,36 @@ body::-webkit-scrollbar {
   background: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  .markdown-alert {
-    --color-border-default: #30363d;
-    --color-accent-fg: #58a6ff;
-    --color-accent-emphasis: #1f6feb;
-    --color-danger-fg: #f85149;
-    --color-danger-emphasis: #da3633;
-    --color-attention-fg: #d29922;
-    --color-attention-emphasis: #9e6a03;
-    --color-done-fg: #a371f7;
-    --color-done-emphasis: #8957e5;
-    --color-success-fg: #3fb950;
-    --color-success-emphasis: #238636;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  .markdown-alert {
-    --color-border-default: #d0d7de;
-    --color-accent-fg: #0969da;
-    --color-accent-emphasis: #0969da;
-    --color-danger-fg: #d1242f;
-    --color-danger-emphasis: #cf222e;
-    --color-attention-fg: #9a6700;
-    --color-attention-emphasis: #9a6700;
-    --color-done-fg: #8250df;
-    --color-done-emphasis: #8250df;
-    --color-success-fg: #1a7f37;
-    --color-success-emphasis: #1f883d;
-  }
-}
-
 .markdown-alert {
+  --color-border-default: #d0d7de;
+  --color-accent-fg: #0969da;
+  --color-accent-emphasis: #0969da;
+  --color-danger-fg: #d1242f;
+  --color-danger-emphasis: #cf222e;
+  --color-attention-fg: #9a6700;
+  --color-attention-emphasis: #9a6700;
+  --color-done-fg: #8250df;
+  --color-done-emphasis: #8250df;
+  --color-success-fg: #1a7f37;
+  --color-success-emphasis: #1f883d;
   border-left: 0.25em solid var(--borderColor-default, var(--color-border-default));
   color: inherit;
   margin-bottom: 16px;
   padding: 0.5rem 1em;
+}
+
+html.dark .markdown-alert {
+  --color-border-default: #30363d;
+  --color-accent-fg: #58a6ff;
+  --color-accent-emphasis: #1f6feb;
+  --color-danger-fg: #f85149;
+  --color-danger-emphasis: #da3633;
+  --color-attention-fg: #d29922;
+  --color-attention-emphasis: #9e6a03;
+  --color-done-fg: #a371f7;
+  --color-done-emphasis: #8957e5;
+  --color-success-fg: #3fb950;
+  --color-success-emphasis: #238636;
 }
 .markdown-alert > :last-child {
   margin-bottom: 0 !important;

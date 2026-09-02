@@ -1,0 +1,293 @@
+---
+/**
+ * Historical says-query idea, adapted for the separate Saying collection.
+ * A deterministic server fallback preserves no-JS HTML; client code chooses a
+ * fresh published Saying on every Home visit. Do not move that selection into
+ * Astro frontmatter: Home is statically generated.
+ */
+import { getCardCutSide } from '@/data/home-media'
+import type { CardCutSide } from '@/data/home-media'
+import { resolveMediaImage } from '@/lib/content-layer/page-data'
+import type { RenderablePageItem, SayingRecord } from '@/lib/content-layer/types'
+
+import { Button } from 'astro-pure/user'
+import ContentCard from '@/components/cards/ContentCard.astro'
+
+interface Props {
+  items: readonly RenderablePageItem[]
+}
+
+type SayingCatalogItem = {
+  description: string
+  footer: string
+  href: string
+  id: string
+  image: ReturnType<typeof resolveMediaImage>
+  cutSide: CardCutSide
+  text: string
+}
+
+const { items } = Astro.props
+const sayingItems = items.filter(
+  (item): item is RenderablePageItem & { record: SayingRecord } => item.record.kind === 'saying'
+)
+const catalog: SayingCatalogItem[] = sayingItems.map((item) => {
+  const image = resolveMediaImage(item)
+  return {
+    description: item.card.description ?? '',
+    footer: item.card.footerText,
+    href: item.card.href,
+    id: item.record.id,
+    image,
+    cutSide: getCardCutSide(image),
+    text: item.record.title
+  }
+})
+const fallbackItem = sayingItems[0]
+const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
+---
+
+<!-- The custom element owns this page visit's selection. It is not persisted,
+     so returning to /home through ClientRouter selects again. -->{
+  fallbackItem ? (
+    <section
+      class='home-random-saying'
+      aria-labelledby='home-random-saying-heading'
+      data-home-random-saying
+    >
+      <h2 id='home-random-saying-heading' class='sr-only'>
+        Saying
+      </h2>
+
+      <saying-random-card data-random-saying data-saying-id={fallbackItem.record.id}>
+        <ContentCard class='home-saying-card' item={fallbackItem} />
+        <script
+          is:inline
+          type='application/json'
+          data-random-saying-catalog
+          set:html={serializedCatalog}
+        />
+      </saying-random-card>
+
+      <div class='home-random-saying__actions' data-home-saying-actions>
+        <Button
+          title='View all'
+          href='/sayings'
+          variant='ahead'
+          aria-label='View all Sayings'
+          data-home-action='ahead'
+          class='home-random-saying__more w-fit self-end'
+        />
+      </div>
+    </section>
+  ) : null
+}
+
+<script>
+  import { selectRandom } from '@/data/home-media'
+
+  type ClientCatalogItem = {
+    description: string
+    footer: string
+    href: string
+    id: string
+    cutSide: 'left' | 'right'
+    image: {
+      alt: string
+      decorative: boolean
+      key?: string
+      crop?: {
+        fit: 'cover' | 'contain'
+        frame: 'diagonal-left' | 'diagonal-right'
+        transform: { x: number; y: number; zoom: number }
+      }
+      source: string
+      src?: string
+    }
+    text: string
+  }
+
+  type RandomWindow = Window & {
+    __susurriumRandom?: () => number
+  }
+
+  class SayingRandomCard extends HTMLElement {
+    #listenerAbortController?: AbortController
+    #lastVisitKey?: string
+
+    connectedCallback() {
+      this.#listenerAbortController?.abort()
+      const listenerAbortController = new AbortController()
+      this.#listenerAbortController = listenerAbortController
+
+      // ClientRouter inserts a fresh Home subtree and emits this event after
+      // the swap. The visit key prevents the initial connection plus that
+      // event from selecting twice for one arrival.
+      document.addEventListener('astro:page-load', () => this.#selectForCurrentVisit(), {
+        signal: listenerAbortController.signal
+      })
+      this.#selectForCurrentVisit()
+    }
+
+    disconnectedCallback() {
+      this.#listenerAbortController?.abort()
+      this.#listenerAbortController = undefined
+      this.#lastVisitKey = undefined
+    }
+
+    #selectForCurrentVisit() {
+      if (!this.isConnected || window.location.pathname !== '/home') return
+
+      const catalogElement = this.querySelector<HTMLScriptElement>('[data-random-saying-catalog]')
+      if (!catalogElement?.textContent) return
+
+      let catalog: ClientCatalogItem[] = []
+      try {
+        const candidate: unknown = JSON.parse(catalogElement.textContent)
+        if (Array.isArray(candidate)) catalog = candidate as ClientCatalogItem[]
+      } catch {
+        return
+      }
+
+      const visitKey = window.location.href
+      if (this.#lastVisitKey === visitKey) return
+
+      const suppliedRandom = (window as RandomWindow).__susurriumRandom
+      const selected = selectRandom(
+        catalog,
+        typeof suppliedRandom === 'function' ? suppliedRandom : Math.random
+      )
+      if (!selected) return
+
+      this.#lastVisitKey = visitKey
+      this.dataset.sayingId = selected.id
+
+      const card = this.querySelector<HTMLElement>('[data-media-card]')
+      if (!card) return
+      const cutSide = selected.cutSide === 'left' ? 'left' : 'right'
+      const crop = selected.image.crop
+      // A confirmed crop frame is authoritative for this runtime selection;
+      // the catalogue cut side is only the no-crop fallback. Keep the shared
+      // CardMediaFrame in sync because its SSR custom properties are otherwise
+      // immutable when a random Saying swaps the image in place.
+      const frame = crop?.frame ?? (cutSide === 'left' ? 'diagonal-left' : 'diagonal-right')
+      const renderedCutSide = frame === 'diagonal-left' ? 'left' : 'right'
+      const position = crop ? `${crop.transform.x}% ${crop.transform.y}%` : '50% 50%'
+      card.dataset.contentId = selected.id
+      card.dataset.imageKey = selected.image.key ?? ''
+      card.dataset.imageFile = selected.image.src?.split(/[/?#]/).pop() ?? ''
+      card.dataset.imageSource = selected.image.source
+      card.dataset.cardCutSide = renderedCutSide
+      card.dataset.cardImageSide = renderedCutSide === 'left' ? 'right' : 'left'
+      card.dataset.cardLayoutVariant =
+        renderedCutSide === 'left' ? 'image-right-diagonal-left' : 'image-left-diagonal-right'
+      card.classList.toggle('is-cut-left', renderedCutSide === 'left')
+      if (crop) {
+        card.dataset.cardCropFrame = crop.frame
+        card.dataset.cardImageFit = crop.fit
+        card.dataset.cardImagePosition = `${crop.transform.x}% ${crop.transform.y}%`
+        card.dataset.cardImageZoom = String(crop.transform.zoom)
+        card.dataset.cardImageOrigin = `${crop.transform.x}% ${crop.transform.y}%`
+        card.style.setProperty('--media-card-image-fit', crop.fit)
+        card.style.setProperty(
+          '--media-card-image-position',
+          `${crop.transform.x}% ${crop.transform.y}%`
+        )
+        card.style.setProperty('--media-card-image-zoom', String(crop.transform.zoom))
+        card.style.setProperty(
+          '--media-card-image-origin',
+          `${crop.transform.x}% ${crop.transform.y}%`
+        )
+      } else {
+        delete card.dataset.cardCropFrame
+        card.dataset.cardImageFit = 'cover'
+        card.dataset.cardImagePosition = '50% 50%'
+        card.dataset.cardImageZoom = '1'
+        card.dataset.cardImageOrigin = '50% 50%'
+        card.style.setProperty('--media-card-image-fit', 'cover')
+        card.style.setProperty('--media-card-image-position', '50% 50%')
+        card.style.setProperty('--media-card-image-zoom', '1')
+        card.style.setProperty('--media-card-image-origin', '50% 50%')
+      }
+
+      const mediaFrame = card.querySelector<HTMLElement>('[data-card-media-frame]')
+      if (mediaFrame) {
+        mediaFrame.dataset.frame = frame
+        mediaFrame.dataset.mediaFrame = frame
+        mediaFrame.dataset.mediaMask = renderedCutSide
+        mediaFrame.dataset.fit = crop?.fit ?? 'cover'
+        mediaFrame.style.setProperty('--card-media-fit', crop?.fit ?? 'cover')
+        mediaFrame.style.setProperty('--card-media-position', position)
+        mediaFrame.style.setProperty('--card-media-origin', position)
+        mediaFrame.style.setProperty('--card-media-zoom', String(crop?.transform.zoom ?? 1))
+        mediaFrame.classList.toggle('card-media-frame--left', renderedCutSide === 'left')
+        mediaFrame.classList.toggle('card-media-frame--right', renderedCutSide === 'right')
+      }
+
+      const link = card.querySelector<HTMLAnchorElement>('.media-card__link')
+      if (link) link.href = selected.href
+
+      const title = card.querySelector<HTMLElement>('[data-card-title]')
+      if (title) {
+        title.textContent = `“${selected.text}”`
+        // The server-rendered fallback and the client-selected Saying can be
+        // different records. Keep the article outline and accessible name in
+        // sync when the identity changes in place.
+        title.id = `media-card-${selected.id}`
+        card.setAttribute('aria-labelledby', title.id)
+      }
+
+      const description = card.querySelector<HTMLElement>('[data-card-description]')
+      if (description) {
+        description.textContent = selected.description
+        description.hidden = !selected.description
+      }
+
+      const footer = card.querySelector<HTMLElement>('[data-card-footer]')
+      if (footer) footer.textContent = selected.footer
+
+      const image = card.querySelector<HTMLImageElement>('[data-card-image]')
+      if (image && selected.image.src) {
+        image.src = selected.image.src
+        image.alt = selected.image.alt
+        image.setAttribute('data-image-key', selected.image.key ?? '')
+        const cover = card.querySelector<HTMLElement>('.media-card__cover')
+        cover?.toggleAttribute('aria-hidden', selected.image.decorative)
+      }
+    }
+  }
+
+  if (!customElements.get('saying-random-card')) {
+    customElements.define('saying-random-card', SayingRandomCard)
+  }
+</script>
+
+<style>
+  .home-random-saying {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .home-random-saying__actions {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  saying-random-card {
+    display: block;
+  }
+
+  /* Media's archive card deliberately keeps a 1rem breathing room. On
+     Home the card and its external CTA belong to the outer content rail, so
+     remove only the horizontal part of that margin while preserving the
+     vertical rhythm and slanted-card presentation. */
+  .home-random-saying :global(.media-card.home-saying-card) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 100%;
+    margin-inline: 0;
+  }
+</style>

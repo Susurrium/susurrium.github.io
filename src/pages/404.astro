@@ -4,6 +4,7 @@ import PageLayout from '@/layouts/BaseLayout.astro'
 
 const meta = {
   description: 'Not found',
+  noindex: true,
   title: '404'
 }
 ---
@@ -32,6 +33,6 @@ const meta = {
     </p> -->
     <p class='mt-3 text-muted-foreground'>Oops, something went wrong.</p>
     <p class='text-lg'>Sorry, we couldn't find your page.</p>
-    <Button title='Back to home' href='/' variant='ahead' class='mt-5' />
+    <Button title='Back to home' href='/home' variant='ahead' class='mt-5' />
   </div>
 </PageLayout>

@@ -1,0 +1,210 @@
+---
+import { Timeline } from 'astro-pure/user'
+import type { TimelineEvent } from 'astro-pure/types'
+import '@/assets/styles/profile-card.css'
+import {
+  CURRENT_TIME_LABEL,
+  formatProfilePoint,
+  sortProfileTimelineEntries,
+  type ProfileTimelineEntry
+} from '@/data/profile-timeline'
+
+interface Props {
+  entries: readonly ProfileTimelineEntry[]
+  emptyText?: string
+  class?: string
+}
+
+const { entries, emptyText = '暂无记录。', class: className } = Astro.props as Props
+
+const escapeHtml = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[character] ?? character
+  )
+
+const safeUrl = (value?: string) => {
+  if (!value) return undefined
+  if (!/^https?:\/\//i.test(value) && !value.startsWith('/')) return undefined
+  return escapeHtml(value)
+}
+
+const renderCard = (entry: ProfileTimelineEntry) => {
+  const href = safeUrl(entry.href)
+  const image = safeUrl(entry.image)
+  const external = Boolean(entry.href && /^https?:\/\//i.test(entry.href))
+  const cardTag = href ? 'a' : 'article'
+  const cardClass = [
+    'profile-card',
+    'profile-card--compact',
+    'site-card-surface',
+    'site-card-surface--interactive',
+    'border',
+    'not-prose',
+    image ? 'profile-card--has-image' : ''
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const linkAttributes = href
+    ? ` href="${href}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}`
+    : ''
+  const imageMarkup = image
+    ? `<img class="profile-card__image" src="${image}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`
+    : ''
+  const subtitleMarkup = entry.subtitle
+    ? `<span class="profile-card__subtitle">${escapeHtml(entry.subtitle)}</span>`
+    : ''
+  const descriptionMarkup = entry.description
+    ? `<span class="profile-card__description">${escapeHtml(entry.description)}</span>`
+    : ''
+
+  return `<${cardTag} class="${cardClass}"${linkAttributes}>
+    ${imageMarkup}
+    <span class="profile-card__content">
+      <strong class="profile-card__title">${escapeHtml(entry.title)}</strong>
+      ${subtitleMarkup}
+      ${descriptionMarkup}
+    </span>
+  </${cardTag}>`
+}
+
+const orderedEntries = sortProfileTimelineEntries(entries)
+const profileEvents: TimelineEvent[] = orderedEntries.map((entry) => ({
+  date: formatProfilePoint(entry.startDate),
+  content: renderCard(entry)
+}))
+const hasCurrentEntry = orderedEntries.some((entry) => entry.isCurrent)
+const events: TimelineEvent[] = hasCurrentEntry
+  ? [
+      ...profileEvents,
+      {
+        date: CURRENT_TIME_LABEL,
+        content:
+          '<span class="about-timeline__current-anchor" aria-hidden="true"></span>'
+      }
+    ]
+  : profileEvents
+---
+
+<div
+  class:list={['about-timeline', className]}
+  data-about-timeline
+  data-empty={orderedEntries.length === 0 ? 'true' : undefined}
+  data-current-marker={hasCurrentEntry ? 'true' : undefined}
+>
+  {
+    orderedEntries.length > 0 ? (
+      <Timeline class='about-timeline__timeline' {events} />
+    ) : (
+      <div class='about-timeline__empty-state site-card-surface not-prose'>{emptyText}</div>
+    )
+  }
+</div>
+
+<style>
+  .about-timeline {
+    --about-timeline-rail-x: 0.75rem;
+    position: relative;
+    isolation: isolate;
+    padding-block: 0.15rem;
+  }
+
+  .about-timeline::before {
+    position: absolute;
+    z-index: 0;
+    top: 0.875rem;
+    bottom: 0.875rem;
+    inset-inline-start: var(--about-timeline-rail-x);
+    width: 0.25rem;
+    border-radius: 999px;
+    background: hsl(var(--border));
+    content: '';
+    pointer-events: none;
+  }
+
+  :global(.about-timeline__timeline) {
+    position: relative;
+    z-index: 1;
+  }
+
+  :global(.about-timeline__timeline > ul) {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    margin: 0;
+    padding-inline-start: 0 !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  :global(.about-timeline__timeline > ul > li) {
+    align-items: flex-start;
+    margin: 0;
+  }
+
+  /* The outer rail remains continuous, including for a single entry. */
+  :global(.about-timeline__timeline > ul > li > span.absolute) {
+    display: none;
+  }
+
+  :global(.about-timeline__timeline > ul > li > div) {
+    min-width: 0;
+    flex: 1;
+    align-items: flex-start;
+  }
+
+  :global(.about-timeline__timeline > ul > li > div > div) {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .about-timeline__empty-state {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-height: 3.25rem;
+    box-sizing: border-box;
+    align-items: center;
+    margin-inline-start: 2.25rem;
+    border: 1px solid var(--site-card-border, hsl(var(--border)));
+    border-radius: 0.9rem;
+    padding: 0.8rem 1rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.9rem;
+  }
+
+  :global(.about-timeline__current-anchor) {
+    display: block;
+    min-height: 1.25rem;
+  }
+
+  :global(.about-timeline__timeline > ul > li:has(.about-timeline__current-anchor) > span:first-child) {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary));
+  }
+
+  :global(.about-timeline__timeline > ul > li:has(.about-timeline__current-anchor) samp) {
+    color: hsl(var(--primary));
+    font-weight: 650;
+    text-align: left;
+  }
+
+  @media (max-width: 639px) {
+    :global(.about-timeline__timeline > ul > li > div) {
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .about-timeline__empty-state {
+      margin-inline-start: 2rem;
+      padding-inline: 0.9rem;
+    }
+  }
+</style>

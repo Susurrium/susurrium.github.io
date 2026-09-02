@@ -1,0 +1,82 @@
+---
+/**
+ * Semantic article recipe shared by Blog and Trace (and available to future
+ * types).  The recipe owns order and semantics; individual capabilities own
+ * their small visual/rendering contracts.
+ */
+import type { ReadingHeaderData } from '@/lib/content-layer/reading-data'
+import {
+  isReadingFeatureVisible,
+  type ReadingHeaderConfig
+} from '@/lib/content-layer/reading-policy'
+
+import ReadingDescription from '../capabilities/ReadingDescription.astro'
+import ReadingDivider from '../capabilities/ReadingDivider.astro'
+import ReadingEngagement from '../capabilities/ReadingEngagement.astro'
+import ReadingMeta from '../capabilities/ReadingMeta.astro'
+import ReadingOpeningMedia from '../capabilities/ReadingOpeningMedia.astro'
+
+interface Props {
+  config: ReadingHeaderConfig
+  data: ReadingHeaderData
+}
+
+const { config, data } = Astro.props as Props
+const isBlogSkin = config.metadataVariant === 'blog'
+const showMedia = isReadingFeatureVisible(config.openingMedia.mode, Boolean(data.openingMedia))
+const showDraft = isReadingFeatureVisible(config.draft, data.draft)
+const showCommentInfo = isReadingFeatureVisible(config.commentInfo, data.commentInfo)
+const showDescription = isReadingFeatureVisible(config.description.mode, Boolean(data.description))
+---
+
+<div data-reading-header data-reading-profile={config.layout}>
+  {
+    showMedia && data.openingMedia && (
+      <ReadingOpeningMedia
+        backdrop={config.openingMedia.backdrop}
+        data={data.openingMedia}
+        variant={config.openingMedia.variant}
+      />
+    )
+  }
+
+  {showDraft && <span class='text-red-500'>(Draft)</span>}
+
+  <div class={isBlogSkin ? 'article-info max-lg:mx-auto' : undefined}>
+    <ReadingMeta
+      data={data.meta}
+      languageMode={config.language}
+      publishedDateMode={config.publishedDate}
+      readingTimeMode={config.readingTime}
+      tags={data.tags}
+      tagMode={config.tags}
+      tagScopeLabel={data.eyebrow}
+      updatedDateMode={config.updatedDate}
+      variant={config.metadataVariant}
+    />
+
+    <h1 class='mt-4 text-2xl font-medium sm:mb-2 sm:mt-6 sm:text-3xl'>{data.title}</h1>
+
+    {
+      (showDescription || showCommentInfo) && (
+        <div class={isBlogSkin ? 'mt-3 italic' : 'mt-3'}>
+          <ReadingDescription
+            mode={config.description.mode}
+            text={data.description}
+            variant={config.description.variant}
+          />
+          {showCommentInfo && (
+            <ReadingEngagement
+              available={data.commentInfo}
+              comment
+              mode={config.commentInfo}
+              class='mt-1'
+            />
+          )}
+        </div>
+      )
+    }
+  </div>
+
+  <ReadingDivider mode={config.divider} />
+</div>

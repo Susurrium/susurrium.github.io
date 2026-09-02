@@ -1,0 +1,56 @@
+---
+/**
+ * Compatibility facade for callers that explicitly request the Blog text
+ * profile. The visual implementation is still the same TextCard used by every
+ * other content type; this facade only obtains Blog's generated reading-time
+ * metadata at the render boundary.
+ */
+import { render, type CollectionEntry } from 'astro:content'
+
+import TextCard from '@/components/cards/TextCard.astro'
+import { adaptBlogEntry } from '@/lib/content-layer/adapters'
+import { toTextCardViewData } from '@/lib/content-layer/card-data'
+import { createResolvedPageItem } from '@/lib/content-layer/page-data'
+import type { BlogRecord, RenderablePageItem } from '@/lib/content-layer/types'
+
+type BlogPageItem = Extract<RenderablePageItem, { record: BlogRecord }>
+
+interface ModelProps {
+  class?: string
+  item: BlogPageItem
+}
+
+interface LegacyProps {
+  class?: string
+  detailed?: boolean
+  post: CollectionEntry<'blog'>
+}
+
+type Props = ModelProps | LegacyProps
+const props = Astro.props as Props
+const className = props.class
+
+const item: BlogPageItem = 'item' in props
+  ? props.item
+  : (() => {
+      const legacy = props as LegacyProps
+      const record = adaptBlogEntry(legacy.post)
+      return {
+        ...createResolvedPageItem(record, {
+          detailed: legacy.detailed,
+          presentation: 'text'
+        }),
+        source: legacy.post
+      } as BlogPageItem
+    })()
+
+const rendered = await render(item.source)
+const rawReadingMinutes = rendered.remarkPluginFrontmatter.minutesRead
+const readingMinutes =
+  typeof rawReadingMinutes === 'string' || typeof rawReadingMinutes === 'number'
+    ? rawReadingMinutes
+    : undefined
+const data = toTextCardViewData(item, { readingMinutes, skin: 'blog' })
+---
+
+<TextCard as='li' class={className} data={data} detailed={item.placement.detailed} />

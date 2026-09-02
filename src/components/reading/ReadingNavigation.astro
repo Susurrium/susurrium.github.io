@@ -1,0 +1,98 @@
+---
+import type { ReadingNavigationItem } from '@/lib/content-layer/reading-data'
+
+import { cn } from 'astro-pure/utils'
+
+export type { ReadingNavigationItem }
+
+interface Props {
+  previous?: ReadingNavigationItem
+  next?: ReadingNavigationItem
+  class?: string
+}
+
+const { previous, next, class: className } = Astro.props
+---
+
+{
+  (previous || next) && (
+    <div
+      class={cn('flex max-sm:flex-col sm:justify-between gap-2', className)}
+      data-reading-navigation
+    >
+      <span class='min-w-0'>
+        {previous && (
+          <a
+            href={previous.href}
+            data-astro-prefetch
+            class='group inline-flex items-center gap-x-2 rounded-xl px-4 py-2 no-underline transition-colors duration-300 hover:bg-muted focus-visible:bg-muted max-sm:max-w-[80%] sm:flex'
+            aria-label={`Previous: ${previous.title}`}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              width='20'
+              height='20'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke-width='2.5'
+              stroke-linecap='round'
+              stroke-linejoin='round'
+              class='shrink-0 rotate-180 stroke-muted-foreground transition-colors group-hover:stroke-primary group-focus-within:stroke-primary'
+              aria-hidden='true'
+            >
+              <line
+                x1='5'
+                y1='12'
+                x2='19'
+                y2='12'
+                class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover:translate-x-1 group-hover:scale-x-100 group-focus-within:translate-x-1 group-focus-within:scale-x-100'
+              />
+              <polyline
+                points='12 5 19 12 12 19'
+                class='translate-x-0 transition-all duration-300 ease-in-out group-hover:translate-x-1 group-focus-within:translate-x-1'
+              />
+            </svg>
+            <p class='truncate font-medium transition-colors'>{previous.title}</p>
+          </a>
+        )}
+      </span>
+
+      <span class='min-w-0'>
+        {next && (
+          <a
+            href={next.href}
+            data-astro-prefetch
+            class='group inline-flex items-center gap-x-2 rounded-xl px-4 py-2 text-right no-underline transition-colors duration-300 hover:bg-muted focus-visible:bg-muted max-sm:float-end max-sm:max-w-[80%] sm:flex'
+            aria-label={`Next: ${next.title}`}
+          >
+            <p class='truncate font-medium transition-colors'>{next.title}</p>
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              width='20'
+              height='20'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke-width='2.5'
+              stroke-linecap='round'
+              stroke-linejoin='round'
+              class='shrink-0 stroke-muted-foreground transition-colors group-hover:stroke-primary group-focus-within:stroke-primary'
+              aria-hidden='true'
+            >
+              <line
+                x1='5'
+                y1='12'
+                x2='19'
+                y2='12'
+                class='translate-x-4 scale-x-0 transition-all duration-300 ease-in-out group-hover:translate-x-1 group-hover:scale-x-100 group-focus-within:translate-x-1 group-focus-within:scale-x-100'
+              />
+              <polyline
+                points='12 5 19 12 12 19'
+                class='translate-x-0 transition-all duration-300 ease-in-out group-hover:translate-x-1 group-focus-within:translate-x-1'
+              />
+            </svg>
+          </a>
+        )}
+      </span>
+    </div>
+  )
+}

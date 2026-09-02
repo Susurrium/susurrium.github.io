@@ -1,0 +1,182 @@
+---
+// Source: XYX-TYPING, xyx404/xyx404.github.io@d4e1efc. The source timing
+// is retained while Typed.js is pinned locally and destroyed on page teardown.
+interface Props {
+  words: readonly string[]
+  startDelay?: number
+  typeSpeed?: number
+  backSpeed?: number
+  backDelay?: number
+  loop?: boolean
+}
+
+const {
+  words,
+  startDelay = 300,
+  typeSpeed = 150,
+  backSpeed = 50,
+  backDelay = 700,
+  loop = true
+} = Astro.props
+const normalizedWords = words.map((word) => word.trim()).filter(Boolean)
+const fallback = normalizedWords[0] ?? ''
+const accessibleLabel = normalizedWords.join(' · ')
+---
+
+<entrance-typed-text
+  class='entrance-typed-text'
+  data-words={JSON.stringify(normalizedWords)}
+  data-start-delay={startDelay}
+  data-type-speed={typeSpeed}
+  data-back-speed={backSpeed}
+  data-back-delay={backDelay}
+  data-loop={String(loop)}
+  data-motion-state='static'
+  aria-label={accessibleLabel}
+>
+  <span data-entrance-typed data-entrance-typed-value aria-hidden='true'>{fallback}</span>
+</entrance-typed-text>
+
+<script>
+  import Typed from 'typed.js'
+
+  class EntranceTypedTextElement extends HTMLElement {
+    private typed: Typed | null = null
+    private controller: AbortController | null = null
+    private reducedMotion: MediaQueryList | null = null
+
+    connectedCallback() {
+      this.disconnect()
+      this.controller = new AbortController()
+      const { signal } = this.controller
+      this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+      this.reducedMotion.addEventListener('change', this.handleMotionChange, { signal })
+      window.addEventListener('pagehide', this.handlePageHide, { signal })
+      window.addEventListener('pageshow', this.handlePageShow, { signal })
+      document.addEventListener('astro:before-swap', this.handleBeforeSwap, { signal })
+      this.start()
+    }
+
+    disconnectedCallback() {
+      this.disconnect()
+    }
+
+    private get valueElement() {
+      return this.querySelector<HTMLElement>('[data-entrance-typed-value]')
+    }
+
+    private get words() {
+      try {
+        const value: unknown = JSON.parse(this.dataset.words ?? '[]')
+        return Array.isArray(value)
+          ? value.filter((word): word is string => typeof word === 'string')
+          : []
+      } catch {
+        return []
+      }
+    }
+
+    private numberFrom(name: string, fallback: number) {
+      const value = Number(this.dataset[name])
+      return Number.isFinite(value) && value >= 0 ? value : fallback
+    }
+
+    private resetToFallback() {
+      const valueElement = this.valueElement
+      if (valueElement) valueElement.textContent = this.words[0] ?? ''
+      this.dataset.motionState = 'static'
+    }
+
+    private start = () => {
+      this.destroyTyped()
+
+      const valueElement = this.valueElement
+      const words = this.words
+      if (!valueElement || words.length === 0 || this.reducedMotion?.matches) {
+        this.resetToFallback()
+        return
+      }
+
+      valueElement.textContent = ''
+      this.typed = new Typed(valueElement, {
+        strings: words,
+        startDelay: this.numberFrom('startDelay', 300),
+        typeSpeed: this.numberFrom('typeSpeed', 150),
+        backSpeed: this.numberFrom('backSpeed', 50),
+        backDelay: this.numberFrom('backDelay', 700),
+        loop: this.dataset.loop !== 'false',
+        contentType: 'null',
+        autoInsertCss: false
+      })
+      this.dataset.motionState = 'running'
+    }
+
+    private destroyTyped() {
+      this.typed?.destroy()
+      this.typed = null
+    }
+
+    private disconnect() {
+      this.destroyTyped()
+      this.controller?.abort()
+      this.controller = null
+      this.reducedMotion = null
+      this.resetToFallback()
+    }
+
+    private handleMotionChange = () => this.start()
+
+    private handlePageHide = () => {
+      this.destroyTyped()
+      this.resetToFallback()
+    }
+
+    private handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) this.start()
+    }
+
+    private handleBeforeSwap = () => {
+      this.destroyTyped()
+      this.resetToFallback()
+    }
+  }
+
+  if (!customElements.get('entrance-typed-text')) {
+    customElements.define('entrance-typed-text', EntranceTypedTextElement)
+  }
+</script>
+
+<style>
+  .entrance-typed-text {
+    display: inline;
+  }
+
+  .entrance-typed-text :global(.typed-cursor) {
+    display: inline-block;
+    width: 0.1em;
+    height: 0.94em;
+    margin-left: 0.12em;
+    border-radius: 999px;
+    background: #f6ead5;
+    box-shadow:
+      0 0 0.42em rgb(255 229 183 / 0.72),
+      0 0 0.1em rgb(255 249 237 / 0.8);
+    color: transparent;
+    transform: translateY(0.08em);
+    animation: entrance-typed-cursor 0.85s steps(1, end) infinite;
+  }
+
+  @keyframes entrance-typed-cursor {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .entrance-typed-text :global(.typed-cursor) {
+      display: none;
+      animation: none;
+    }
+  }
+</style>

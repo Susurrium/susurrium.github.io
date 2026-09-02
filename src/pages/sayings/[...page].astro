@@ -1,0 +1,81 @@
+---
+import type { GetStaticPaths, Page } from 'astro'
+
+import { Paginator } from 'astro-pure/components/pages'
+import { Button } from 'astro-pure/user'
+
+import ContentCard from '@/components/cards/ContentCard.astro'
+import ContentArchiveTaxonomy from '@/components/content/ContentArchiveTaxonomy.astro'
+import { contentPagination } from '@/site-config'
+import {
+  buildCollectionStaticPaths,
+  getContentTagCounts,
+  hydratePageItems,
+  loadContentCatalog,
+  toPaginatorProps,
+  type PageItem
+} from '@/lib/content-layer'
+import PageLayout from '@/layouts/BaseLayout.astro'
+
+export const prerender = true
+
+export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
+  const catalog = await loadContentCatalog()
+  return buildCollectionStaticPaths(catalog, 'saying', paginate, {
+    itemOptions: { headingLevel: 2 },
+    pagination: contentPagination.saying
+  })
+}
+
+interface Props {
+  page: Page<PageItem>
+}
+
+const { page } = Astro.props as Props
+const contentCatalog = await loadContentCatalog()
+const sayingItems = hydratePageItems(page.data, contentCatalog)
+const sayingTags = getContentTagCounts(contentCatalog, 'saying')
+const meta = {
+  description: 'A small archive of collected excerpts, quotations, and short phrases.',
+  title: page.currentPage > 1 ? `Sayings · Page ${page.currentPage}` : 'Sayings'
+}
+const paginationProps = toPaginatorProps(page, {
+  nextSrLabel: 'Next Saying page',
+  previousSrLabel: 'Previous Saying page'
+})
+---
+
+<PageLayout {meta}>
+  <Button title='Back' href='/home' variant='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <p class='text-sm text-muted-foreground'>
+        Collected excerpts, quotations, and short phrases.
+      </p>
+      <h1 id='sayings-heading' class='mb-6 mt-3 text-3xl font-medium sm:mt-4'>Sayings</h1>
+      <ContentArchiveTaxonomy kind='saying' tags={sayingTags} />
+    </div>
+
+    {
+      sayingItems.length === 0 ? (
+        <p id='content' class='site-empty-state animate'>
+          No sayings yet.
+        </p>
+      ) : (
+        <section
+          id='content'
+          class='animate -mx-4 flex flex-col'
+          aria-labelledby='sayings-heading'
+          data-sayings-archive
+          data-sayings-page={page.currentPage}
+        >
+          <p class='mb-2 px-4 text-sm text-muted-foreground'>
+            Page {page.currentPage} · Showing {page.data.length} of {page.total} sayings
+          </p>
+          {sayingItems.map((item) => <ContentCard item={item} />)}
+          <Paginator {...paginationProps} />
+        </section>
+      )
+    }
+  </main>
+</PageLayout>

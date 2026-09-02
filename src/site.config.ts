@@ -1,26 +1,23 @@
-import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types';
-
-
-
-
+import type { Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types'
+import { connectLinks } from './data/connect'
+import type { ContentPaginationConfig } from './lib/content-layer/pagination'
 
 export const theme: ThemeUserConfig = {
   // === Basic configuration ===
   /** Title for your website. Will be used in metadata and as browser tab title. */
-  title: "Arthals' ink",
+  title: "Susurrium's blog",
   /** Will be used in index page & copyright declaration */
-  author: 'Arthals',
-  since: 2024,
+  author: 'Susurrium',
   /** Description metadata for your website. Can be used in page metadata. */
-  description: '所见高山远木，阔云流风；所幸岁月盈余，了无拘束',
+  description: 'A tracer of the past, a seeker of echoes that last.',
   /** The default favicon for your site which should be a path to an image in the `public/` directory. */
   favicon: '/favicon/favicon.ico',
   /** Specify the default language for this site. */
   locale: {
-    lang: 'en-US',
-    attrs: 'en_US',
+    lang: 'zh-CN',
+    attrs: 'zh_CN',
     // Date locale
-    dateLocale: 'en-US',
+    dateLocale: 'zh-CN',
     dateOptions: {
       day: 'numeric',
       month: 'short',
@@ -30,7 +27,7 @@ export const theme: ThemeUserConfig = {
   /** Set a logo image to show in the homepage. */
   logo: {
     src: 'src/assets/avatar.jpg',
-    alt: 'Avatar'
+    alt: 'Susurrium avatar'
   },
 
   // === Global configuration ===
@@ -52,35 +49,28 @@ export const theme: ThemeUserConfig = {
   /** Configure the header of your site. */
   header: {
     menu: [
+      { title: 'Home', link: '/home' },
       { title: 'Blog', link: '/blog' },
+      { title: 'Traces', link: '/traces' },
       { title: 'Projects', link: '/projects' },
-      { title: 'Links', link: '/links' },
-      { title: 'About', link: '/about' }
+      { title: 'About', link: '/about' },
+      { title: 'Links', link: '/links' }
     ]
   },
 
   /** Configure the footer of your site. */
   footer: {
     // Year format
-    year: `© ${new Date().getFullYear()}`,
+    year: '© 2026',
     // year: `© 2019 - ${new Date().getFullYear()}`,
-    links: [
-      // Registration link
-      {
-        title: '京ICP备2022002869号-2',
-        link: 'https://beian.miit.gov.cn/',
-        style: 'text-xs text-muted-foreground' // Uno/TW CSS class
-      },
-      {
-        title: '萌ICP备20254869号',
-        link: 'https://icp.gov.moe/?keyword=20254869',
-        style: 'text-xs text-muted-foreground' // Uno/TW CSS class
-      }
-    ],
+    links: [],
     /** Enable displaying a “Astro & Pure theme powered” link in your site’s footer. */
     credits: false,
     /** Optional details about the social media accounts for this site. */
-    social: { github: 'https://github.com/zhuozhiyongde', email: 'mailto:zhuozhiyongde@126.com' }
+    // The full Connect records live in src/data/connect.ts. Keep the theme
+    // config projection here for astro-pure while About and Footer consume
+    // the same canonical order and URLs directly.
+    social: connectLinks.map(({ icon, label, href }) => ({ icon, label, href }))
   },
 
   content: {
@@ -99,33 +89,56 @@ export const theme: ThemeUserConfig = {
   }
 }
 
+/**
+ * Site-owned archive pagination. Keep this outside `theme.content`: astro-pure
+ * exposes only its historical `blogPageSize` option there, while this site
+ * needs independent controls for Blog, Trace, and Saying archives.
+ */
+export const contentPagination = {
+  blog: {
+    enabled: true,
+    pageSize: theme.content.blogPageSize ?? 8
+  },
+  saying: {
+    enabled: true,
+    pageSize: 8
+  },
+  trace: {
+    enabled: true,
+    pageSize: 8
+  }
+} satisfies Record<'blog' | 'trace' | 'saying', ContentPaginationConfig>
+
+/** Site-wide switches for optional visual capabilities. */
+export const siteFeatures = {
+  signature: {
+    enabled: false
+  }
+} as const
+
 export const integ: IntegrationUserConfig = {
   // Links management
   // See: https://astro-pure.js.org/docs/integrations/links
   links: {
     // Friend logbook
-    logbook: [{ date: '2024-01-16', content: '开始接纳新的伙伴！' }],
+    logbook: [{ date: '2026-09-01', content: '开始接纳新的伙伴！' }],
     // Yourself link info
     applyTip: [
       { name: 'Name', val: theme.title },
       { name: 'Desc', val: theme.description || 'Null' },
-      { name: 'Link', val: 'https://arthals.ink/' },
-      { name: 'Avatar', val: 'https://cdn.arthals.ink/Arthals.png' }
+      { name: 'Link', val: 'https://susurrium.github.io/' },
+      { name: 'Avatar', val: 'https://susurrium.github.io/media/residence/avatar.jpg' }
     ],
     // Cache avatars in `public/avatars/` to improve user experience.
-    cacheAvatar: false,
+    cacheAvatar: false
   },
   // Enable page search function
   pagefind: true,
-  // Add a random quote to the footer (default on homepage footer)
-  // See: https://astro-pure.js.org/docs/integrations/advanced#web-content-render
+  // Pure 1.4.6 requires a quote provider. Keep it local until the Sayings
+  // collection replaces this temporary development fallback.
   quote: {
-    // https://developer.hitokoto.cn/sentence/#%E8%AF%B7%E6%B1%82%E5%9C%B0%E5%9D%80
-    server: 'https://v1.hitokoto.cn/?c=i',
-    target: `(data) => data.hitokoto || 'Error'`
-    // https://github.com/lukePeavey/quotable
-    // server: 'https://api.quotable.io/quotes/random?maxLength=60',
-    // target: `(data) => data[0].content || 'Error'`
+    server: '/data/development-quote.json',
+    target: `(data) => data.text || 'Sayings are being prepared.'`
   },
   // UnoCSS typography
   // See: https://unocss.dev/presets/typography
@@ -148,8 +161,7 @@ export const integ: IntegrationUserConfig = {
   // Comment system
   waline: {
     enable: true,
-    // Server service link
-    server: 'https://waline.arthals.ink',
+    server: 'https://waline-susurrium.vercel.app',
     // Refer https://waline.js.org/en/guide/features/emoji.html
     emoji: ['bmoji', 'weibo'],
     // Refer https://waline.js.org/en/reference/client/props.html

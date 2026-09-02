@@ -1,0 +1,334 @@
+---
+import { Icon } from 'astro-pure/user'
+import config from '@/site-config'
+
+const menu = config.header.menu ?? []
+---
+
+<!--
+  Local wrapper of astro-pure@1.4.6 Header. The markup and behaviour stay
+  aligned with Pure; the only product-level difference is the locked logo
+  destination: /home is the actual home while / is the replayable entrance.
+-->
+<header-component
+  class='group sticky top-4 z-50 mb-12 flex items-center justify-between rounded-xl border border-transparent max-sm:py-1 max-md:z-30 sm:rounded-2xl'
+>
+  <a
+    class='z-30 text-xl font-medium group-[.not-top]:ms-2 sm:group-[.not-top]:ms-3'
+    style='transition:margin-inline 0.3s'
+    href='/home'
+    data-astro-prefetch
+    aria-label='Brand'>{config.title}</a
+  >
+
+  <div class='flex items-center gap-x-2'>
+    <div
+      id='headerExpandContent'
+      class='end-0 start-0 top-12 grid border border-transparent group-[.not-top]:rounded-xl dark:group-[.expanded.not-top]:bg-muted max-sm:group-[.not-top]:border-border max-sm:group-[.not-top]:px-4 max-sm:group-[.not-top]:py-2 max-sm:group-[.expanded.not-top]:bg-background sm:grid-rows-1'
+    >
+      <div class='flex flex-col items-center justify-center overflow-hidden sm:flex-row'>
+        {
+          menu.map((item) => (
+            <a
+              href={item.link}
+              class='w-full flex-none grow py-2 text-right font-medium transition-none hover:text-primary sm:w-fit sm:px-3'
+              aria-label={item.title}
+              data-nav-menu-item
+              data-astro-prefetch
+            >
+              {item.title}
+            </a>
+          ))
+        }
+        <div class='flex w-full grow flex-row justify-end gap-x-3 sm:w-fit sm:gap-x-5'>
+          <a
+            class='px-1 py-2 transition-none sm:px-2'
+            href='/search'
+            title='Search'
+            data-astro-prefetch
+          >
+            <span class='sr-only'>Search</span>
+            <Icon name='search' class='size-5' />
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class='z-30 flex gap-x-4 group-[.not-top]:gap-x-2' style='transition:gap 0.3s'>
+      <button
+        id='toggleDarkMode'
+        class='group/dark box-content size-5 rounded-md border p-1.5 transition-colors hover:bg-border sm:group-[.not-top]:rounded-xl'
+        type='button'
+        aria-label='Toggle color theme'
+      >
+        <span class='sr-only'>Dark Theme</span>
+        <Icon class='system size-5 group-hover/dark:text-primary' name='computer' />
+        <Icon class='light hidden size-5 group-hover/dark:text-primary' name='sun' />
+        <Icon class='dark hidden size-5 group-hover/dark:text-primary' name='moon' />
+      </button>
+      <button
+        id='toggleMenu'
+        class='rounded-md border p-1.5 transition-colors hover:bg-border sm:hidden sm:group-[.not-top]:rounded-xl'
+        type='button'
+        aria-label='Toggle navigation menu'
+        aria-controls='headerExpandContent'
+        aria-expanded='false'
+      >
+        <span class='sr-only'>Menu</span>
+        <Icon class='size-5' name='menu' />
+      </button>
+    </div>
+  </div>
+</header-component>
+
+<script is:inline>
+  const toggleDarkModeElement = document.getElementById('toggleDarkMode')
+  if (toggleDarkModeElement) {
+    toggleDarkModeElement.dataset.theme = localStorage.getItem('theme') || 'system'
+  }
+</script>
+<script>
+  declare global {
+    interface Window {
+      __susurriumSetThemeHandoff?: (theme: 'dark' | 'light') => void
+    }
+  }
+
+  // The two tiny browser helpers are copied from astro-pure@1.4.6 instead of
+  // importing its barrel. The barrel also exports date.ts, which imports the
+  // Astro-only `virtual:config` module and makes Vite dev prebundling fail.
+  function setTheme(theme?: string, save = false) {
+    const themes = ['system', 'dark', 'light']
+    if (theme) {
+      if (!themes.includes(theme)) return
+      if (save) localStorage.setItem('theme', theme)
+    } else {
+      theme = localStorage.getItem('theme') ?? undefined
+      if (save) {
+        const currentIndex = themes.indexOf(theme ?? 'system')
+        theme = themes[(currentIndex + 1) % themes.length]
+        localStorage.setItem('theme', theme)
+      }
+    }
+
+    let targetTheme = theme
+    if (theme === 'system') {
+      targetTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+
+    document.documentElement.classList.toggle('dark', targetTheme === 'dark')
+    document.documentElement.dataset.theme = targetTheme === 'dark' ? 'dark' : 'light'
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', targetTheme === 'dark' ? '#0B0B10' : '#FCFCFD')
+    window.__susurriumSetThemeHandoff?.(targetTheme === 'dark' ? 'dark' : 'light')
+    return theme
+  }
+
+  function showToast(message: string) {
+    document.dispatchEvent(new CustomEvent('toast', { detail: { message } }))
+  }
+
+  class SiteHeaderComponent extends HTMLElement {
+    #listenerAbortController?: AbortController
+
+    connectedCallback() {
+      // ClientRouter replaces this element on every internal navigation.  Keep
+      // the listeners tied to the current element instance so a detached
+      // header can never keep reacting to scroll or button events.
+      this.#listenerAbortController?.abort()
+      const listenerAbortController = new AbortController()
+      this.#listenerAbortController = listenerAbortController
+      const { signal } = listenerAbortController
+
+      let previousScrollY = window.scrollY
+      this.classList.toggle('not-top', previousScrollY > 20)
+      window.addEventListener(
+        'scroll',
+        () => {
+          this.classList.toggle('not-top', window.scrollY > 20)
+          this.dataset.show = (window.scrollY < 350 || window.scrollY < previousScrollY).toString()
+          previousScrollY = window.scrollY
+        },
+        { passive: true, signal }
+      )
+
+      const darkModeButton = this.querySelector('#toggleDarkMode') as HTMLElement | null
+      if (darkModeButton) {
+        darkModeButton.dataset.theme ||= localStorage.getItem('theme') || 'system'
+        darkModeButton.addEventListener(
+          'click',
+          () => {
+            const newTheme = setTheme(undefined, true)
+            darkModeButton.dataset.theme = newTheme
+            showToast(`Set theme to ${newTheme}`)
+          },
+          { signal }
+        )
+      }
+
+      const menuButton = this.querySelector<HTMLButtonElement>('#toggleMenu')
+      const menuPanel = this.querySelector<HTMLElement>('#headerExpandContent')
+      if (menuButton && menuPanel) {
+        const mobileQuery = window.matchMedia('(max-width: 639px)')
+
+        const setMenuOpen = (open: boolean, restoreFocus = false) => {
+          const mobile = mobileQuery.matches
+          const expanded = mobile && open
+          this.classList.toggle('expanded', expanded)
+          menuButton.setAttribute('aria-expanded', String(expanded))
+          menuPanel.setAttribute('aria-hidden', String(mobile && !expanded))
+          menuPanel.toggleAttribute('inert', mobile && !expanded)
+
+          if (!expanded && restoreFocus) menuButton.focus()
+        }
+
+        menuButton.addEventListener(
+          'click',
+          () => setMenuOpen(!this.classList.contains('expanded')),
+          { signal }
+        )
+        menuPanel.querySelectorAll<HTMLAnchorElement>('[data-nav-menu-item]').forEach((link) => {
+          link.addEventListener('click', () => setMenuOpen(false), { signal })
+        })
+        this.addEventListener(
+          'keydown',
+          (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && this.classList.contains('expanded')) {
+              event.preventDefault()
+              setMenuOpen(false, true)
+            }
+          },
+          { signal }
+        )
+        mobileQuery.addEventListener('change', () => setMenuOpen(false), { signal })
+        setMenuOpen(false)
+      }
+    }
+
+    disconnectedCallback() {
+      this.#listenerAbortController?.abort()
+      this.#listenerAbortController = undefined
+    }
+  }
+
+  if (!customElements.get('header-component')) {
+    customElements.define('header-component', SiteHeaderComponent)
+  }
+</script>
+
+<style>
+  header-component {
+    transition:
+      padding 0.3s,
+      transform 0.3s,
+      margin-inline 0.3s,
+      border 0.15s,
+      background-color 0.15s;
+
+    &.not-top {
+      --un-border-opacity: 1;
+      border-color: hsl(var(--border) / var(--un-border-opacity));
+      --un-bg-opacity: 1;
+      background-color: hsl(var(--background) / var(--un-bg-opacity));
+      padding-left: 0.375rem;
+      padding-right: 0.375rem;
+      box-shadow:
+        rgb(255, 255, 255) 0 0 0 0,
+        rgba(24, 24, 27, 0.08) 0 0 0 1px,
+        rgba(39, 39, 42, 0.08) 0 10px 15px -3px,
+        rgba(39, 39, 42, 0.08) 0 4px 6px -4px;
+    }
+
+    &[data-show='false']:not(.expanded) {
+      transform: translateY(-5rem);
+    }
+  }
+
+  @media (min-width: 800px) {
+    header-component.not-top {
+      margin-inline: 8%;
+    }
+  }
+
+  :global(.dark) header-component.not-top {
+    background-color: hsl(var(--muted) / var(--un-bg-opacity));
+  }
+
+  @media (max-width: 639px) {
+    header-component #headerExpandContent {
+      position: absolute;
+      top: 3rem;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.3s ease,
+        padding 0.3s ease,
+        border-color 0.15s ease,
+        grid-template-rows 0.3s ease,
+        visibility 0s linear 0.3s;
+    }
+
+    header-component.expanded #headerExpandContent {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition-delay: 0s;
+    }
+
+    .expanded.not-top #headerExpandContent {
+      box-shadow:
+        rgb(255, 255, 255) 0 0 0 0,
+        rgba(24, 24, 27, 0.08) 0 0 0 1px,
+        rgba(39, 39, 42, 0.08) 0 10px 15px -3px,
+        rgba(39, 39, 42, 0.08) 0 4px 6px -4px;
+    }
+
+    header-component #headerExpandContent::after {
+      box-sizing: content-box;
+      position: absolute;
+      inset-inline: calc(-1rem - 1px);
+      top: -5rem;
+      bottom: 0;
+      z-index: -1;
+      visibility: hidden;
+      border-bottom: 1px solid transparent;
+      content: '';
+      opacity: 0;
+      transition: 0.3s;
+    }
+
+    header-component:not(.not-top) #headerExpandContent::after {
+      bottom: -1rem;
+      visibility: visible;
+      border-bottom-color: hsl(var(--border) / var(--un-border-opacity, 1));
+      background-color: hsl(var(--muted) / var(--un-bg-opacity, 1));
+      opacity: 1;
+    }
+  }
+
+  #toggleDarkMode {
+    &[data-theme='dark'] {
+      & .system {
+        display: none;
+      }
+
+      & .dark {
+        display: block;
+      }
+    }
+
+    &[data-theme='light'] {
+      & .system {
+        display: none;
+      }
+
+      .light {
+        display: block;
+      }
+    }
+  }
+</style>

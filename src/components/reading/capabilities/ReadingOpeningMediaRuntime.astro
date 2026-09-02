@@ -1,0 +1,98 @@
+---
+/**
+ * Capability-level runtime for the optional opening-media backdrop.
+ *
+ * It is mounted once by ContentReadingShell even when the current record has
+ * no media. That lets a later ClientRouter page (or a test fixture) add media
+ * without requiring a page-specific script to have been emitted beforehand.
+ * The runtime never owns the global reading lifecycle; it only synchronizes
+ * the decorative backdrop belonging to Opening Media.
+ */
+---
+
+<script>
+  declare global {
+    interface Window {
+      __readingOpeningMediaBackdropCleanup?: () => void
+      __susurriumReadingOpeningMediaRuntimeInstalled?: boolean
+    }
+  }
+
+  if (!window.__susurriumReadingOpeningMediaRuntimeInstalled) {
+    window.__susurriumReadingOpeningMediaRuntimeInstalled = true
+
+    const initializeOpeningMediaBackdrop = () => {
+      // ClientRouter can leave the previous page's listeners alive briefly
+      // while it prepares the next document. Always release that instance
+      // first.
+      window.__readingOpeningMediaBackdropCleanup?.()
+
+      const root = document.querySelector<HTMLElement>('[data-reading-opening-backdrop-root]')
+      const image = root?.querySelector<HTMLImageElement>('[data-reading-opening-media-backdrop]')
+      if (!root || !image) return
+
+      const controller = new AbortController()
+      const { signal } = controller
+      let frame = 0
+      let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+      const sync = () => {
+        frame = 0
+
+        // Keep the original three visual steps, but use the lighter ambient
+        // range so the backdrop remains a source hint rather than a second
+        // image. Recompute on every viewport change and restore the top
+        // opacity when scrolling back up.
+        if (reducedMotion) {
+          image.style.opacity = '0.26'
+          return
+        }
+
+        const viewportHeight = Math.max(window.innerHeight, 1)
+        const scrollDistance = Math.max(window.scrollY, 0)
+        const threshold1 = viewportHeight / 9
+        const threshold2 = (viewportHeight * 2) / 9
+        const threshold3 = (viewportHeight * 3) / 9
+        const opacity =
+          scrollDistance >= threshold3
+            ? '0.08'
+            : scrollDistance >= threshold2
+              ? '0.16'
+              : scrollDistance >= threshold1
+                ? '0.24'
+                : '0.34'
+
+        image.style.opacity = opacity
+      }
+
+      const schedule = () => {
+        if (frame === 0) frame = window.requestAnimationFrame(sync)
+      }
+
+      const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+      const handleMotionChange = (event: MediaQueryListEvent) => {
+        reducedMotion = event.matches
+        schedule()
+      }
+      const cleanup = () => {
+        controller.abort()
+        if (frame) window.cancelAnimationFrame(frame)
+        frame = 0
+        image.style.removeProperty('opacity')
+        if (window.__readingOpeningMediaBackdropCleanup === cleanup) {
+          delete window.__readingOpeningMediaBackdropCleanup
+        }
+      }
+
+      window.__readingOpeningMediaBackdropCleanup = cleanup
+      window.addEventListener('scroll', schedule, { passive: true, signal })
+      window.addEventListener('resize', schedule, { passive: true, signal })
+      motionQuery.addEventListener('change', handleMotionChange, { signal })
+      document.addEventListener('astro:before-swap', cleanup, { once: true, signal })
+      sync()
+    }
+
+    initializeOpeningMediaBackdrop()
+    document.addEventListener('astro:page-load', initializeOpeningMediaBackdrop)
+  }
+</script>

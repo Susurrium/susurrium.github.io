@@ -1,0 +1,32 @@
+---
+/**
+ * Reading-surface background capability.
+ *
+ * The host is supplied by BaseLayout so this remains a root-level visual
+ * layer. The variant is selected by reading policy, not by a collection
+ * branch. `gradient` intentionally reproduces the established detail-page
+ * background; additional variants can be added behind this contract later.
+ */
+import type { ReadingBackgroundConfig } from '@/lib/content-layer/reading-policy'
+
+interface Props {
+  color: string
+  config: ReadingBackgroundConfig
+}
+
+const { color, config } = Astro.props as Props
+const shouldRender = config.mode !== 'off' && Boolean(color)
+---
+
+{
+  shouldRender && config.variant === 'gradient' && (
+    <div
+      id='highlight-gradient'
+      class='pointer-events-none absolute start-0 top-0 z-0 h-screen w-full opacity-25'
+      style={`background-image:linear-gradient(${color},transparent)`}
+      data-reading-background
+      data-reading-background-variant={config.variant}
+      aria-hidden='true'
+    />
+  )
+}

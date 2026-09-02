@@ -2,74 +2,151 @@
 import links from 'public/links.json'
 import config from 'virtual:config'
 
-import { Collapse, Timeline, Signature } from 'astro-pure/user'
+import { Collapse, Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
+import Signature from '@/components/shared/Signature.astro'
 import FriendList from '@/components/links/FriendList.astro'
+import { siteFeatures } from '@/site-config'
 
 const headings = [
   { depth: 2, slug: 'common-links', text: 'Common Links' },
   { depth: 2, slug: 'special-links', text: 'Special Links' },
-  { depth: 2, slug: 'apply-links', text: 'Apply Links' },
-  { depth: 2, slug: 'friend-circle', text: 'Friend Circle' }
+  { depth: 2, slug: 'apply-links', text: 'Link exchange' }
 ]
 
 const { friends } = links
 const linksConf = config.integ.links
-const linkEditPage = 'https://github.com/cworld1/astro-theme-pure/blob/main/public/links.json'
 ---
 
-<PageLayout title='Links' {headings} comment>
-  <p>怎么可能有顺序呢，当然是随机的~ It's random</p>
+<PageLayout title='Links' {headings} comment effectProfile='links'>
   <h2 id='common-links'>Common Links</h2>
   <FriendList list={friends[0]} />
   <Collapse title='Links with Bad Status'>
     <FriendList list={friends[1]} />
   </Collapse>
-  <Collapse title='Link History Book'>
+  <Collapse title='Link history'>
     <Timeline events={linksConf.logbook} />
   </Collapse>
   <h2 id='special-links'>Special Links</h2>
   <FriendList list={friends[2]} />
 
   <!-- apply-links -->
-  <h2 id='apply-links'>Apply Links</h2>
-  <p>本站信息（点击复制）The site information (click to copy)：</p>
-  <blockquote class='not-prose grid grid-cols-[auto_1fr] gap-x-2 break-words border-s-4 ps-4'>
-    {
-      linksConf.applyTip.map(({ name, val }) => {
-        const script = `navigator.clipboard.writeText('${val}');document.dispatchEvent(new CustomEvent('toast',{detail:{message:'Copied "${val}" to clipboard!'}}))`
-        return (
+  <h2 id='apply-links'>Link exchange</h2>
+  <p>本站信息（点击复制）：</p>
+  <blockquote class='not-prose border-s-4 ps-4'>
+    <site-info-copy class='grid grid-cols-[auto_1fr] gap-x-2 break-words'>
+      {
+        linksConf.applyTip.map(({ name, val }) => (
           <>
             <span class='text-end'>{name}:</span>
-            <samp class='cursor-pointer' onclick={script}>
+            <button
+              class='site-info-copy__value focus-ring'
+              type='button'
+              data-copy-value={val}
+              aria-label={`Copy ${name}`}
+              title='Copy'
+            >
               {val}
-            </samp>
+            </button>
           </>
-        )
-      })
-    }
+        ))
+      }
+    </site-info-copy>
   </blockquote>
 
-  <p>申请时还请按照这个模板留言，此外有关申请说明：</p>
+  <p>申请时请按此模板留言，并确认：</p>
   <ul>
-    <li>在你的友链上添加了本站. You've recommended this site on your website.</li>
-    <li>请确保你的站点活着. Make sure your site is alive.</li>
-    <li>博客内容不违反国家法律. Content does not violate common laws.</li>
+    <li>已在你的友链上添加本站。</li>
+    <li>请确保你的站点正常运行。</li>
+    <li>博客内容不违反适用法律。</li>
   </ul>
-  <h2 id='friend-circle'>Friend Circle</h2>
-  <div id='friend-circle-lite-root' class='not-prose'>Loading...</div>
-  <script>
-    import '@/assets/styles/fc.css'
-
-    import { FriendCircle } from '@/plugins/friend-circle'
-
-    const fc = new FriendCircle()
-    fc.init({
-      private_api_url: 'https://friends.arthals.ink/',
-      page_turning_number: 10,
-      error_img: 'https://cravatar.cn/avatar/57d8260dfb55501c37dde588e7c3852c'
-    })
-    fc.load()
-  </script>
-  {config.signature && <Signature />}
+  {siteFeatures.signature.enabled && <Signature />}
 </PageLayout>
+
+<script>
+  class SiteInfoCopy extends HTMLElement {
+    #controller?: AbortController
+
+    connectedCallback() {
+      this.#controller?.abort()
+      this.#controller = new AbortController()
+      this.addEventListener('click', this.#handleClick, { signal: this.#controller.signal })
+    }
+
+    disconnectedCallback() {
+      this.#controller?.abort()
+      this.#controller = undefined
+    }
+
+    #handleClick = (event: MouseEvent) => {
+      const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+        '[data-copy-value]'
+      )
+      if (!button || !this.contains(button)) return
+
+      const value = button.dataset.copyValue ?? ''
+      void this.#copy(value)
+    }
+
+    async #copy(value: string) {
+      let copied = false
+
+      try {
+        await navigator.clipboard.writeText(value)
+        copied = true
+      } catch {
+        const input = document.createElement('textarea')
+        input.value = value
+        input.setAttribute('aria-hidden', 'true')
+        input.style.cssText = 'position:fixed;opacity:0;pointer-events:none'
+        document.body.append(input)
+        try {
+          input.select()
+          // `execCommand` is the last-resort path for older browsers. Read it
+          // reflectively so the supported Clipboard API remains the primary
+          // contract without introducing a deprecated DOM typing diagnostic.
+          const execCommand = Reflect.get(document, 'execCommand') as
+            | ((commandId: string) => boolean)
+            | undefined
+          copied = typeof execCommand === 'function' ? execCommand.call(document, 'copy') : false
+        } catch {
+          copied = false
+        } finally {
+          input.remove()
+        }
+      }
+
+      document.dispatchEvent(
+        new CustomEvent('toast', {
+          detail: {
+            message: copied
+              ? 'Copied to clipboard.'
+              : 'Copy failed. Please copy it manually.'
+          }
+        })
+      )
+    }
+  }
+
+  if (!customElements.get('site-info-copy')) {
+    customElements.define('site-info-copy', SiteInfoCopy)
+  }
+</script>
+
+<style>
+  .site-info-copy__value {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    text-align: left;
+  }
+
+  .site-info-copy__value:hover {
+    color: hsl(var(--primary));
+  }
+</style>

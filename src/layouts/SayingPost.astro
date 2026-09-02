@@ -1,0 +1,36 @@
+---
+/** Compatibility route layout; the actual composition lives in ContentReadingPage. */
+import type { MarkdownHeading } from 'astro'
+import type {
+  ReadingPageConfig,
+  ReadingPageConfigOverride,
+  RenderablePageItem
+} from '@/lib/content-layer'
+
+import ContentReadingPage from './ContentReadingPage.astro'
+
+interface Props {
+  item: Extract<RenderablePageItem, { record: { kind: 'saying' } }>
+  relatedItems: readonly RenderablePageItem[]
+  headings: MarkdownHeading[]
+  /** Optional one-page composition override; baseline remains resolved centrally. */
+  readingConfig?: ReadingPageConfig
+  readingOverride?: ReadingPageConfigOverride
+}
+
+const { headings, item, readingConfig, readingOverride, relatedItems } = Astro.props as Props
+---
+
+<ContentReadingPage
+  {headings}
+  {item}
+  pageKind='saying-detail'
+  {readingConfig}
+  {readingOverride}
+  {relatedItems}
+>
+  <slot />
+  <Fragment slot='bottom-sidebar'>
+    <slot name='bottom-sidebar' />
+  </Fragment>
+</ContentReadingPage>

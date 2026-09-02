@@ -1,0 +1,67 @@
+---
+import { render } from 'astro:content'
+import {
+  buildCollectionPageData,
+  buildDetailPageData,
+  getPageItems,
+  hydratePageItem,
+  hydratePageItems,
+  loadContentCatalog,
+  sortContentRecords,
+  type PageData
+} from '@/lib/content-layer'
+
+import TracePost from '@/layouts/TracePost.astro'
+
+export const prerender = true
+
+export async function getStaticPaths() {
+  const contentCatalog = await loadContentCatalog()
+  const records = sortContentRecords(contentCatalog.byKind.trace, 'publish-date-desc')
+  const archivePage = buildCollectionPageData('trace-archive', '/traces', records)
+  const archivePlacementByContentKey = new Map(
+    getPageItems(archivePage, 'content', 'items').map(({ contentKey, placement }) => [
+      contentKey,
+      {
+        index: placement.index,
+        ...(placement.imageAssignment ? { imageAssignment: placement.imageAssignment } : {})
+      }
+    ])
+  )
+
+  return records.map((record) => ({
+    params: { slug: record.id },
+    props: {
+      pageData: buildDetailPageData('trace-detail', `/traces/${record.id}`, record, records, {
+        primaryMeaning: '当前 Trace 文章',
+        relatedGroupKey: 'traces',
+        relatedMeaning: '按发布时间排列的 Trace 条目',
+        relatedSectionMeaning: 'Trace 详情页相邻导航内容',
+        primaryCardPlacement: archivePlacementByContentKey.get(record.key)
+      })
+    }
+  }))
+}
+
+interface Props {
+  pageData: PageData<'trace-detail'>
+}
+
+const { pageData } = Astro.props as Props
+const traceItem = getPageItems(pageData, 'article', 'primary')[0]
+if (!traceItem) {
+  throw new Error('Trace detail page data is missing its Trace primary item')
+}
+const contentCatalog = await loadContentCatalog()
+const renderItem = hydratePageItem(traceItem, contentCatalog)
+if (renderItem.record.kind !== 'trace')
+  throw new Error('Trace detail page resolved a non-Trace item')
+const traceItemResolved = renderItem as Extract<typeof renderItem, { record: { kind: 'trace' } }>
+const trace = traceItemResolved.source
+const relatedItems = hydratePageItems(getPageItems(pageData, 'related', 'traces'), contentCatalog)
+const { Content, headings } = await render(trace)
+---
+
+<TracePost item={traceItemResolved} relatedItems={relatedItems} {headings}>
+  <Content />
+</TracePost>

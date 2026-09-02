@@ -1,0 +1,79 @@
+---
+import type { GetStaticPaths, Page } from 'astro'
+
+import { Paginator } from 'astro-pure/components/pages'
+import { Button } from 'astro-pure/user'
+
+import ContentCard from '@/components/cards/ContentCard.astro'
+import ContentArchiveTaxonomy from '@/components/content/ContentArchiveTaxonomy.astro'
+import { contentPagination } from '@/site-config'
+import {
+  buildCollectionStaticPaths,
+  getContentTagCounts,
+  hydratePageItems,
+  loadContentCatalog,
+  toPaginatorProps,
+  type PageItem
+} from '@/lib/content-layer'
+import PageLayout from '@/layouts/BaseLayout.astro'
+
+export const prerender = true
+
+export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
+  const catalog = await loadContentCatalog()
+  return buildCollectionStaticPaths(catalog, 'trace', paginate, {
+    itemOptions: { headingLevel: 2 },
+    pagination: contentPagination.trace
+  })
+}
+
+interface Props {
+  page: Page<PageItem>
+}
+
+const { page } = Astro.props as Props
+const contentCatalog = await loadContentCatalog()
+const traceItems = hydratePageItems(page.data, contentCatalog)
+const traceTags = getContentTagCounts(contentCatalog, 'trace')
+const meta = {
+  description: 'Short-form notes and evolving observations.',
+  title: page.currentPage > 1 ? `Traces · Page ${page.currentPage}` : 'Traces'
+}
+const paginationProps = toPaginatorProps(page, {
+  nextSrLabel: 'Next Trace page',
+  previousSrLabel: 'Previous Trace page'
+})
+---
+
+<PageLayout {meta}>
+  <Button title='Back' href='/home' variant='back' />
+  <main class='mt-6 lg:mt-10'>
+    <div id='content-header' class='animate'>
+      <p class='text-sm text-muted-foreground'>Short notes and evolving observations</p>
+      <h1 id='traces-heading' class='mb-6 mt-3 text-3xl font-medium sm:mt-4'>Traces</h1>
+      <ContentArchiveTaxonomy kind='trace' tags={traceTags} />
+    </div>
+
+    {
+      traceItems.length === 0 ? (
+        <p id='content' class='site-empty-state animate'>
+          No traces yet.
+        </p>
+      ) : (
+        <section
+          id='content'
+          class='animate -mx-4 flex flex-col'
+          aria-labelledby='traces-heading'
+          data-traces-list
+          data-traces-page={page.currentPage}
+        >
+          <p class='mb-2 px-4 text-sm text-muted-foreground'>
+            Page {page.currentPage} · Showing {page.data.length} of {page.total} traces
+          </p>
+          {traceItems.map((item) => <ContentCard item={item} />)}
+          <Paginator {...paginationProps} />
+        </section>
+      )
+    }
+  </main>
+</PageLayout>

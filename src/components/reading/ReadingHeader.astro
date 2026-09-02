@@ -1,0 +1,29 @@
+---
+/**
+ * Public header composition boundary.
+ *
+ * This component knows only the selected semantic recipe. Collection names,
+ * schema fields, and legacy source-specific profiles have already been
+ * resolved into `ReadingHeaderData` and `ReadingHeaderConfig` upstream.
+ */
+import type { ReadingHeaderData } from '@/lib/content-layer/reading-data'
+import type { ReadingHeaderConfig } from '@/lib/content-layer/reading-policy'
+
+import ArticleReadingLayout from './layouts/ArticleReadingLayout.astro'
+import QuoteReadingLayout from './layouts/QuoteReadingLayout.astro'
+
+interface Props {
+  config: ReadingHeaderConfig
+  data: ReadingHeaderData
+}
+
+const { config, data } = Astro.props as Props
+---
+
+{
+  config.layout === 'quote' ? (
+    <QuoteReadingLayout {config} {data} />
+  ) : (
+    <ArticleReadingLayout {config} {data} />
+  )
+}

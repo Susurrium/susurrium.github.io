@@ -1,0 +1,681 @@
+---
+import {
+  buildHomePageData,
+  getPageItems,
+  hydratePageItems,
+  loadContentCatalog
+} from '@/lib/content-layer'
+
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import ContentCard from '@/components/cards/ContentCard.astro'
+import CodeTimeCard from '@/components/CodeTimeCard.astro'
+import EducationCard from '@/components/EducationCard.astro'
+import BlogTimeline from '@/components/home/BlogTimeline.astro'
+import GitHubContributionHeatmap from '@/components/home/GitHubContributionHeatmap.astro'
+import HeroGallery from '@/components/home/HeroGallery.astro'
+import ProfileIntro from '@/components/home/ProfileIntro.astro'
+import RandomSayingCard from '@/components/home/RandomSayingCard.astro'
+import ResidenceCard from '@/components/home/ResidenceCard.astro'
+
+const contentCatalog = await loadContentCatalog()
+const pageData = buildHomePageData(contentCatalog)
+const sayingItems = hydratePageItems(
+  getPageItems(pageData, 'featured-saying', 'candidates'),
+  contentCatalog
+)
+const recentBlogItems = hydratePageItems(
+  getPageItems(pageData, 'recent-writing', 'blog'),
+  contentCatalog
+)
+const recentTraceItems = hydratePageItems(
+  getPageItems(pageData, 'recent-writing', 'trace'),
+  contentCatalog
+)
+const timelineItems = hydratePageItems(getPageItems(pageData, 'blog-timeline'), contentCatalog)
+const timelineYearKey = pageData.sections
+  .find(({ key }) => key === 'blog-timeline')
+  ?.groups[0]?.key.replace(/^year-/, '')
+const timelineYear =
+  timelineYearKey && /^\d{4}$/.test(timelineYearKey) ? Number(timelineYearKey) : undefined
+
+const meta = {
+  description: 'A personal blog of formal writing, short traces, and collected sayings.',
+  title: 'Home'
+}
+---
+
+<PageLayout {meta} pageKind='home'>
+  <main class='home-page' data-page-kind='home'>
+    <HeroGallery />
+
+    <div
+      class='home-content-cover'
+      data-home-content-cover
+      data-cover-mode='hero'
+      aria-hidden='true'
+    >
+    </div>
+
+    <div class='home-content' data-home-content>
+      <div class='home-saying-profile' data-home-saying-profile>
+        {sayingItems.length > 0 && <RandomSayingCard items={sayingItems} />}
+        <ProfileIntro />
+      </div>
+
+      <section class='home-writing' aria-labelledby='home-recent-heading' data-home-writing-grid>
+        <div class='home-writing__title home-section-heading'>
+          <h2 id='home-recent-heading'>Recent</h2>
+        </div>
+
+        <section class='home-writing__column' data-home-blog-column>
+          <div class='home-writing__heading'>
+            <h3>Blog</h3>
+            <Button
+              title='View all'
+              href='/blog'
+              variant='ahead'
+              aria-label='View all Blog posts'
+              data-home-action='ahead'
+            />
+          </div>
+          {
+            recentBlogItems.length > 0 ? (
+              <ul class='home-writing__blog-list' data-home-recent-blog-list>
+                {recentBlogItems.map((item) => (
+                  <ContentCard class='home-recent-card' item={item} />
+                ))}
+              </ul>
+            ) : (
+              <p class='site-empty-state home-writing__empty'>No posts yet.</p>
+            )
+          }
+        </section>
+
+        <section class='home-writing__column' data-home-traces-column>
+          <div class='home-writing__heading'>
+            <h3>Traces</h3>
+            <Button
+              title='View all'
+              href='/traces'
+              variant='ahead'
+              aria-label='View all Traces'
+              data-home-action='ahead'
+            />
+          </div>
+          {
+            recentTraceItems.length > 0 ? (
+              <div class='home-writing__trace-list' data-home-recent-trace-list>
+                {recentTraceItems.map((item) => (
+                  <ContentCard class='home-recent-card' item={item} />
+                ))}
+              </div>
+            ) : (
+              <p class='site-empty-state home-writing__empty'>No traces yet.</p>
+            )
+          }
+        </section>
+      </section>
+
+      {timelineItems.length > 0 && <BlogTimeline items={timelineItems} year={timelineYear} />}
+
+      <section class='home-education' aria-labelledby='home-education-heading' data-home-education>
+        <div class='home-section-heading'>
+          <h2 id='home-education-heading'>Education</h2>
+        </div>
+        <EducationCard />
+      </section>
+
+      <section class='home-residence' aria-labelledby='home-residence-heading' data-home-residence>
+        <div class='home-section-heading'>
+          <h2 id='home-residence-heading'>Residence</h2>
+        </div>
+        <ResidenceCard />
+      </section>
+
+      <section
+        class='home-github-activity'
+        aria-labelledby='home-github-activity-heading'
+        data-home-github-activity
+      >
+        <div class='home-github-activity__heading home-section-heading'>
+          <h2 id='home-github-activity-heading'>GitHub Activity</h2>
+          <a href='https://github.com/Susurrium' target='_blank' rel='noopener noreferrer'
+            >GitHub ↗</a
+          >
+        </div>
+        <CodeTimeCard />
+        <GitHubContributionHeatmap />
+      </section>
+    </div>
+  </main>
+</PageLayout>
+
+<style>
+  :global(html:has(body[data-page-kind='home'])),
+  :global(body[data-page-kind='home']) {
+    /* Hero and transition layers deliberately span the visual viewport.
+       Clip only their scrollbar-width overhang at the page boundary. */
+    overflow-x: clip;
+  }
+
+  .home-page {
+    /* Keep the cover below the first paint even before its observer runs.
+       HeroGallery consumes the same token, so this is a layout contract,
+       not a timing guess. */
+    --home-hero-height: clamp(25rem, 70vh, 52rem);
+    --home-section-title-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    --home-subsection-title-size: clamp(1.22rem, 2.1vw, 1.55rem);
+    position: relative;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .home-page :global(.home-section-heading) {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .home-page :global(.home-section-heading h2) {
+    margin: 0;
+    font-size: var(--home-section-title-size);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .home-page :global(.home-section-heading > a) {
+    white-space: nowrap;
+  }
+
+  /* This surface is only the Hero-to-content transition veil. It follows the
+     Hero boundary while the wave is covering the fixed image, then disappears
+     completely so the normal page background and ambient backdrop can return. */
+  .home-content-cover {
+    position: absolute;
+    top: var(--home-content-cover-top, var(--home-hero-height));
+    right: 50%;
+    bottom: 0;
+    left: 50%;
+    z-index: 0;
+    width: 100vw;
+    min-height: 100%;
+    background: hsl(var(--background) / 0.965);
+    pointer-events: none;
+    transform: translateX(-50%);
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 240ms ease,
+      visibility 0s linear 240ms;
+  }
+
+  .home-content-cover[data-cover-mode='released'] {
+    opacity: 0;
+    visibility: hidden;
+    transition-delay: 0s, 240ms;
+  }
+
+  .home-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-height: 28rem;
+    padding: clamp(1.25rem, 3vw, 2.5rem) 0 clamp(4rem, 10vw, 7rem);
+    flex-direction: column;
+    gap: clamp(4rem, 9vw, 7rem);
+    background: transparent;
+  }
+
+  .home-saying-profile {
+    /* This wrapper only groups Saying and Profile vertically. Its children
+       stay on Home's outer content rail with the sibling sections below. */
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex-direction: column;
+    gap: clamp(2.75rem, 5vw, 4.5rem);
+  }
+
+  .home-writing {
+    --home-recent-card-height: clamp(15.5rem, 20vw, 16.5rem);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+
+  .home-writing__title {
+    grid-column: 1 / -1;
+  }
+
+  .home-writing__column {
+    min-width: 0;
+  }
+
+  .home-writing__heading {
+    display: flex;
+    min-height: 2.5rem;
+    margin-bottom: 0.85rem;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .home-writing__heading h3 {
+    margin: 0;
+  }
+
+  .home-writing__heading h3 {
+    font-size: var(--home-subsection-title-size);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .home-writing__blog-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    grid-auto-rows: var(--home-recent-card-height);
+    gap: 0.75rem;
+    list-style: none;
+  }
+
+  .home-writing__trace-list {
+    display: grid;
+    grid-auto-rows: var(--home-recent-card-height);
+    margin: 0;
+    gap: 0.75rem;
+  }
+
+  .home-writing__blog-list > :global(.home-recent-card) {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .home-writing__trace-list > :global(.media-card-container) {
+    min-height: 0;
+    height: 100%;
+    /* Let the CTA's hover lift extend beyond the Home card row. */
+    overflow: visible;
+  }
+
+  .home-writing__blog-list > :global(.home-recent-card) :global(.blog-text-card__surface) {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .home-writing__blog-list > :global(.home-recent-card) :global(.blog-text-card__post-link) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .home-writing__blog-list > :global(.home-recent-card) :global(.tag-list) {
+    max-height: 1.8rem;
+    overflow: hidden;
+  }
+
+  /* Home uses a shared row contract instead of the archive card's outer
+     margins, so Blog and Trace land on exactly the same baselines. */
+  .home-writing__trace-list
+    > :global(.media-card-container)
+    > :global(.media-card.home-recent-card) {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    /* The outer card must not clip the CTA's intentional hover lift. */
+    overflow: visible;
+  }
+
+  .home-writing__trace-list
+    > :global(.media-card-container)
+    > :global(.media-card.home-recent-card)
+    > :global(.media-card__link) {
+    /* Keep the component's original out-of-card interaction on Home. */
+    overflow: visible;
+  }
+
+  .home-writing__trace-list :global(.media-card__cover) {
+    flex: 0 0 54%;
+    width: 54%;
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+    align-self: stretch;
+    margin-right: 1.5rem;
+  }
+
+  .home-writing__trace-list :global(.media-card.is-cut-left .media-card__cover) {
+    margin-right: auto;
+    margin-left: 1.5rem;
+  }
+
+  .home-writing__trace-list :global(.media-card__info) {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 1rem 1.5rem 0 0;
+  }
+
+  .home-writing__trace-list :global(.media-card.is-cut-left .media-card__info) {
+    padding: 1rem 0 0 1.5rem;
+  }
+
+  .home-writing__empty {
+    min-height: var(--home-recent-card-height, 12.5rem);
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 1.25rem;
+  }
+
+  .home-github-activity {
+    display: grid;
+    gap: 0.8rem;
+    width: 100%;
+  }
+
+  .home-github-activity__heading > a {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* Keep Timeline as its existing sibling, while reducing the inter-section
+     gap so it reads as the final visual beat of Recent. */
+  .home-writing + :global(.blog-timeline) {
+    margin-top: clamp(-3rem, -4vw, -1.75rem);
+  }
+
+  .home-residence {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .home-education {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  /* The six-item menu is intentionally wider than the collapsed mobile
+     button row while it is hidden. Clip that hidden row at the Home shell so
+     the added Home entry cannot create a horizontal page scrollbar. */
+  @media (max-width: 639px) {
+    :global(body[data-page-kind='home'] header-component),
+    :global(body[data-page-kind='home'] header-component #headerExpandContent) {
+      overflow-x: clip;
+    }
+  }
+
+  /* Keep the two Recent columns wider than Media's 30rem stacked-card
+     threshold. Otherwise Trace can become a 28rem vertical card while Blog
+     stays on its compact row, leaving the two Recent columns misaligned. */
+  @media (max-width: 1100px) {
+    .home-writing {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-writing__title {
+      grid-column: auto;
+    }
+  }
+
+  /* The source Media component switches to a stacked card either at its
+     viewport breakpoint or when its own container is narrow. Mirror that
+     decision here so our desktop equal-height row contract never overrides
+     the source mobile geometry. */
+  @media (max-width: 767px) {
+    .home-page {
+      --home-hero-height: clamp(24rem, 62vh, 34rem);
+    }
+
+    .home-writing__blog-list,
+    .home-writing__trace-list {
+      grid-auto-rows: auto;
+    }
+
+    .home-writing__blog-list > :global(.home-recent-card),
+    .home-writing__trace-list > :global(.media-card-container) {
+      height: auto;
+    }
+
+    .home-writing__blog-list > :global(.home-recent-card) :global(.blog-text-card__surface) {
+      height: auto;
+      min-height: 12.5rem;
+    }
+
+    .home-writing__trace-list
+      > :global(.media-card-container)
+      > :global(.media-card.home-recent-card) {
+      height: auto;
+      min-height: 28rem;
+    }
+
+    /* Match Media's source mobile presentation after the desktop Home
+       ratio overrides are no longer applicable. */
+    .home-writing__trace-list :global(.media-card__cover),
+    .home-writing__trace-list :global(.media-card.is-cut-left .media-card__cover) {
+      width: 100%;
+      height: 14rem;
+      flex: 0 0 14rem;
+      margin: 0;
+      aspect-ratio: auto;
+      align-self: auto;
+    }
+
+    .home-writing__trace-list :global(.media-card__info),
+    .home-writing__trace-list :global(.media-card.is-cut-left .media-card__info) {
+      width: 100%;
+      height: 14rem;
+      flex: 0 0 14rem;
+      padding: 0 1rem 0;
+    }
+  }
+
+  @container (max-width: 30rem) {
+    .home-writing__trace-list {
+      grid-auto-rows: auto;
+    }
+
+    .home-writing__trace-list
+      > :global(.media-card-container)
+      > :global(.media-card.home-recent-card) {
+      height: auto;
+      min-height: 28rem;
+    }
+
+    .home-writing__trace-list
+      > :global(.media-card-container)
+      > :global(.media-card.home-recent-card)
+      > :global(.media-card__link) {
+      flex-direction: column;
+    }
+
+    .home-writing__trace-list :global(.media-card__cover),
+    .home-writing__trace-list :global(.media-card.is-cut-left .media-card__cover) {
+      width: 100%;
+      height: 14rem;
+      flex: 0 0 14rem;
+      margin: 0;
+      aspect-ratio: auto;
+      align-self: auto;
+    }
+
+    .home-writing__trace-list :global(.media-card__info),
+    .home-writing__trace-list :global(.media-card.is-cut-left .media-card__info) {
+      width: 100%;
+      height: 14rem;
+      flex: 0 0 14rem;
+      padding: 0 1rem 0;
+    }
+  }
+</style>
+
+<script>
+  declare global {
+    interface Window {
+      __homeContentCoverCleanup?: () => void
+      __homeEntryHandoffCleanup?: () => void
+    }
+  }
+
+  const initializeHomeContentCover = () => {
+    const page = document.querySelector<HTMLElement>('[data-page-kind="home"]')
+    const hero = page?.querySelector<HTMLElement>('[data-home-hero]')
+    const cover = page?.querySelector<HTMLElement>('[data-home-content-cover]')
+    if (!page || !hero || !cover) return
+
+    window.__homeContentCoverCleanup?.()
+
+    const controller = new AbortController()
+    const { signal } = controller
+    let frame = 0
+
+    const sync = () => {
+      frame = 0
+      const pageTop = page.getBoundingClientRect().top + window.scrollY
+      const boundary = hero.getBoundingClientRect().bottom + window.scrollY
+      const top = Math.max(0, boundary - pageTop)
+      const covered = hero.getBoundingClientRect().bottom <= 0
+      cover.style.setProperty('--home-content-cover-top', `${top}px`)
+      cover.dataset.coverTop = String(Math.round(top))
+      cover.dataset.coverMode = covered ? 'released' : 'hero'
+    }
+
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(sync)
+    }
+
+    const resizeObserver = new ResizeObserver(schedule)
+    resizeObserver.observe(page)
+    resizeObserver.observe(hero)
+
+    const cleanup = () => {
+      controller.abort()
+      resizeObserver.disconnect()
+      if (frame) window.cancelAnimationFrame(frame)
+      frame = 0
+      if (window.__homeContentCoverCleanup === cleanup) delete window.__homeContentCoverCleanup
+    }
+
+    window.__homeContentCoverCleanup = cleanup
+    window.addEventListener('scroll', schedule, { passive: true, signal })
+    window.addEventListener('resize', schedule, { passive: true, signal })
+    document.addEventListener('astro:before-swap', cleanup, { once: true, signal })
+    sync()
+  }
+
+  const waitForFirstHeroImage = async (source: string, signal: AbortSignal) => {
+    if (!source) return
+
+    const image = new Image()
+    image.decoding = 'async'
+    let finishLoad = () => {}
+    const loaded = new Promise<void>((resolve) => {
+      const finish = () => resolve()
+      finishLoad = finish
+      image.addEventListener('load', finish, { once: true, signal })
+      image.addEventListener('error', finish, { once: true, signal })
+      signal.addEventListener('abort', finish, { once: true })
+    })
+
+    image.src = source
+    if (image.complete) finishLoad()
+
+    let timeout = 0
+    let settled = false
+    try {
+      await Promise.race([
+        loaded.then(() => {
+          settled = true
+        }),
+        new Promise<void>((resolve) => {
+          timeout = window.setTimeout(() => {
+            settled = true
+            resolve()
+          }, 1600)
+        })
+      ])
+      /*
+       * `decode()` is not part of the timeout race: some browsers can keep a
+       * decode promise pending after a failed/aborted image request. Only
+       * await it when the image actually settled successfully, and keep this
+       * extra wait bounded so a slow decoder cannot hold the curtain forever.
+       */
+      if (!signal.aborted && settled && image.complete && image.naturalWidth > 0) {
+        await Promise.race([
+          image.decode().catch(() => undefined),
+          new Promise<void>((resolve) => window.setTimeout(resolve, 240))
+        ])
+      }
+    } finally {
+      if (timeout) window.clearTimeout(timeout)
+    }
+  }
+
+  const nextFrame = () =>
+    new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => resolve())
+    })
+
+  const initializeHomeEntryHandoff = () => {
+    const root = document.documentElement
+    if (root.dataset.homeHandoff !== 'pending' || window.__homeEntryHandoffCleanup) return
+
+    const handoff = document.querySelector<HTMLElement>('[data-home-entry-handoff]')
+    const media = document.querySelector<HTMLElement>('[data-home-hero-media]')
+    if (!handoff || !media || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      delete root.dataset.homeHandoff
+      return
+    }
+
+    const controller = new AbortController()
+    const { signal } = controller
+    let revealTimer = 0
+
+    const cleanup = () => {
+      controller.abort()
+      if (revealTimer) window.clearTimeout(revealTimer)
+      revealTimer = 0
+      delete root.dataset.homeHandoff
+      if (window.__homeEntryHandoffCleanup === cleanup) {
+        delete window.__homeEntryHandoffCleanup
+      }
+    }
+
+    window.__homeEntryHandoffCleanup = cleanup
+    document.addEventListener('astro:before-swap', cleanup, { once: true, signal })
+
+    const reveal = async () => {
+      await waitForFirstHeroImage(media.dataset.firstSlideSrc ?? '', signal)
+      await nextFrame()
+      await nextFrame()
+      if (signal.aborted || root.dataset.homeHandoff !== 'pending') return
+
+      root.dataset.homeHandoff = 'revealing'
+      revealTimer = window.setTimeout(() => {
+        if (!signal.aborted && root.dataset.homeHandoff === 'revealing') {
+          cleanup()
+        }
+      }, 360)
+    }
+
+    void reveal()
+  }
+
+  initializeHomeContentCover()
+  initializeHomeEntryHandoff()
+  document.addEventListener('astro:page-load', initializeHomeContentCover)
+  document.addEventListener('astro:page-load', initializeHomeEntryHandoff)
+</script>

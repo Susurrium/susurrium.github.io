@@ -1,0 +1,181 @@
+---
+/**
+ * Historical SkyWT-style residence module, adapted only for the current
+ * content configuration and Astro base path.  The map controller, flight
+ * geometry and visual CSS remain the historical implementation.
+ */
+import { Icon } from 'astro-pure/user'
+import { residence } from '@/data/residence'
+
+import FlightOverlay from './FlightOverlay.astro'
+import '@/assets/styles/residence-map.css'
+
+export interface Props {
+  city?: string;
+  region?: string;
+  displayName?: string;
+  timezone?: string;
+  status?: string;
+  headingLevel?: 2 | 3 | 4;
+  caption?: string;
+  href?: string;
+  linkLabel?: string;
+  latitude?: number;
+  longitude?: number;
+  mapStyle?: string;
+  darkMapStyle?: string;
+  mapZoom?: number;
+  mapImage?: string;
+  mapImageAlt?: string;
+  mapAttribution?: string;
+  weather?: string;
+  markerX?: number;
+  markerY?: number;
+  showPlaceholder?: boolean;
+  class?: string;
+}
+
+const {
+  city = residence.city,
+  region = residence.region,
+  displayName = residence.displayName,
+  latitude = residence.latitude,
+  longitude = residence.longitude,
+  mapStyle = residence.mapStyle,
+  darkMapStyle = residence.darkMapStyle,
+  mapZoom = residence.mapZoom,
+  mapImage = residence.mapImage,
+  mapImageAlt = residence.mapImageAlt,
+  markerX = residence.markerX,
+  markerY = residence.markerY,
+  showPlaceholder = true,
+  class: className,
+} = Astro.props;
+
+const isPlaceholder = !city;
+const shouldRender = Boolean(city) || showPlaceholder;
+const displayCity = city || '杭州';
+const displayRegion = region || (isPlaceholder ? residence.label : undefined);
+const safeLatitude = Math.min(85, Math.max(-85, latitude));
+const safeLongitude = Math.min(180, Math.max(-180, longitude));
+const safeMarkerX = Math.min(90, Math.max(10, markerX));
+const safeMarkerY = Math.min(86, Math.max(14, markerY));
+const markerStyle = `--marker-x:${safeMarkerX}%;--marker-y:${safeMarkerY}%`;
+const residenceLabel = displayName || `${displayCity}${displayRegion ? ` · ${displayRegion}` : ''}`;
+const dialogSlug = displayCity.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'map';
+const dialogId = `residence-globe-${dialogSlug}`;
+const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
+const withBase = (path: string) => (/^[a-z][a-z\d+.-]*:/i.test(path) || path.startsWith('//') ? path : `${basePath}${path}`)
+---
+
+{
+  shouldRender && (
+    <article class:list={['residence-card', isPlaceholder && 'is-placeholder', className]}>
+      <div
+        class="residence-scene"
+        style={markerStyle}
+        role="group"
+        aria-label={`${residenceLabel}居住地地图${isPlaceholder ? '示意图' : ''}`}
+        data-residence-map
+        data-map-state="fallback"
+        data-map-interaction="static"
+        data-map-projection="mercator"
+        data-flight-active="false"
+        data-location-state="idle"
+        data-latitude={safeLatitude}
+        data-longitude={safeLongitude}
+        data-map-style={mapStyle}
+        data-map-dark-style={darkMapStyle}
+        data-map-zoom={mapZoom}
+        data-owner-avatar={withBase(residence.ownerAvatar)}
+        data-visitor-avatar={withBase(residence.visitorAvatar)}
+        data-globe-dialog-id={dialogId}
+      >
+        <img
+          class="residence-scene__fallback"
+          data-map-fallback
+          src={withBase(mapImage)}
+          alt={mapImageAlt}
+          width="1200"
+          height="675"
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="residence-scene__live-map" data-map-canvas aria-hidden="true" />
+
+        <FlightOverlay />
+
+        <div class="residence-marker" data-map-marker aria-hidden="true">
+          <span class="residence-marker__halo residence-marker__halo--one" />
+          <span class="residence-marker__pin" />
+        </div>
+
+        <div class="map-label map-label--city" aria-hidden="true">
+          <Icon name='location' class='size-3.5' />
+          <span data-residence-label>{residenceLabel}</span>
+        </div>
+
+        <div class="map-attribution" aria-label="地图数据来源">
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+            © OpenStreetMap contributors
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">© CARTO</a>
+        </div>
+
+        <div class="map-actions" aria-label="地图操作">
+          <button
+            type="button"
+            class="map-action focus-ring"
+            data-map-maximize
+            data-globe-trigger
+            disabled
+            aria-haspopup="dialog"
+            aria-controls={dialogId}
+            aria-label="Open globe in fullscreen"
+            title="Open globe in fullscreen"
+          >
+            <span aria-hidden="true">⛶</span>
+          </button>
+        </div>
+      </div>
+
+      <dialog class="globe-dialog" id={dialogId} data-globe-dialog data-globe-state="idle" data-map-projection="globe" aria-modal="true" aria-labelledby={`${dialogId}-title`}>
+        <div class="globe-dialog__surface">
+          <header class="globe-dialog__header">
+            <div>
+              <p class="globe-dialog__eyebrow">SkyWT globe</p>
+              <h3 id={`${dialogId}-title`}>从{displayCity}，看向世界</h3>
+            </div>
+            <button type="button" class="globe-dialog__close focus-ring" data-globe-close aria-label="关闭全球地图">×</button>
+          </header>
+          <div class="globe-dialog__map" data-globe-canvas data-globe-state="idle" data-map-projection="globe" data-fallback-src={withBase(mapImage)} role="application" aria-label="可旋转的全球地图">
+            <img class="globe-dialog__fallback" src={withBase(mapImage)} alt="" width="1200" height="675" aria-hidden="true" />
+            <div class="globe-dialog__map-host" data-globe-map-host aria-hidden="true" />
+            <div class="globe-dialog__loading" data-globe-loading>地图正在展开…</div>
+          </div>
+          <footer class="globe-dialog__footer">
+            <div class="globe-dialog__footer-info">
+              <span data-globe-status aria-live="polite">居住地：{residenceLabel}</span>
+              <span class="globe-dialog__attribution" aria-label="地图数据来源">
+                <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+                  © OpenStreetMap contributors
+                </a>
+                <span aria-hidden="true">·</span>
+                <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">© CARTO</a>
+              </span>
+            </div>
+            <button type="button" class="globe-dialog__locate focus-ring" data-visitor-location aria-label="Retry location">↻</button>
+          </footer>
+        </div>
+      </dialog>
+    </article>
+  )
+}
+
+<script>
+  import { initializeResidenceMaps, installResidenceMapClientRouterHook } from '../../scripts/residence-map'
+
+  installResidenceMapClientRouterHook()
+  initializeResidenceMaps()
+</script>

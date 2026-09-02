@@ -1,0 +1,142 @@
+---
+/**
+ * Full-bleed Hero image stage.  This is intentionally separate from
+ * CardMediaFrame: Hero has no diagonal mask and its desktop/mobile focal
+ * points are independent.  Both the runtime Hero and the Hero editor use this
+ * exact component, so a saved focal transform is rendered identically.
+ */
+import {
+  DEFAULT_HERO_CROP_TRANSFORM,
+  normalizeHeroCropTransform,
+  type HeroCropTransform
+} from '@/lib/hero-crop/types'
+
+interface Props {
+  alt?: string
+  aspectRatio?: number
+  class?: string
+  imageClass?: string
+  loading?: 'eager' | 'lazy'
+  mobileTransform?: HeroCropTransform
+  src: string
+  style?: string
+  transform?: HeroCropTransform
+  width?: number
+  height?: number
+  dataAttributes?: Record<string, string | number | boolean | undefined>
+}
+
+const {
+  alt = '',
+  aspectRatio,
+  class: className,
+  imageClass,
+  loading = 'lazy',
+  mobileTransform,
+  src,
+  style: customStyle,
+  transform = DEFAULT_HERO_CROP_TRANSFORM,
+  width = 1920,
+  height = 1080,
+  dataAttributes
+} = Astro.props as Props
+
+const normalized = normalizeHeroCropTransform(transform)
+const normalizedMobile = normalizeHeroCropTransform(mobileTransform ?? normalized)
+const position = `${normalized.x}% ${normalized.y}%`
+const mobilePosition = `${normalizedMobile.x}% ${normalizedMobile.y}%`
+const style = [
+  // Keep named desktop variables as well as the active variables.  The
+  // editor can request a desktop preview while the host browser is below
+  // the mobile media-query breakpoint, so CSS needs an explicit way to
+  // restore the selected target rather than relying on window width.  The
+  // active variables themselves are intentionally not written inline: an
+  // inline value would win the real Hero's mobile media query and make the
+  // production page keep using the desktop focal point on phones.
+  `--hero-media-position-desktop:${position}`,
+  `--hero-media-origin-desktop:${position}`,
+  `--hero-media-zoom-desktop:${normalized.zoom}`,
+  `--hero-media-position-mobile:${mobilePosition}`,
+  `--hero-media-origin-mobile:${mobilePosition}`,
+  `--hero-media-zoom-mobile:${normalizedMobile.zoom}`,
+  aspectRatio ? `--hero-media-aspect-ratio:${aspectRatio}` : '',
+  customStyle ?? ''
+]
+  .filter(Boolean)
+  .join(';')
+---
+
+<div
+  class:list={['hero-media-frame', className]}
+  data-hero-media-frame
+  data-hero-position={position}
+  data-hero-zoom={normalized.zoom}
+  data-hero-position-mobile={mobilePosition}
+  data-hero-zoom-mobile={normalizedMobile.zoom}
+  {...dataAttributes}
+  style={style}
+>
+  <img
+    alt={alt}
+    class:list={['hero-media-frame__image', imageClass]}
+    data-hero-image
+    height={height}
+    loading={loading}
+    src={src}
+    width={width}
+  />
+</div>
+
+<style>
+  .hero-media-frame {
+    --hero-media-position: var(--hero-media-position-desktop, 50% 50%);
+    --hero-media-origin: var(--hero-media-origin-desktop, 50% 50%);
+    --hero-media-zoom: var(--hero-media-zoom-desktop, 1);
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    background: #363636;
+  }
+
+  .hero-media-frame__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--hero-media-position, 50% 50%);
+    transform: scale(var(--hero-media-zoom, 1));
+    transform-origin: var(--hero-media-origin, center);
+  }
+
+  /* The editor can preview the mobile target while it is itself open in a
+     desktop browser.  The real Hero switches these variables through the
+     viewport media query below; this explicit data attribute gives the
+     editor the same switch without depending on the host window width. */
+  .hero-media-frame[data-hero-viewport='mobile'] {
+    --hero-media-position: var(--hero-media-position-mobile, 50% 50%);
+    --hero-media-origin: var(--hero-media-origin-mobile, 50% 50%);
+    --hero-media-zoom: var(--hero-media-zoom-mobile, 1);
+  }
+
+  .hero-media-frame[data-hero-viewport='desktop'] {
+    --hero-media-position: var(--hero-media-position-desktop, 50% 50%);
+    --hero-media-origin: var(--hero-media-origin-desktop, 50% 50%);
+    --hero-media-zoom: var(--hero-media-zoom-desktop, 1);
+  }
+
+  @media (max-width: 767px) {
+    .hero-media-frame {
+      --hero-media-position: var(--hero-media-position-mobile, 50% 50%);
+      --hero-media-origin: var(--hero-media-origin-mobile, 50% 50%);
+      --hero-media-zoom: var(--hero-media-zoom-mobile, 1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-media-frame__image {
+      transition: none;
+    }
+  }
+</style>

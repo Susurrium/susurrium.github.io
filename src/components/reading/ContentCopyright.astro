@@ -1,0 +1,313 @@
+---
+import config from 'virtual:config'
+
+import { Icon } from 'astro-pure/user'
+import { cn, getFormattedDate } from 'astro-pure/utils'
+
+type CopyrightImage = {
+  src?: string | { src?: string }
+}
+
+type CopyrightData = {
+  title?: string
+  text?: string
+  publishDate?: Date
+  heroImage?: CopyrightImage
+}
+
+interface Props {
+  data: CopyrightData
+  /** Optional display title for content types whose primary field is not `title`. */
+  title?: string
+  class?: string
+}
+
+const {
+  data,
+  title: displayTitle,
+  class: className
+} = Astro.props
+const heroImage = data.heroImage
+const title = displayTitle ?? data.title ?? data.text ?? 'Untitled'
+const publishDate = data.publishDate
+
+const image = typeof heroImage?.src === 'string' ? heroImage.src : (heroImage?.src?.src ?? '')
+const pageUrl = Astro.url.href
+
+const shares = {
+  weibo: {
+    link: `https://service.weibo.com/share/share.php?url=${encodeURIComponent(pageUrl)}&title=${encodeURIComponent(title)}&pic=${encodeURIComponent(image)}`
+  },
+  x: {
+    link: `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(pageUrl)}&via=${encodeURIComponent(config.author)}`
+  },
+  bluesky: {
+    link: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title}\n${pageUrl}`)}`
+  }
+} as const
+
+const shareLabels: Record<string, string> = {
+  weibo: 'Share on Weibo',
+  x: 'Share on X',
+  bluesky: 'Share on Bluesky'
+}
+---
+
+<!--
+  Local adaptation of astro-pure 1.4.6's Copyright.astro.
+  Its QR renderer is bundled from the pinned qrcodejs@1.0.0 package instead
+  of astro-pure's runtime npm CDN script. The custom element scopes event
+  listeners to this instance so Astro ClientRouter swaps cannot leak them.
+-->
+<article-copyright data-article-copyright>
+  <div
+    class={cn(
+      'relative flex flex-col gap-y-2 rounded-xl border px-3 py-2 sm:px-4 sm:py-3',
+      className
+    )}
+  >
+    <Icon class='absolute end-4 top-4 size-20 opacity-10' name='copyright' />
+
+    <!-- title & link -->
+    <div class='flex flex-col'>
+      <div class='font-medium text-foreground'>{title}</div>
+      <div class='text-sm line-clamp-1'>{Astro.url}</div>
+    </div>
+
+    <!-- common info -->
+    <div class='flex flex-row flex-wrap justify-start gap-x-5 gap-y-1 sm:gap-x-8'>
+      <div class='flex gap-x-2 sm:flex-col'>
+        <span>Author</span>
+        <span class='text-sm text-foreground max-sm:place-self-center'>{config.author}</span>
+      </div>
+      {
+        publishDate && (
+          <div class='flex gap-x-2 sm:min-w-16 sm:flex-col'>
+            <span>Published at</span>
+            <span class='text-sm text-foreground max-sm:place-self-center'>
+              {getFormattedDate(publishDate, { month: 'long' })}
+            </span>
+          </div>
+        )
+      }
+      <div class='flex gap-x-2 sm:flex-col'>
+        <span>Copyright</span>
+        <a
+          class='text-sm text-foreground max-sm:place-self-center'
+          href='https://creativecommons.org/licenses/by/4.0/'
+          target='_blank'
+          rel='noopener noreferrer'
+        >
+          CC BY-NC-SA 4.0
+        </a>
+      </div>
+    </div>
+
+    <!-- functions -->
+    <div class='relative'>
+      <div class='flex flex-row gap-3'>
+        <button
+          type='button'
+          data-copy-link
+          aria-label='Copy link'
+          class='group rounded-full bg-muted p-1 text-muted-foreground transition-colors hover:text-primary sm:p-1.5'
+        >
+          <Icon class='size-5' name='link' />
+        </button>
+        <button
+          type='button'
+          data-get-qrcode
+          aria-label='Get QR code'
+          aria-expanded='false'
+          class='group rounded-full bg-muted p-1 text-muted-foreground transition-colors hover:text-primary sm:p-1.5'
+        >
+          <Icon class='size-5' name='qrcode' />
+        </button>
+        {
+          config.content.share.map((share) => (
+            <a
+              href={shares[share].link}
+              target='_blank'
+              rel='noopener noreferrer'
+              data-share={share}
+              aria-label={shareLabels[share] ?? 'Share'}
+              class='group rounded-full bg-muted p-1 text-muted-foreground transition-colors hover:text-primary sm:p-1.5'
+            >
+              <Icon class='size-5' name={share} />
+            </a>
+          ))
+        }
+      </div>
+      <div
+        data-qrcode-container
+        aria-hidden='true'
+        class='absolute z-10 -mt-2 box-content max-h-0 max-w-44 overflow-hidden rounded-xl border bg-muted p-4 opacity-0 transition-all duration-300 ease-in-out'
+      >
+      </div>
+    </div>
+  </div>
+
+  <div class='mx-6 rounded-b-xl border border-t-0 px-3 pb-1.5 pt-1 sm:mx-8 sm:px-4'>
+    <a
+      href='/projects#sponsorship'
+      data-astro-prefetch
+      class='flex items-center justify-between text-muted-foreground no-underline'
+    >
+      <span>Support the author ☕</span>
+      <Icon class='box-content size-5 p-1' name='receive-money' />
+    </a>
+  </div>
+</article-copyright>
+
+<style>
+  [data-qrcode-container].expanded {
+    max-height: 11rem;
+    transform: translateY(6px);
+    opacity: 100;
+  }
+
+  [data-qrcode-container] :global(canvas) {
+    width: 100%;
+  }
+</style>
+
+<script>
+  import qrcodeScriptUrl from 'qrcodejs/qrcode.min.js?url'
+
+  type QRCodeOptions = {
+    text: string
+  }
+
+  type QRCodeConstructor = new (element: HTMLElement, options: QRCodeOptions | string) => void
+
+  declare global {
+    interface Window {
+      QRCode?: QRCodeConstructor
+    }
+  }
+
+  let loader: Promise<QRCodeConstructor> | undefined
+
+  // `astro-pure/utils` is a server/client barrel that also exports date.ts,
+  // whose `virtual:config` import is not valid during Vite client prebundling.
+  // This is the exact local toast event used by Pure's small utility.
+  const showToast = (detail: { message: string }) => {
+    document.dispatchEvent(new CustomEvent('toast', { detail }))
+  }
+
+  function loadQRCode(): Promise<QRCodeConstructor> {
+    if (window.QRCode) return Promise.resolve(window.QRCode)
+    if (loader) return loader
+
+    loader = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector<HTMLScriptElement>(
+        'script[data-susurrium-qrcodejs]'
+      )
+
+      const finish = () => {
+        if (window.QRCode) resolve(window.QRCode)
+        else reject(new Error('The local qrcodejs renderer did not initialize.'))
+      }
+
+      if (existingScript) {
+        existingScript.addEventListener('load', finish, { once: true })
+        existingScript.addEventListener(
+          'error',
+          () => reject(new Error('Unable to load the local qrcodejs renderer.')),
+          { once: true }
+        )
+        return
+      }
+
+      const script = document.createElement('script')
+      script.src = qrcodeScriptUrl
+      script.async = true
+      script.dataset.susurriumQrcodejs = 'true'
+      script.addEventListener('load', finish, { once: true })
+      script.addEventListener(
+        'error',
+        () => reject(new Error('Unable to load the local qrcodejs renderer.')),
+        { once: true }
+      )
+      document.head.append(script)
+    })
+
+    return loader
+  }
+
+  class ArticleCopyright extends HTMLElement {
+    #controller?: AbortController
+    #renderVersion = 0
+
+    connectedCallback() {
+      this.#controller?.abort()
+      this.#controller = new AbortController()
+
+      const { signal } = this.#controller
+      // Delegate from the custom-element root. During a ClientRouter swap a
+      // custom element can be connected before all of its replacement
+      // children are available, so querying individual buttons here would
+      // occasionally miss their listeners.
+      this.addEventListener('click', this.#handleAction, { signal })
+      queueMicrotask(() => {
+        if (!signal.aborted && this.isConnected) {
+          this.#renderQRCode(this.querySelector<HTMLElement>('[data-qrcode-container]'))
+        }
+      })
+    }
+
+    disconnectedCallback() {
+      this.#controller?.abort()
+      this.#controller = undefined
+      this.#renderVersion += 1
+    }
+
+    #handleAction = async (event: Event) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+
+      const action = target.closest<HTMLButtonElement>('[data-copy-link], [data-get-qrcode]')
+      if (!action || !this.contains(action)) return
+
+      if (action.matches('[data-copy-link]')) {
+        try {
+          await navigator.clipboard.writeText(window.location.href)
+          showToast({ message: 'Link copied.' })
+        } catch {
+          showToast({ message: 'Copy failed.' })
+        }
+        return
+      }
+
+      const container = this.querySelector<HTMLElement>('[data-qrcode-container]')
+      const expanded = !container?.classList.contains('expanded')
+      container?.classList.toggle('expanded', expanded)
+      container?.setAttribute('aria-hidden', String(!expanded))
+      action.setAttribute('aria-expanded', String(expanded))
+    }
+
+    async #renderQRCode(container: HTMLElement | null) {
+      if (!container || container.childElementCount > 0) return
+
+      const renderVersion = ++this.#renderVersion
+
+      try {
+        const QRCode = await loadQRCode()
+        if (
+          !this.isConnected ||
+          renderVersion !== this.#renderVersion ||
+          container.childElementCount > 0
+        ) {
+          return
+        }
+        new QRCode(container, window.location.href)
+      } catch (error) {
+        console.warn('[copyright] QR code could not be generated.', error)
+      }
+    }
+  }
+
+  if (!customElements.get('article-copyright')) {
+    customElements.define('article-copyright', ArticleCopyright)
+  }
+</script>

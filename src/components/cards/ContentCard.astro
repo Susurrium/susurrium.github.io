@@ -1,0 +1,100 @@
+---
+/**
+ * The single presentation host for content cards.
+ *
+ * Dispatch is based on the resolved visual family. A Blog text card has one
+ * narrowly-scoped metadata facade because Astro's generated reading-time
+ * value is only available from its raw entry; that facade still renders the
+ * same TextCard primitive as every other text card. The visual decision is
+ * never encoded as three source-specific card implementations.
+ */
+import type { CollectionEntry } from 'astro:content'
+
+import { adaptContentEntry } from '@/lib/content-layer/adapters'
+import {
+  createResolvedPageItem,
+  toContentCardViewData,
+  type ContentCardViewData
+} from '@/lib/content-layer'
+import type { ContentKind, ContentPresentation, RenderablePageItem } from '@/lib/content-layer/types'
+
+import BlogTextCardAdapter from '@/components/cards/BlogTextCardAdapter.astro'
+import MediaCard from '@/components/cards/MediaCard.astro'
+import TextCard from '@/components/cards/TextCard.astro'
+
+type ContentEntry = CollectionEntry<'blog'> | CollectionEntry<'trace'> | CollectionEntry<'saying'>
+
+type HeadingLevel = 2 | 3 | 4 | 5 | 6
+
+interface LegacyProps {
+  actionLabel?: string
+  class?: string
+  contentKind: ContentKind
+  detailed?: boolean
+  entry: ContentEntry
+  headingLevel?: HeadingLevel
+  index?: number
+  presentation?: ContentPresentation | string
+}
+
+interface ModelProps {
+  class?: string
+  item: RenderablePageItem
+}
+
+type Props = LegacyProps | ModelProps
+const props = Astro.props as Props
+const className = props.class
+const isLegacy = !('item' in props)
+
+const item: RenderablePageItem = isLegacy
+  ? (() => {
+      const legacy = props as LegacyProps
+      const record = adaptContentEntry(legacy.entry)
+      if (record.kind !== legacy.contentKind) {
+        throw new Error(`ContentCard kind mismatch: expected ${legacy.contentKind}, got ${record.kind}`)
+      }
+      return {
+        ...createResolvedPageItem(record, {
+          actionLabel: legacy.actionLabel,
+          detailed: legacy.detailed,
+          headingLevel: legacy.headingLevel,
+          index: legacy.index,
+          presentation: legacy.presentation
+        }),
+        source: legacy.entry
+      } as RenderablePageItem
+    })()
+  : (props as ModelProps).item
+
+const detailed = item.placement.detailed
+const cardView: ContentCardViewData = toContentCardViewData(item)
+const classNameValue = className
+---
+
+{cardView.family === 'text' ? (
+  item.record.kind === 'blog' ? (
+    <BlogTextCardAdapter
+      class={classNameValue}
+      item={item as Extract<RenderablePageItem, { record: { kind: 'blog' } }>}
+    />
+  ) : (
+    <TextCard as='article' class={classNameValue} data={cardView} {detailed} />
+  )
+) : (
+  <MediaCard
+    actionLabel={item.placement.actionLabel ?? 'Read'}
+    class={classNameValue}
+    contentId={cardView.data.contentId}
+    contentType={cardView.data.contentType}
+    date={cardView.data.date}
+    description={cardView.data.description}
+    footerText={cardView.data.footerText}
+    headingLevel={item.placement.headingLevel}
+    href={cardView.data.href}
+    image={cardView.data.image}
+    index={item.placement.index}
+    presentation={item.placement.presentation}
+    title={cardView.data.title}
+  />
+)}

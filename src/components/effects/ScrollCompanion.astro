@@ -1,0 +1,261 @@
+---
+/**
+ * About's right-side companion, hosted by the historical Astro lifecycle
+ * shell. The project-owned Tracer artwork uses a bounded, continuous drift
+ * and a long-tail fade that are both driven by About's actual scroll distance.
+ * No historical breathing/click behaviour remains.
+ */
+interface Props {
+  class?: string
+  minWidth?: number
+  src?: string
+}
+
+const {
+  class: className,
+  minWidth = 1440,
+  src = '/media/effects/tracer-companion.webp'
+} = Astro.props
+const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
+const resolvedSrc =
+  /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? src : `${basePath}${src}`
+---
+
+<scroll-companion
+  class:list={['scroll-companion', className]}
+  data-min-width={minWidth}
+  data-visible='false'
+  data-lifecycle='paused'
+  aria-hidden='true'
+>
+  <span class='scroll-companion__stage'>
+    <img
+      data-src={resolvedSrc}
+      alt=''
+      width='820'
+      height='420'
+      loading='lazy'
+      decoding='async'
+      draggable='false'
+    />
+  </span>
+</scroll-companion>
+
+<script>
+  // Keep the companion present through most of the readable About content,
+  // then let it leave before the very bottom instead of staying resident.
+  const COMPANION_EXIT_SHARE = 0.88
+  // The replacement artwork is right-heavy on a transparent canvas. A small
+  // bounded drift keeps the figure visible inside the narrow right rail.
+  const COMPANION_MAX_X = 22
+  const COMPANION_MAX_ROTATE = 10
+  const COMPANION_FADE_START = 0.68
+  const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
+  const smoothstep = (value: number) => {
+    const t = clamp01(value)
+    return t * t * (3 - 2 * t)
+  }
+
+  class ScrollCompanionElement extends HTMLElement {
+    private controller: AbortController | null = null
+    private frame = 0
+    private reduceQuery: MediaQueryList | null = null
+    private widthQuery: MediaQueryList | null = null
+    private suspended = false
+
+    connectedCallback() {
+      this.disconnect()
+      this.suspended = false
+      this.controller = new AbortController()
+      const { signal } = this.controller
+      const parsedWidth = Number(this.dataset.minWidth)
+      const minWidth = Number.isFinite(parsedWidth) ? Math.max(0, parsedWidth) : 1440
+
+      this.reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+      this.widthQuery = window.matchMedia(`(min-width: ${minWidth}px)`)
+      this.reduceQuery.addEventListener('change', this.scheduleUpdate, { signal })
+      this.widthQuery.addEventListener('change', this.scheduleUpdate, { signal })
+      window.addEventListener('scroll', this.scheduleUpdate, { passive: true, signal })
+      window.addEventListener('resize', this.scheduleUpdate, { passive: true, signal })
+      window.addEventListener('pagehide', this.handlePageHide, { signal })
+      window.addEventListener('pageshow', this.handlePageShow, { signal })
+      document.addEventListener('visibilitychange', this.handleVisibilityChange, { signal })
+      document.addEventListener('astro:before-preparation', this.pause, { signal })
+      document.addEventListener('astro:before-swap', this.pause, { signal })
+      document.addEventListener('astro:page-load', this.resume, { signal })
+      this.scheduleUpdate()
+    }
+
+    disconnectedCallback() {
+      this.disconnect()
+    }
+
+    private disconnect() {
+      cancelAnimationFrame(this.frame)
+      this.frame = 0
+      this.controller?.abort()
+      this.controller = null
+      this.reduceQuery = null
+      this.widthQuery = null
+      this.suspended = true
+      this.deactivateImage()
+      this.dataset.visible = 'false'
+      this.dataset.lifecycle = 'paused'
+    }
+
+    private scheduleUpdate = () => {
+      if (this.suspended || document.visibilityState !== 'visible') {
+        this.cancelPendingAndHide()
+        return
+      }
+      if (this.frame) return
+      this.frame = requestAnimationFrame(() => {
+        this.frame = 0
+        this.update()
+      })
+    }
+
+    private cancelPendingAndHide() {
+      cancelAnimationFrame(this.frame)
+      this.frame = 0
+      this.deactivateImage()
+      this.dataset.visible = 'false'
+      this.dataset.lifecycle = 'paused'
+    }
+
+    private activateImage() {
+      const image = this.querySelector<HTMLImageElement>('img[data-src]')
+      const source = image?.dataset.src
+      if (image && source && !image.getAttribute('src')) image.src = source
+    }
+
+    private deactivateImage() {
+      this.querySelector<HTMLImageElement>('img[data-src]')?.removeAttribute('src')
+    }
+
+    private handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') {
+        this.cancelPendingAndHide()
+        return
+      }
+      if (!this.suspended) this.scheduleUpdate()
+    }
+
+    private handlePageHide = () => this.pause()
+
+    private handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) this.resume()
+    }
+
+    private pause = () => {
+      this.suspended = true
+      this.cancelPendingAndHide()
+    }
+
+    private resume = () => {
+      if (!this.isConnected) return
+      this.suspended = false
+      this.scheduleUpdate()
+    }
+
+    private update() {
+      const operational =
+        !this.suspended &&
+        document.visibilityState === 'visible' &&
+        Boolean(this.widthQuery?.matches) &&
+        !this.reduceQuery?.matches
+      this.dataset.lifecycle = operational ? 'active' : 'paused'
+      if (!operational) {
+        this.deactivateImage()
+        this.dataset.visible = 'false'
+        return
+      }
+
+      this.activateImage()
+      const scrollable = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+      const progress = scrollable > 0 ? clamp01(window.scrollY / scrollable) : 0
+      // Use the real scrollable distance as the animation's clock. The
+      // companion starts moving with the first scroll and exits at 88% of the
+      // page, regardless of the document's absolute pixel height.
+      const exitDistance = Math.max(1, scrollable * COMPANION_EXIT_SHARE)
+      const timeline = scrollable > 0 ? clamp01(window.scrollY / exitDistance) : 0
+      // Position is intentionally linear (the CSS transition smooths frame
+      // updates), while opacity gets a separate smooth tail near the end.
+      const travel = timeline
+      const fade = smoothstep((timeline - COMPANION_FADE_START) / (1 - COMPANION_FADE_START))
+      const opacity = 1 - fade
+
+      this.dataset.visible = String(opacity > 0.01)
+      this.style.setProperty('--companion-x', `${(travel * COMPANION_MAX_X).toFixed(2)}%`)
+      this.style.setProperty(
+        '--companion-rotate',
+        `${(travel * COMPANION_MAX_ROTATE).toFixed(2)}deg`
+      )
+      this.style.setProperty('--companion-opacity', opacity.toFixed(3))
+      this.dataset.progress = progress.toFixed(4)
+    }
+  }
+
+  if (!customElements.get('scroll-companion')) {
+    customElements.define('scroll-companion', ScrollCompanionElement)
+  }
+</script>
+
+<style>
+  .scroll-companion {
+    position: fixed;
+    inset-block: 0;
+    right: 0;
+    z-index: var(--z-companion);
+    display: flex;
+    width: max(0px, calc((100vw - 70rem) / 2 - 1.5rem));
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
+
+  .scroll-companion[data-visible='true'] {
+    opacity: 1;
+  }
+
+  .scroll-companion__stage {
+    display: block;
+    width: 124%;
+    max-height: 124vh;
+    flex: 0 0 124%;
+    opacity: var(--companion-opacity, 1);
+    transform: translateX(var(--companion-x, 0%)) rotate(var(--companion-rotate, 0deg));
+    transform-origin: 72% 50%;
+    transition:
+      transform 160ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      opacity 180ms linear;
+    will-change: transform, opacity;
+  }
+
+  .scroll-companion img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 124vh;
+    object-fit: contain;
+    user-select: none;
+  }
+
+  @media (max-width: 89.999rem), (prefers-reduced-motion: reduce) {
+    .scroll-companion {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-companion,
+    .scroll-companion__stage,
+    .scroll-companion img {
+      animation: none;
+      transition: none;
+    }
+  }
+</style>

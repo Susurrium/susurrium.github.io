@@ -198,7 +198,28 @@ async function loadDatabase(): Promise<ArticleDatabase> {
  * 保存数据库
  */
 async function saveDatabase(database: ArticleDatabase): Promise<void> {
-  await fs.writeFile(DATABASE_FILE, JSON.stringify(database, null, 2))
+  await fs.writeFile(DATABASE_FILE, `${JSON.stringify(database, null, 2)}\n`)
+}
+
+/**
+ * List Blog sources while treating a missing collection directory as the
+ * same supported empty state used by the build and release verifiers.
+ */
+async function listMarkdownFiles(): Promise<string[]> {
+  try {
+    return (await fs.readdir(BLOG_DIR, { withFileTypes: true }))
+      .filter(
+        (entry) =>
+          entry.isFile() && (entry.name.endsWith('.md') || entry.name.endsWith('.mdx'))
+      )
+      .map((entry) => entry.name)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      infoLog('Blog directory is absent; treating it as an empty collection')
+      return []
+    }
+    throw error
+  }
 }
 
 /**
@@ -286,9 +307,8 @@ async function main(): Promise<void> {
     // 读取数据库
     const database = await loadDatabase()
 
-    // 读取博客目录
-    const files = await fs.readdir(BLOG_DIR)
-    const markdownFiles = files.filter((file) => file.endsWith('.md') || file.endsWith('.mdx'))
+    // 读取博客目录；目录不存在和目录为空都是合法的发布状态。
+    const markdownFiles = await listMarkdownFiles()
 
     infoLog(`Found ${markdownFiles.length} markdown files`)
 
@@ -299,13 +319,11 @@ async function main(): Promise<void> {
     // 处理每个文件
     for (const filename of markdownFiles) {
       const filePath = path.join(BLOG_DIR, filename)
-      const beforeCount = Object.keys(database).length
       const existingEntry = database[filename]
 
       await processArticle(filePath, filename, database)
 
       // 统计变化
-      const afterCount = Object.keys(database).length
       if (!existingEntry) {
         newCount++
       } else if (
@@ -347,9 +365,10 @@ async function main(): Promise<void> {
   }
 }
 
-// 如果直接运行此脚本
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main()
+// 如果直接运行此脚本。使用规范化文件系统路径，避免 Windows 的盘符、
+// 反斜杠与 file: URL 表示法导致入口判断永远为 false。
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  await main()
 }
 
 export { main as updateBlogDates }

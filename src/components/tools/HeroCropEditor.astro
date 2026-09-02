@@ -1,0 +1,826 @@
+---
+/**
+ * Hero-only focal-point workbench.
+ *
+ * Hero is deliberately not part of the diagonal card crop contract.  This
+ * panel previews the real full-bleed Hero stage and stores a separate desktop
+ * and mobile transform for each of the six fixed slides.
+ */
+import {
+  getHeroCropTransform,
+  heroCropEditorStorageKey,
+  heroCropSelections
+} from '@/data/hero-crops'
+import { heroSlides } from '@/data/home-media'
+
+import HeroGallery from '@/components/home/HeroGallery.astro'
+
+const filenameFromSrc = (src: string): string => src.split(/[/?#]/).pop() ?? src
+
+const catalog = heroSlides.map((slide, index) => ({
+  description: slide.description,
+  filename: filenameFromSrc(slide.src),
+  index,
+  key: slide.key,
+  src: slide.src
+}))
+
+const initial = catalog[0]
+const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
+const serializedInitial = JSON.stringify(heroCropSelections).replace(/</g, '\\u003c')
+---
+
+<section
+  class='hero-crop-editor'
+  data-hero-crop-editor
+  data-storage-key={heroCropEditorStorageKey}
+  data-active-viewport='desktop'
+>
+  <header class='hero-crop-editor__header'>
+    <div>
+      <p class='hero-crop-editor__eyebrow'>HERO FOCAL-POINT WORKBENCH · 6 SLIDES</p>
+      <h2>Hero 独立定位</h2>
+      <p class='hero-crop-editor__intro'>
+        Hero 不使用卡片斜边。请选择一张
+        Hero，在真实全屏比例下拖动和缩放；桌面端与手机端可以分别保存位置。 这里的结果只影响
+        Hero，不会改变 Saying 或 Trace 卡片。
+      </p>
+    </div>
+    <div class='hero-crop-editor__progress' aria-live='polite'>
+      <strong data-hero-progress>已确认 0 / 6</strong>
+      <span data-hero-save-state>自动保存已开启</span>
+    </div>
+  </header>
+
+  <div class='hero-crop-editor__toolbar'>
+    <div class='hero-crop-editor__segmented' role='group' aria-label='Hero 预览尺寸'>
+      <span>预览</span>
+      <button type='button' class='is-active' data-hero-viewport='desktop' aria-pressed='true'
+        >桌面</button
+      >
+      <button type='button' data-hero-viewport='mobile' aria-pressed='false'>手机</button>
+    </div>
+    <div class='hero-crop-editor__segmented' role='group' aria-label='Hero 构图预览模式'>
+      <span>模式</span>
+      <button type='button' class='is-active' data-hero-motion='static' aria-pressed='true'
+        >静态构图</button
+      >
+      <button type='button' data-hero-motion='preview' aria-pressed='false'>运行预览（暂停）</button
+      >
+      <button type='button' data-hero-motion='runtime' aria-pressed='false'>运行预览（播放）</button
+      >
+    </div>
+    <div class='hero-crop-editor__toolbar-actions'>
+      <button type='button' data-hero-action='undo' disabled>撤销</button>
+      <button type='button' data-hero-action='redo' disabled>重做</button>
+      <button type='button' data-hero-action='load-production'>加载已应用配置</button>
+      <button type='button' data-hero-action='export'>导出 Hero 配置</button>
+      <button type='button' data-hero-action='import'>导入配置</button>
+      <input type='file' accept='application/json,.json' data-hero-import hidden />
+      <button type='button' class='is-warning' data-hero-action='clear-confirmations'
+        >取消全部确认</button
+      >
+      <button type='button' class='is-subtle' data-hero-action='clear'>清空草稿</button>
+    </div>
+  </div>
+
+  <div class='hero-crop-editor__workspace'>
+    <aside class='hero-crop-editor__queue' aria-label='Hero 幻灯片列表'>
+      <div class='hero-crop-editor__queue-heading'>
+        <strong>六张 Hero</strong>
+        <span data-hero-slide-count>6 张</span>
+      </div>
+      <ol class='hero-crop-editor__queue-list'>
+        {
+          catalog.map((slide, index) => (
+            <li>
+              <button
+                type='button'
+                class:list={['hero-crop-editor__queue-button', index === 0 && 'is-active']}
+                data-hero-select={slide.filename}
+                aria-current={index === 0 ? 'true' : undefined}
+              >
+                <img src={slide.src} alt='' loading={index < 2 ? 'eager' : 'lazy'} />
+                <span>
+                  <b>
+                    {String(index + 1).padStart(2, '0')} · {slide.filename}
+                  </b>
+                  <small data-hero-item-status={slide.filename}>待处理</small>
+                </span>
+              </button>
+            </li>
+          ))
+        }
+      </ol>
+    </aside>
+
+    <main class='hero-crop-editor__main'>
+      <header class='hero-crop-editor__asset-header'>
+        <div>
+          <p class='hero-crop-editor__asset-kicker' data-hero-asset-index>HERO 01</p>
+          <h3 data-hero-asset-name>{initial?.filename}</h3>
+          <p data-hero-asset-description>{initial?.description}</p>
+        </div>
+        <span class='hero-crop-editor__asset-status' data-hero-asset-status>待处理</span>
+      </header>
+
+      <section class='hero-crop-editor__stage-panel'>
+        <div class='hero-crop-editor__stage-heading'>
+          <div>
+            <span class='hero-crop-editor__panel-eyebrow'>STEP 1 · POSITION</span>
+            <h4>在真实 Hero 舞台中调整</h4>
+          </div>
+          <div class='hero-crop-editor__stage-meta'>
+            <span class='hero-crop-editor__viewport-label' data-hero-viewport-label>桌面预览</span>
+            <span class='hero-crop-editor__stage-size' data-hero-stage-size>目标尺寸计算中</span>
+          </div>
+        </div>
+
+        <div class='hero-crop-editor__stage-wrap'>
+          <div class='hero-crop-editor__stage-viewport' data-hero-stage-viewport>
+            <div
+              class='hero-crop-editor__stage'
+              data-hero-editor-stage
+              tabindex='0'
+              role='application'
+              aria-label='Hero 图片定位画布，可拖动图片或使用方向键调整'
+            >
+              <HeroGallery
+                mode='editor'
+                motion='static'
+                previewMobileTransform={initial
+                  ? getHeroCropTransform(initial.src, 'mobile')
+                  : undefined}
+                previewSlide={initial}
+                previewTransform={initial
+                  ? getHeroCropTransform(initial.src, 'desktop')
+                  : undefined}
+              />
+              <div class='hero-crop-editor__safe-area' aria-hidden='true'>
+                <span>标题 / Logo 安全区域</span>
+              </div>
+              <span class='hero-crop-editor__drag-hint' data-hero-drag-hint>拖动图片调整焦点</span>
+            </div>
+          </div>
+        </div>
+
+        <div class='hero-crop-editor__controls'>
+          <button type='button' data-hero-action='zoom-out' aria-label='缩小'>−</button>
+          <label>
+            <span>缩放</span>
+            <input type='range' min='1' max='4' step='0.01' value='1' data-hero-zoom />
+            <output data-hero-zoom-value>100%</output>
+          </label>
+          <button type='button' data-hero-action='zoom-in' aria-label='放大'>+</button>
+          <button type='button' class='is-subtle' data-hero-action='reset'>重置当前位置</button>
+          <span class='hero-crop-editor__coordinates' data-hero-coordinates>焦点 50% / 50%</span>
+        </div>
+      </section>
+
+      <section class='hero-crop-editor__confirm'>
+        <div>
+          <span class='hero-crop-editor__panel-eyebrow'>STEP 2 · CONFIRM</span>
+          <strong data-hero-confirm-heading>确认当前 Hero 定位</strong>
+          <p data-hero-confirm-help>
+            确认后会保存当前预览尺寸的焦点和缩放；另一种尺寸仍可单独调整。
+          </p>
+        </div>
+        <div class='hero-crop-editor__confirm-actions'>
+          <button type='button' class='is-primary' data-hero-action='confirm'>确认当前尺寸</button>
+          <button type='button' data-hero-action='copy-to-other'>复制到另一尺寸</button>
+          <button type='button' class='is-primary' data-hero-action='confirm-next'
+            >确认并处理下一张</button
+          >
+        </div>
+        <div class='hero-crop-editor__recovery' data-hero-recovery>
+          <div class='hero-crop-editor__recovery-actions'>
+            <button type='button' data-hero-action='restore-latest' disabled>恢复最近确认</button>
+            <button type='button' data-hero-action='toggle-history' aria-expanded='false' disabled
+              >查看确认历史</button
+            >
+            <span data-hero-latest-label>尚无确认版本</span>
+          </div>
+          <div class='hero-crop-editor__history-panel' data-hero-history-panel hidden>
+            <p>历史版本只属于当前图片和当前尺寸；载入草稿不会直接改变确认状态。</p>
+            <ol class='hero-crop-editor__history-list' data-hero-history-list></ol>
+          </div>
+        </div>
+      </section>
+
+      <nav class='hero-crop-editor__navigation' aria-label='Hero 导航'>
+        <button type='button' data-hero-action='previous'>← 上一张</button>
+        <button type='button' data-hero-action='next'>下一张 →</button>
+      </nav>
+
+      <p class='hero-crop-editor__keyboard-help'>
+        快捷键：方向键移动，<kbd>+</kbd>/<kbd>−</kbd> 缩放，<kbd>R</kbd> 重置，<kbd>Enter</kbd> 确认。
+      </p>
+      <p class='hero-crop-editor__config-source' data-hero-config-source>
+        当前显示：已应用生产配置
+      </p>
+    </main>
+  </div>
+
+  <script is:inline type='application/json' data-hero-catalog set:html={serializedCatalog} />
+  <script is:inline type='application/json' data-hero-initial set:html={serializedInitial} />
+</section>
+
+<script>
+  import { bootHeroCropEditor } from '@/scripts/hero-crop-editor'
+
+  bootHeroCropEditor()
+  document.addEventListener('astro:page-load', bootHeroCropEditor)
+</script>
+
+<style>
+  .hero-crop-editor {
+    --hero-editor-border: hsl(var(--border) / 0.78);
+    --hero-editor-muted: hsl(var(--muted-foreground));
+    --hero-editor-surface: hsl(var(--card) / 0.72);
+    --hero-editor-accent: hsl(var(--primary));
+    display: block;
+    padding: clamp(1.25rem, 3vw, 2.5rem) 0 5rem;
+  }
+
+  .hero-crop-editor__header,
+  .hero-crop-editor__asset-header,
+  .hero-crop-editor__stage-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .hero-crop-editor__header {
+    align-items: flex-end;
+    margin-bottom: 1.2rem;
+  }
+
+  .hero-crop-editor__eyebrow,
+  .hero-crop-editor__panel-eyebrow,
+  .hero-crop-editor__asset-kicker {
+    margin: 0 0 0.4rem;
+    color: var(--hero-editor-accent);
+    font-size: 0.68rem;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+  }
+
+  .hero-crop-editor h2,
+  .hero-crop-editor h3,
+  .hero-crop-editor h4,
+  .hero-crop-editor p {
+    margin-top: 0;
+  }
+
+  .hero-crop-editor h2 {
+    margin-bottom: 0.6rem;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+  }
+
+  .hero-crop-editor__intro {
+    max-width: 54rem;
+    margin-bottom: 0;
+    color: var(--hero-editor-muted);
+    line-height: 1.6;
+  }
+
+  .hero-crop-editor__progress {
+    display: grid;
+    flex: 0 0 auto;
+    gap: 0.2rem;
+    min-width: 10rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 0.75rem;
+    background: var(--hero-editor-surface);
+    text-align: right;
+  }
+
+  .hero-crop-editor__progress span,
+  .hero-crop-editor__asset-header p,
+  .hero-crop-editor__viewport-label,
+  .hero-crop-editor__coordinates,
+  .hero-crop-editor__keyboard-help {
+    color: var(--hero-editor-muted);
+    font-size: 0.74rem;
+  }
+
+  .hero-crop-editor__toolbar {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 8;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+    padding: 0.7rem;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 0.85rem;
+    background: hsl(var(--background) / 0.93);
+    box-shadow: 0 0.7rem 1.8rem hsl(var(--foreground) / 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .hero-crop-editor__segmented,
+  .hero-crop-editor__toolbar-actions,
+  .hero-crop-editor__controls,
+  .hero-crop-editor__confirm-actions,
+  .hero-crop-editor__navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .hero-crop-editor__toolbar-actions {
+    margin-left: auto;
+  }
+
+  .hero-crop-editor button {
+    min-height: 2rem;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    background: var(--hero-editor-surface);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75rem;
+  }
+
+  .hero-crop-editor button:hover:not(:disabled) {
+    border-color: hsl(var(--primary) / 0.7);
+  }
+
+  .hero-crop-editor button.is-active,
+  .hero-crop-editor button.is-primary {
+    border-color: transparent;
+    background: var(--hero-editor-accent);
+    color: hsl(var(--primary-foreground));
+  }
+
+  .hero-crop-editor button.is-subtle,
+  .hero-crop-editor button:disabled {
+    color: var(--hero-editor-muted);
+  }
+
+  .hero-crop-editor button.is-warning {
+    border-color: hsl(var(--destructive) / 0.45);
+    color: hsl(var(--destructive));
+  }
+
+  .hero-crop-editor button.is-warning:hover:not(:disabled) {
+    border-color: hsl(var(--destructive) / 0.78);
+    background: hsl(var(--destructive) / 0.08);
+  }
+
+  .hero-crop-editor button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .hero-crop-editor__workspace {
+    display: grid;
+    grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .hero-crop-editor__queue,
+  .hero-crop-editor__stage-panel,
+  .hero-crop-editor__confirm {
+    min-width: 0;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 1rem;
+    background: hsl(var(--card) / 0.42);
+  }
+
+  .hero-crop-editor__queue {
+    position: sticky;
+    top: 5.4rem;
+    max-height: calc(100dvh - 6.5rem);
+    overflow: hidden;
+  }
+
+  .hero-crop-editor__queue-heading {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.8rem 0.85rem;
+    border-bottom: 1px solid var(--hero-editor-border);
+  }
+
+  .hero-crop-editor__queue-heading span {
+    color: var(--hero-editor-muted);
+    font-size: 0.74rem;
+  }
+
+  .hero-crop-editor__queue-list {
+    display: grid;
+    max-height: calc(100dvh - 9.2rem);
+    margin: 0;
+    padding: 0.45rem;
+    overflow: auto;
+    list-style: none;
+  }
+
+  .hero-crop-editor__queue-button {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: center;
+    border-color: transparent !important;
+    border-radius: 0.7rem !important;
+    background: transparent !important;
+    text-align: left;
+  }
+
+  .hero-crop-editor__queue-button:hover,
+  .hero-crop-editor__queue-button.is-active {
+    border-color: hsl(var(--primary) / 0.42) !important;
+    background: hsl(var(--primary) / 0.1) !important;
+  }
+
+  .hero-crop-editor__queue-button img {
+    width: 4rem;
+    height: 2.65rem;
+    border-radius: 0.35rem;
+    object-fit: cover;
+  }
+
+  .hero-crop-editor__queue-button span {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+  }
+
+  .hero-crop-editor__queue-button b {
+    overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.63rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero-crop-editor__queue-button small {
+    color: var(--hero-editor-muted);
+    font-size: 0.65rem;
+  }
+
+  .hero-crop-editor__main {
+    min-width: 0;
+  }
+
+  .hero-crop-editor__asset-header {
+    margin-bottom: 0.85rem;
+  }
+
+  .hero-crop-editor__asset-kicker {
+    margin-bottom: 0.25rem;
+  }
+
+  .hero-crop-editor__asset-header h3 {
+    margin-bottom: 0.2rem;
+    overflow-wrap: anywhere;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1rem;
+  }
+
+  .hero-crop-editor__asset-header p {
+    margin-bottom: 0;
+  }
+
+  .hero-crop-editor__asset-status {
+    flex: 0 0 auto;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 999px;
+    padding: 0.4rem 0.7rem;
+    color: var(--hero-editor-muted);
+    font-size: 0.72rem;
+  }
+
+  .hero-crop-editor__stage-panel,
+  .hero-crop-editor__confirm {
+    padding: clamp(0.8rem, 2vw, 1.1rem);
+  }
+
+  .hero-crop-editor__stage-heading {
+    margin-bottom: 0.7rem;
+  }
+
+  .hero-crop-editor__stage-meta {
+    display: grid;
+    justify-items: end;
+    gap: 0.18rem;
+    text-align: right;
+  }
+
+  .hero-crop-editor__stage-size {
+    color: var(--hero-editor-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.66rem;
+    white-space: nowrap;
+  }
+
+  .hero-crop-editor__stage-heading h4 {
+    margin-bottom: 0;
+    font-size: 1rem;
+  }
+
+  .hero-crop-editor__stage-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 0.35rem;
+    border-radius: 0.8rem;
+    background: hsl(var(--foreground) / 0.06);
+    overflow: hidden;
+  }
+
+  .hero-crop-editor__stage-viewport {
+    position: relative;
+    width: min(100%, 54rem);
+    overflow: hidden;
+    border-radius: 0.65rem;
+    background: #17191e;
+  }
+
+  .hero-crop-editor__stage-viewport[data-hero-viewport='mobile'] {
+    /* Match the editor's canonical mobile Home canvas (390 CSS px).  If the
+       actual device is narrower, the outer viewport still shrinks and the
+       inner stage remains uniformly scaled. */
+    width: min(100%, 390px);
+  }
+
+  .hero-crop-editor__stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--hero-editor-target-width, 1440px);
+    height: var(--hero-editor-target-height, 630px);
+    /* The stage stays at Home's real pixel dimensions and the outer viewport
+       scales it as one unit. Image, brand, overlay, waves, and guides then
+       preserve the same relative geometry in the smaller workbench. */
+    transform: scale(var(--hero-editor-scale, 1));
+    transform-origin: top left;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .hero-crop-editor__stage.is-dragging {
+    cursor: grabbing;
+  }
+
+  .hero-crop-editor__safe-area {
+    position: absolute;
+    inset: 22% 25%;
+    z-index: 2;
+    border: 1px dashed rgb(255 255 255 / 0.7);
+    color: rgb(255 255 255 / 0.85);
+    font-size: clamp(0.55rem, 1vw, 0.75rem);
+    pointer-events: none;
+  }
+
+  .hero-crop-editor__safe-area span {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.45rem;
+    text-shadow: 0 1px 3px #000;
+  }
+
+  .hero-crop-editor__drag-hint {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.55rem;
+    z-index: 4;
+    border-radius: 999px;
+    padding: 0.3rem 0.55rem;
+    background: rgb(0 0 0 / 0.55);
+    color: #fff;
+    font-size: 0.66rem;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
+
+  .hero-crop-editor__stage.is-interacted .hero-crop-editor__drag-hint {
+    opacity: 0;
+  }
+
+  .hero-crop-editor__controls {
+    margin-top: 0.8rem;
+  }
+
+  .hero-crop-editor__controls > button {
+    min-width: 2rem;
+    padding-inline: 0.55rem;
+  }
+
+  .hero-crop-editor__controls label {
+    display: grid;
+    flex: 1 1 12rem;
+    grid-template-columns: auto minmax(5rem, 1fr) 3rem;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--hero-editor-muted);
+    font-size: 0.72rem;
+  }
+
+  .hero-crop-editor__controls input {
+    min-width: 0;
+    accent-color: var(--hero-editor-accent);
+  }
+
+  .hero-crop-editor__coordinates {
+    margin-left: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  .hero-crop-editor__confirm {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .hero-crop-editor__confirm strong {
+    display: block;
+    margin-bottom: 0.2rem;
+    font-size: 0.86rem;
+  }
+
+  .hero-crop-editor__confirm p {
+    margin-bottom: 0;
+    color: var(--hero-editor-muted);
+    font-size: 0.72rem;
+  }
+
+  .hero-crop-editor__recovery {
+    display: grid;
+    gap: 0.55rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--hero-editor-border);
+  }
+
+  .hero-crop-editor__recovery-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .hero-crop-editor__recovery-actions > span {
+    color: var(--hero-editor-muted);
+    font-size: 0.7rem;
+  }
+
+  .hero-crop-editor__history-panel {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.65rem;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 0.7rem;
+    background: hsl(var(--background) / 0.5);
+  }
+
+  .hero-crop-editor__history-panel[hidden] {
+    display: none;
+  }
+
+  .hero-crop-editor__history-panel p {
+    margin: 0;
+    color: var(--hero-editor-muted);
+    font-size: 0.68rem;
+  }
+
+  .hero-crop-editor__history-list {
+    display: grid;
+    gap: 0.45rem;
+    max-height: 16rem;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  :global(.hero-crop-editor__history-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.5rem;
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 0.55rem;
+    background: hsl(var(--card) / 0.5);
+  }
+
+  :global(.hero-crop-editor__history-copy) {
+    display: grid;
+    min-width: 0;
+    gap: 0.16rem;
+  }
+
+  :global(.hero-crop-editor__history-copy strong) {
+    overflow: hidden;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.hero-crop-editor__history-copy small) {
+    color: var(--hero-editor-muted);
+    font-size: 0.65rem;
+  }
+
+  :global(.hero-crop-editor__history-actions) {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  :global(.hero-crop-editor__history-actions button) {
+    min-height: 1.8rem;
+    padding-inline: 0.55rem;
+    font-size: 0.67rem;
+  }
+
+  :global(.hero-crop-editor__history-empty) {
+    color: var(--hero-editor-muted);
+    font-size: 0.68rem;
+  }
+
+  .hero-crop-editor__navigation {
+    justify-content: space-between;
+    margin-top: 1rem;
+  }
+
+  .hero-crop-editor__keyboard-help {
+    margin: 0.7rem 0 0;
+  }
+
+  .hero-crop-editor__config-source {
+    margin: 0.35rem 0 0;
+    color: var(--hero-editor-muted);
+    font-size: 0.7rem;
+  }
+
+  .hero-crop-editor kbd {
+    border: 1px solid var(--hero-editor-border);
+    border-radius: 0.25rem;
+    padding: 0.05rem 0.3rem;
+    background: hsl(var(--muted) / 0.5);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (max-width: 760px) {
+    .hero-crop-editor__header,
+    .hero-crop-editor__asset-header {
+      display: grid;
+    }
+
+    .hero-crop-editor__progress {
+      justify-self: start;
+      text-align: left;
+    }
+
+    .hero-crop-editor__toolbar-actions {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .hero-crop-editor__workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-crop-editor__queue {
+      position: static;
+      max-height: none;
+    }
+
+    .hero-crop-editor__queue-list {
+      display: flex;
+      max-height: none;
+      overflow-x: auto;
+    }
+
+    .hero-crop-editor__queue-list li {
+      flex: 0 0 12rem;
+    }
+
+    .hero-crop-editor__coordinates {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .hero-crop-editor__stage-meta {
+      justify-items: start;
+      text-align: left;
+    }
+
+    :global(.hero-crop-editor__history-item) {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+</style>

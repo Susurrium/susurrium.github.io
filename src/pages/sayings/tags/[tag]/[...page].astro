@@ -1,0 +1,26 @@
+---
+import type { GetStaticPaths, Page } from 'astro'
+
+import TagDetailPage from '@/components/content/TagDetailPage.astro'
+import { contentPagination } from '@/site-config'
+import {
+  buildTagStaticPaths,
+  loadContentCatalog,
+  type PageItem
+} from '@/lib/content-layer'
+
+export const prerender = true
+
+export const getStaticPaths: GetStaticPaths = async ({ paginate }) => {
+  const catalog = await loadContentCatalog()
+  return buildTagStaticPaths(catalog, 'saying', paginate, contentPagination.saying)
+}
+
+interface Props {
+  page: Page<PageItem>
+}
+
+const { page } = Astro.props as Props
+---
+
+<TagDetailPage kind='saying' {page} />

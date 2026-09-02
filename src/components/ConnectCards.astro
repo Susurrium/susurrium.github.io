@@ -1,0 +1,133 @@
+---
+import {
+  connectLinkRel,
+  connectLinks,
+  isExternalConnectLink,
+  type ConnectLink
+} from '@/data/connect'
+
+import { Icon } from 'astro-pure/user'
+
+interface Props {
+  class?: string
+  links?: readonly ConnectLink[]
+}
+
+const { class: className, links = connectLinks } = Astro.props as Props
+---
+
+<div class:list={['connect-cards', className]} data-connect-cards>
+  {
+    links.map((link) => {
+      const external = isExternalConnectLink(link)
+      return (
+        <a
+          class='connect-card site-card-surface site-card-surface--interactive group border'
+          href={link.href}
+          target={external ? '_blank' : undefined}
+          rel={connectLinkRel(link)}
+          aria-label={`${link.label}: ${link.description}`}
+          data-connect-kind={link.kind}
+        >
+          <span class='connect-card__icon' aria-hidden='true'>
+            <Icon name={link.icon} />
+          </span>
+          <span class='connect-card__copy'>
+            <span class='connect-card__label'>{link.label}</span>
+            <span class='connect-card__description'>{link.description}</span>
+          </span>
+          <span class='connect-card__arrow' aria-hidden='true'>
+            ↗
+          </span>
+        </a>
+      )
+    })
+  }
+</div>
+
+<style>
+  .connect-cards {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .connect-card {
+    display: flex;
+    min-width: 0;
+    min-height: 4.75rem;
+    align-items: center;
+    gap: 0.8rem;
+    border-radius: 0.875rem;
+    padding: 0.8rem 0.95rem;
+    color: hsl(var(--foreground));
+    text-decoration: none;
+  }
+
+  .connect-card__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.7rem;
+    background: hsl(var(--muted) / 0.85);
+    color: hsl(var(--primary));
+  }
+
+  .connect-card__icon :global(svg) {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .connect-card__copy {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .connect-card__label {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .connect-card__description {
+    overflow: hidden;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.8rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .connect-card__arrow {
+    flex: 0 0 auto;
+    color: hsl(var(--muted-foreground));
+    font-size: 1rem;
+    transition:
+      transform 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .connect-card:hover .connect-card__arrow,
+  .connect-card:focus-visible .connect-card__arrow {
+    color: hsl(var(--primary));
+    transform: translate(0.12rem, -0.12rem);
+  }
+
+  @media (min-width: 640px) {
+    .connect-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .connect-card__arrow {
+      transition: none;
+    }
+  }
+</style>

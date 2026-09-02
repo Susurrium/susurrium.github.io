@@ -1,0 +1,1198 @@
+---
+/**
+ * Unified crop workbench.
+ *
+ * One source file is listed once when Saying and Trace reuse it.
+ * The browser editor stores a focal transform for each mirrored card frame;
+ * the production card can consume the same transform after an explicit
+ * confirmation/export.
+ */
+import {
+  CARD_CROP_FRAME_RATIO,
+  cardCropEditorStorageKey,
+  cardCropPolicy,
+  cardCropSelections,
+  getCardCropRuntime,
+  type CardCropFrame
+} from '@/data/card-crops'
+import {
+  sayingDecorativeImages,
+  traceFallbackImages,
+  type HomeMediaAsset,
+  type ResolvedCardImage
+} from '@/data/home-media'
+import { frameForCutSide } from '@/lib/card-crop/types'
+
+import CardMediaFrame from '@/components/cards/CardMediaFrame.astro'
+import MediaCard from '@/components/cards/MediaCard.astro'
+
+type EditorUsage = 'saying' | 'trace'
+
+interface EditorAsset {
+  readonly defaultFrame: CardCropFrame
+  readonly description: string
+  readonly filename: string
+  readonly key: string
+  readonly src: string
+  readonly usages: readonly EditorUsage[]
+}
+
+const filenameFromSrc = (src: string): string => src.split(/[/?#]/).pop() ?? src
+const assets = new Map<string, { asset: HomeMediaAsset; usages: Set<EditorUsage> }>()
+
+const addAssets = (items: readonly HomeMediaAsset[], usage: EditorUsage) => {
+  items.forEach((asset) => {
+    const filename = filenameFromSrc(asset.src)
+    const existing = assets.get(filename)
+    if (existing) {
+      existing.usages.add(usage)
+    } else {
+      assets.set(filename, { asset, usages: new Set([usage]) })
+    }
+  })
+}
+
+// The card workbench intentionally contains only the two card pools. Hero has
+// its own full-bleed positioning workbench and data contract.
+addAssets(sayingDecorativeImages, 'saying')
+addAssets(traceFallbackImages, 'trace')
+
+const editorAssets: EditorAsset[] = [...assets.entries()].map(([filename, value]) => ({
+  defaultFrame: frameForCutSide(value.asset.cutSide),
+  description: value.asset.description,
+  filename,
+  key: value.asset.key,
+  src: value.asset.src,
+  usages: [...value.usages]
+}))
+
+/*
+ * Step 2 deliberately uses the production card component rather than a
+ * second, editor-only card imitation.  The first item only supplies Astro's
+ * initial HTML; the browser editor swaps its source/title/transform after
+ * boot.  Keeping this initial payload valid also avoids a blank frame before
+ * the client script has had a chance to run.
+ */
+const firstEditorAsset = editorAssets[0]
+const previewImage: ResolvedCardImage = firstEditorAsset
+  ? {
+      alt: '',
+      decorative: true,
+      key: firstEditorAsset.key,
+      source: 'decorative',
+      src: firstEditorAsset.src
+    }
+  : { alt: '', decorative: true, source: 'none' }
+const previewCrop = firstEditorAsset ? getCardCropRuntime(firstEditorAsset.src) : undefined
+const previewFrame =
+  previewCrop?.frame ??
+  frameForCutSide(firstEditorAsset?.defaultFrame === 'diagonal-left' ? 'left' : 'right')
+const previewFit = previewCrop?.fit ?? 'cover'
+const previewTransform = previewCrop?.transform
+const previewMask = previewFrame === 'diagonal-left' ? 'left' : 'right'
+const previewDate = new Date('2026-01-01T00:00:00.000Z')
+
+const serializedCatalog = JSON.stringify(editorAssets).replace(/</g, '\\u003c')
+const serializedInitialSelections = JSON.stringify(cardCropSelections).replace(/</g, '\\u003c')
+---
+
+<section
+  class='card-crop-editor'
+  data-card-crop-editor
+  data-card-crop-profile={cardCropPolicy.profile}
+  data-preview-source='media-card'
+  data-storage-key={cardCropEditorStorageKey}
+  data-frame-ratio={CARD_CROP_FRAME_RATIO}
+  data-crop-policy={cardCropPolicy.sceneOverrides}
+  data-active-frame={previewFrame}
+>
+  <header class='card-crop-editor__header'>
+    <div>
+      <p class='card-crop-editor__eyebrow'>
+        LOCAL EDITORIAL WORKBENCH · {editorAssets.length} SOURCES
+      </p>
+      <h1>统一卡片裁剪工作台</h1>
+      <p class='card-crop-editor__intro'>
+        每张素材只编辑一次。选择斜边在左或斜边在右的固定框，在框下拖动图片、滚轮或滑杆缩放；看到满意构图后确认。
+        Saying、Trace 复用同一文件时会共享这份卡片裁剪记录；Hero 使用独立的定位工作台。
+      </p>
+    </div>
+    <div class='card-crop-editor__progress' aria-live='polite'>
+      <strong data-editor-progress>已确认 0 / {editorAssets.length}</strong>
+      <span data-editor-pending>待处理 {editorAssets.length} 张</span>
+      <span data-editor-save-state>自动保存已开启</span>
+    </div>
+  </header>
+
+  <div class='card-crop-editor__toolbar' data-editor-toolbar>
+    <label class='card-crop-editor__search'>
+      <span>查找素材</span>
+      <input type='search' placeholder='按文件名或描述筛选' data-editor-search />
+    </label>
+
+    <div class='card-crop-editor__segmented' role='group' aria-label='按用途筛选'>
+      <span class='card-crop-editor__toolbar-label'>用途</span>
+      <button type='button' class='is-active' data-editor-usage='all' aria-pressed='true'
+        >全部</button
+      >
+      <button type='button' data-editor-usage='saying' aria-pressed='false'>Saying</button>
+      <button type='button' data-editor-usage='trace' aria-pressed='false'>Trace</button>
+    </div>
+
+    <div class='card-crop-editor__segmented' role='group' aria-label='按状态筛选'>
+      <span class='card-crop-editor__toolbar-label'>状态</span>
+      <button type='button' class='is-active' data-editor-status='all' aria-pressed='true'
+        >全部</button
+      >
+      <button type='button' data-editor-status='pending' aria-pressed='false'>待处理</button>
+      <button type='button' data-editor-status='confirmed' aria-pressed='false'>已确认</button>
+      <button type='button' data-editor-status='neither' aria-pressed='false'>不合适</button>
+    </div>
+
+    <div class='card-crop-editor__toolbar-actions'>
+      <button type='button' data-editor-action='undo' disabled>撤销</button>
+      <button type='button' data-editor-action='redo' disabled>重做</button>
+      <button type='button' data-editor-action='export'>导出裁剪配置</button>
+      <button type='button' data-editor-action='import'>导入配置</button>
+      <input type='file' accept='application/json,.json' data-editor-import hidden />
+      <button type='button' class='is-danger' data-editor-action='clear-confirmations'
+        >取消全部确认</button
+      >
+      <button type='button' class='is-subtle' data-editor-action='clear'>清空草稿</button>
+    </div>
+  </div>
+
+  <p class='card-crop-editor__note'>
+    Step 2 直接渲染正式 Saying / Trace 卡片；Step 1 的图片框比例会跟随当前正式卡片媒体框同步。
+    正式卡片在手机端会改为纵向排版，但沿用同一份焦点与缩放记录。斜边位置和图片所在侧是绑定的：
+    斜边在左时图片在右，斜边在右时图片在左；只有图片焦点、缩放和适配方式可以独立调整。
+    没有确认的素材不会改动正式页面。
+  </p>
+
+  <div class='card-crop-editor__workspace'>
+    <aside class='card-crop-editor__queue' aria-label='素材队列'>
+      <div class='card-crop-editor__queue-heading'>
+        <strong>素材队列</strong>
+        <span data-editor-visible-count>{editorAssets.length} 张</span>
+      </div>
+      <ol class='card-crop-editor__queue-list' data-editor-queue>
+        {
+          editorAssets.map((asset, index) => (
+            <li data-editor-queue-item data-editor-filename={asset.filename}>
+              <button
+                type='button'
+                class:list={['card-crop-editor__queue-button', index === 0 && 'is-active']}
+                data-editor-select={asset.filename}
+                aria-label={`编辑 ${asset.filename}`}
+                aria-current={index === 0 ? 'true' : undefined}
+              >
+                <img src={asset.src} alt='' loading={index < 8 ? 'eager' : 'lazy'} />
+                <span class='card-crop-editor__queue-copy'>
+                  <b>{asset.filename}</b>
+                  <small>{asset.usages.map((usage) => usage.toUpperCase()).join(' · ')}</small>
+                </span>
+                <span class='card-crop-editor__queue-status' data-editor-item-status>
+                  待处理
+                </span>
+              </button>
+            </li>
+          ))
+        }
+      </ol>
+      <p class='card-crop-editor__queue-empty' data-editor-queue-empty hidden>没有匹配的素材。</p>
+    </aside>
+
+    <main class='card-crop-editor__main'>
+      <header class='card-crop-editor__asset-header'>
+        <div>
+          <p class='card-crop-editor__asset-kicker' data-editor-asset-usage>素材</p>
+          <h2 data-editor-asset-name>{editorAssets[0]?.filename}</h2>
+          <p data-editor-asset-description>{editorAssets[0]?.description}</p>
+        </div>
+        <div class='card-crop-editor__asset-status' data-editor-asset-status>待处理</div>
+      </header>
+
+      <div class='card-crop-editor__editor-grid'>
+        <section class='card-crop-editor__panel card-crop-editor__panel--canvas'>
+          <div class='card-crop-editor__panel-heading'>
+            <div>
+              <span class='card-crop-editor__panel-eyebrow'>STEP 1 · FRAME</span>
+              <h3>固定框内调整图片</h3>
+            </div>
+            <div class='card-crop-editor__frame-switch' role='group' aria-label='选择斜边位置'>
+              <button
+                type='button'
+                class:list={previewFrame === 'diagonal-left' ? 'is-active' : undefined}
+                data-editor-frame='diagonal-left'
+                aria-pressed={previewFrame === 'diagonal-left' ? 'true' : 'false'}>斜边在左</button
+              >
+              <button
+                type='button'
+                class:list={previewFrame === 'diagonal-right' ? 'is-active' : undefined}
+                data-editor-frame='diagonal-right'
+                aria-pressed={previewFrame === 'diagonal-right' ? 'true' : 'false'}>斜边在右</button
+              >
+            </div>
+          </div>
+
+          <div class='card-crop-editor__canvas-wrap'>
+            <div
+              class='card-crop-editor__canvas'
+              tabindex='0'
+              role='application'
+              aria-label='图片裁剪画布，可拖动图片或使用方向键调整'
+              data-editor-canvas
+            >
+              <CardMediaFrame
+                class='card-crop-editor__image-window'
+                imageClass='card-crop-editor__source-image'
+                src={editorAssets[0]?.src}
+                alt={editorAssets[0]?.description}
+                frame={previewFrame}
+                mask={previewMask}
+                fit={previewFit}
+                transform={previewTransform}
+                outline
+                aspectRatio={CARD_CROP_FRAME_RATIO}
+                dataAttributes={{ 'data-editor-image-window': 'true' }}
+                style='position:absolute;inset:0;aspect-ratio:auto;border-radius:0.65rem;'
+              />
+              <div class='card-crop-editor__canvas-hint' data-editor-canvas-hint>
+                拖动图片调整焦点
+              </div>
+            </div>
+          </div>
+
+          <div class='card-crop-editor__controls'>
+            <div class='card-crop-editor__control-row'>
+              <button type='button' data-editor-action='zoom-out' aria-label='缩小'>−</button>
+              <label class='card-crop-editor__zoom-control'>
+                <span>缩放</span>
+                <input
+                  type='range'
+                  min='1'
+                  max='4'
+                  step='0.01'
+                  value={previewTransform?.zoom ?? 1}
+                  data-editor-zoom
+                />
+                <output data-editor-zoom-value
+                  >{Math.round((previewTransform?.zoom ?? 1) * 100)}%</output
+                >
+              </label>
+              <button type='button' data-editor-action='zoom-in' aria-label='放大'>+</button>
+              <button type='button' class='is-subtle' data-editor-action='reset-transform'
+                >重置当前位置</button
+              >
+            </div>
+            <div class='card-crop-editor__control-row card-crop-editor__control-row--secondary'>
+              <span class='card-crop-editor__fit-label'>图片适配</span>
+              <button
+                type='button'
+                class:list={previewFit === 'cover' ? 'is-active' : undefined}
+                data-editor-fit='cover'
+                aria-pressed={previewFit === 'cover' ? 'true' : 'false'}>填满裁剪框</button
+              >
+              <button
+                type='button'
+                class:list={previewFit === 'contain' ? 'is-active' : undefined}
+                data-editor-fit='contain'
+                aria-pressed={previewFit === 'contain' ? 'true' : 'false'}>完整显示</button
+              >
+              <span class='card-crop-editor__coordinates' data-editor-coordinates
+                >焦点 {Math.round(previewTransform?.x ?? 50)}% / {
+                  Math.round(previewTransform?.y ?? 50)
+                }%</span
+              >
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <nav class='card-crop-editor__navigation' aria-label='素材导航'>
+        <button type='button' data-editor-action='previous'>← 上一张</button>
+        <button type='button' class='is-primary' data-editor-action='confirm-next'
+          >确认并处理下一张</button
+        >
+        <button type='button' data-editor-action='next'>下一张 →</button>
+      </nav>
+
+      <p class='card-crop-editor__keyboard-help'>
+        快捷键：方向键移动焦点，<kbd>+</kbd>/<kbd>−</kbd> 缩放，<kbd>Enter</kbd> 确认当前框并进入下一张，<kbd
+          >R</kbd
+        > 重置。
+      </p>
+    </main>
+  </div>
+
+  <!--
+    This is intentionally outside the queue/main grid.  Archive lists widen
+    their card rail by 1rem on each side; the preview rail below uses the same
+    parent geometry, so the imported MediaCard receives the same width,
+    height, flex negotiation, and media-frame dimensions as /sayings and
+    /traces at the same viewport.
+  -->
+  <section class='card-crop-editor__panel card-crop-editor__panel--preview'>
+    <div class='card-crop-editor__panel-heading'>
+      <div>
+        <span class='card-crop-editor__panel-eyebrow'>STEP 2 · PREVIEW</span>
+        <h3>正式 Saying / Trace 卡片效果</h3>
+      </div>
+      <span class='card-crop-editor__preview-label' data-editor-preview-label
+        >{previewFrame === 'diagonal-left' ? '斜边在左' : '斜边在右'}</span
+      >
+    </div>
+
+    <div class='card-crop-editor__preview-rail'>
+      <MediaCard
+        actionLabel='Preview'
+        class='card-crop-editor__card-preview'
+        contentId='card-crop-editor-preview'
+        contentType='trace'
+        date={previewDate}
+        description='图片所在侧与斜边方向严格绑定；这里直接渲染正式 Media 卡片结构。'
+        footerText='待确认'
+        headingLevel={4}
+        href='#card-crop-preview'
+        image={previewImage}
+        imageClass='card-crop-editor__preview-image'
+        imageFit={previewCrop?.fit ?? 'cover'}
+        crop={previewCrop}
+        diagonalSide={previewFrame === 'diagonal-left' ? 'left' : 'right'}
+        presentation='media-content'
+        title={firstEditorAsset?.filename ?? '素材预览'}
+        dataAttributes={{ 'data-editor-card-preview': 'true' }}
+      />
+    </div>
+
+    <div class='card-crop-editor__decision'>
+      <div>
+        <span class='card-crop-editor__panel-eyebrow'>STEP 3 · CONFIRM</span>
+        <strong data-editor-decision-heading>确认当前框</strong>
+        <p data-editor-decision-help>确认后会保存当前斜边、焦点、缩放和适配方式。</p>
+      </div>
+      <div class='card-crop-editor__decision-actions'>
+        <button type='button' class='is-primary' data-editor-action='confirm-frame'
+          >确认当前框</button
+        >
+        <button type='button' data-editor-action='confirm-both'>两个框都可以</button>
+        <button type='button' class='is-danger' data-editor-action='confirm-neither'>
+          两个框都不合适
+        </button>
+      </div>
+      <div class='card-crop-editor__recovery' data-editor-recovery>
+        <div class='card-crop-editor__recovery-actions'>
+          <button type='button' data-editor-action='restore-latest' disabled>恢复最近确认</button>
+          <button type='button' data-editor-action='toggle-history' aria-expanded='false' disabled
+            >查看确认历史</button
+          >
+          <span data-editor-latest-label>当前斜边还没有确认版本</span>
+        </div>
+        <div class='card-crop-editor__history-panel' data-editor-history-panel hidden>
+          <p>历史版本独立保留在当前素材和当前斜边下；载入草稿不会直接改变确认状态。</p>
+          <ol class='card-crop-editor__history-list' data-editor-history-list></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script is:inline type='application/json' data-editor-catalog set:html={serializedCatalog} />
+  <script
+    is:inline
+    type='application/json'
+    data-editor-initial
+    set:html={serializedInitialSelections}
+  />
+</section>
+
+<script>
+  import { bootCardCropEditor } from '@/scripts/card-crop-editor'
+
+  bootCardCropEditor()
+  document.addEventListener('astro:page-load', bootCardCropEditor)
+</script>
+
+<style>
+  .card-crop-editor {
+    --editor-border: hsl(var(--border) / 0.78);
+    --editor-muted: hsl(var(--muted-foreground));
+    --editor-surface: hsl(var(--card) / 0.72);
+    --editor-surface-strong: hsl(var(--card) / 0.94);
+    --editor-accent: hsl(var(--primary));
+    --editor-danger: hsl(8 72% 48%);
+    width: 100%;
+    padding: clamp(1.25rem, 3vw, 2.5rem) 0 clamp(4rem, 8vw, 7rem);
+  }
+
+  .card-crop-editor__header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-crop-editor__eyebrow,
+  .card-crop-editor__panel-eyebrow {
+    margin: 0 0 0.45rem;
+    color: var(--editor-accent);
+    font-size: 0.68rem;
+    font-weight: 750;
+    letter-spacing: 0.13em;
+  }
+
+  .card-crop-editor h1,
+  .card-crop-editor h2,
+  .card-crop-editor h3,
+  .card-crop-editor h4,
+  .card-crop-editor p {
+    margin-top: 0;
+  }
+
+  .card-crop-editor h1 {
+    margin-bottom: 0.7rem;
+    font-size: clamp(1.65rem, 4vw, 2.65rem);
+    line-height: 1.05;
+  }
+
+  .card-crop-editor__intro,
+  .card-crop-editor__note {
+    max-width: 52rem;
+    margin-bottom: 0;
+    color: var(--editor-muted);
+    line-height: 1.65;
+  }
+
+  .card-crop-editor__progress {
+    display: grid;
+    flex: 0 0 auto;
+    gap: 0.22rem;
+    min-width: 11rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--editor-border);
+    border-radius: 0.8rem;
+    background: var(--editor-surface);
+    text-align: right;
+  }
+
+  .card-crop-editor__progress span {
+    color: var(--editor-muted);
+    font-size: 0.75rem;
+  }
+
+  .card-crop-editor__toolbar {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 8;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 0.9rem;
+    margin-bottom: 0.85rem;
+    padding: 0.75rem;
+    border: 1px solid var(--editor-border);
+    border-radius: 0.9rem;
+    background: hsl(var(--background) / 0.93);
+    box-shadow: 0 0.8rem 2rem hsl(var(--foreground) / 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  .card-crop-editor__search,
+  .card-crop-editor__segmented,
+  .card-crop-editor__toolbar-actions,
+  .card-crop-editor__frame-switch,
+  .card-crop-editor__decision-actions,
+  .card-crop-editor__control-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .card-crop-editor__search {
+    gap: 0.45rem;
+    color: var(--editor-muted);
+    font-size: 0.74rem;
+  }
+
+  .card-crop-editor__search input {
+    width: clamp(11rem, 20vw, 16rem);
+    min-height: 2rem;
+    border: 1px solid var(--editor-border);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    background: var(--editor-surface-strong);
+    color: inherit;
+    font: inherit;
+  }
+
+  .card-crop-editor__toolbar-label,
+  .card-crop-editor__fit-label {
+    margin-right: 0.1rem;
+    color: var(--editor-muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+  }
+
+  .card-crop-editor button {
+    min-height: 2rem;
+    border: 1px solid var(--editor-border);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    background: var(--editor-surface-strong);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    line-height: 1;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .card-crop-editor button:hover:not(:disabled) {
+    border-color: hsl(var(--primary) / 0.65);
+    transform: translateY(-1px);
+  }
+
+  .card-crop-editor button:focus-visible,
+  .card-crop-editor input:focus-visible,
+  .card-crop-editor__canvas:focus-visible {
+    outline: 3px solid hsl(var(--ring) / 0.7);
+    outline-offset: 2px;
+  }
+
+  .card-crop-editor button.is-active,
+  .card-crop-editor button.is-selected {
+    border-color: hsl(var(--primary) / 0.8);
+    background: hsl(var(--primary) / 0.15);
+    color: hsl(var(--primary));
+  }
+
+  .card-crop-editor button.is-primary {
+    border-color: transparent;
+    background: var(--editor-accent);
+    color: hsl(var(--primary-foreground));
+  }
+
+  .card-crop-editor button.is-danger {
+    border-color: hsl(8 72% 48% / 0.35);
+    color: var(--editor-danger);
+  }
+
+  .card-crop-editor button.is-subtle,
+  .card-crop-editor button:disabled {
+    color: var(--editor-muted);
+  }
+
+  .card-crop-editor button:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+  }
+
+  .card-crop-editor__toolbar-actions {
+    margin-left: auto;
+  }
+
+  .card-crop-editor__note {
+    margin: 0 0 1rem;
+    font-size: 0.78rem;
+  }
+
+  .card-crop-editor__workspace {
+    display: grid;
+    grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .card-crop-editor__queue,
+  .card-crop-editor__panel {
+    min-width: 0;
+    border: 1px solid var(--editor-border);
+    border-radius: 1rem;
+    background: hsl(var(--card) / 0.42);
+  }
+
+  .card-crop-editor__queue {
+    position: sticky;
+    top: 5.4rem;
+    max-height: calc(100dvh - 6.5rem);
+    overflow: hidden;
+  }
+
+  .card-crop-editor__queue-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 0.85rem;
+    border-bottom: 1px solid var(--editor-border);
+  }
+
+  .card-crop-editor__queue-heading span {
+    color: var(--editor-muted);
+    font-size: 0.74rem;
+  }
+
+  .card-crop-editor__queue-list {
+    display: grid;
+    max-height: calc(100dvh - 9.2rem);
+    margin: 0;
+    padding: 0.45rem;
+    overflow: auto;
+    list-style: none;
+  }
+
+  .card-crop-editor__queue-list li[hidden] {
+    display: none;
+  }
+
+  .card-crop-editor__queue-button {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 3.2rem minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: center;
+    border: 1px solid transparent !important;
+    border-radius: 0.7rem !important;
+    padding: 0.38rem !important;
+    background: transparent !important;
+    text-align: left;
+    transform: none !important;
+  }
+
+  .card-crop-editor__queue-button:hover,
+  .card-crop-editor__queue-button.is-active {
+    border-color: hsl(var(--primary) / 0.4) !important;
+    background: hsl(var(--primary) / 0.09) !important;
+  }
+
+  .card-crop-editor__queue-button img {
+    width: 3.2rem;
+    height: 2.25rem;
+    border-radius: 0.35rem;
+    object-fit: cover;
+    background: hsl(var(--muted) / 0.45);
+  }
+
+  .card-crop-editor__queue-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.14rem;
+  }
+
+  .card-crop-editor__queue-copy b {
+    overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.65rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-crop-editor__queue-copy small,
+  .card-crop-editor__queue-status {
+    color: var(--editor-muted);
+    font-size: 0.61rem;
+  }
+
+  .card-crop-editor__queue-status {
+    min-width: 2.7rem;
+    text-align: right;
+  }
+
+  .card-crop-editor__queue-button[data-editor-status='confirmed'] .card-crop-editor__queue-status {
+    color: hsl(145 48% 38%);
+  }
+
+  .card-crop-editor__queue-button[data-editor-status='neither'] .card-crop-editor__queue-status {
+    color: var(--editor-danger);
+  }
+
+  .card-crop-editor__queue-empty {
+    margin: 1rem;
+    color: var(--editor-muted);
+    font-size: 0.8rem;
+  }
+
+  .card-crop-editor__main {
+    min-width: 0;
+    /* The page shell has a capped width, so the useful breakpoint is the
+       editor column's actual width rather than the viewport width. */
+    container: crop-editor-main / inline-size;
+  }
+
+  .card-crop-editor__asset-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .card-crop-editor__asset-kicker {
+    margin-bottom: 0.25rem;
+    color: var(--editor-accent);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .card-crop-editor__asset-header h2 {
+    margin-bottom: 0.25rem;
+    overflow-wrap: anywhere;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1rem;
+  }
+
+  .card-crop-editor__asset-header p {
+    margin-bottom: 0;
+    color: var(--editor-muted);
+    font-size: 0.78rem;
+  }
+
+  .card-crop-editor__asset-status {
+    flex: 0 0 auto;
+    border: 1px solid var(--editor-border);
+    border-radius: 999px;
+    padding: 0.4rem 0.7rem;
+    color: var(--editor-muted);
+    font-size: 0.72rem;
+  }
+
+  .card-crop-editor__asset-status[data-status='confirmed'] {
+    border-color: hsl(145 48% 38% / 0.35);
+    color: hsl(145 48% 38%);
+  }
+
+  .card-crop-editor__asset-status[data-status='neither'] {
+    border-color: hsl(8 72% 48% / 0.35);
+    color: var(--editor-danger);
+  }
+
+  .card-crop-editor__editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(20rem, 0.92fr);
+    gap: 1rem;
+  }
+
+  .card-crop-editor__panel {
+    padding: clamp(0.8rem, 2vw, 1.1rem);
+  }
+
+  .card-crop-editor__panel-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .card-crop-editor__panel-heading h3 {
+    margin-bottom: 0;
+    font-size: 1rem;
+  }
+
+  .card-crop-editor__frame-switch button {
+    min-height: 1.85rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .card-crop-editor__canvas-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 0.35rem;
+    border-radius: 0.8rem;
+    background: hsl(var(--foreground) / 0.06);
+  }
+
+  .card-crop-editor__canvas {
+    position: relative;
+    width: min(100%, 40rem);
+    /* JS measures the real archive card below and writes this value. The
+       fallback is only used during the first paint before that measurement. */
+    aspect-ratio: var(--editor-canvas-ratio, 640 / 448);
+    overflow: hidden;
+    border-radius: 0.65rem;
+    background: #16181c;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .card-crop-editor__canvas.is-dragging {
+    cursor: grabbing;
+  }
+
+  .card-crop-editor__canvas-hint {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.55rem;
+    border-radius: 999px;
+    padding: 0.3rem 0.55rem;
+    background: rgb(0 0 0 / 0.52);
+    color: #fff;
+    font-size: 0.66rem;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
+
+  .card-crop-editor__canvas.is-interacted .card-crop-editor__canvas-hint {
+    opacity: 0;
+  }
+
+  .card-crop-editor__controls {
+    display: grid;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+  }
+
+  .card-crop-editor__control-row {
+    min-width: 0;
+  }
+
+  .card-crop-editor__control-row > button {
+    min-width: 2rem;
+    padding-inline: 0.55rem;
+  }
+
+  .card-crop-editor__zoom-control {
+    display: grid;
+    flex: 1 1 12rem;
+    grid-template-columns: auto minmax(5rem, 1fr) 3rem;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--editor-muted);
+    font-size: 0.72rem;
+  }
+
+  .card-crop-editor__zoom-control input {
+    min-width: 0;
+    accent-color: var(--editor-accent);
+  }
+
+  .card-crop-editor__zoom-control output,
+  .card-crop-editor__coordinates {
+    color: var(--editor-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+  }
+
+  .card-crop-editor__coordinates {
+    margin-left: auto;
+  }
+
+  .card-crop-editor__control-row--secondary {
+    padding-top: 0.55rem;
+    border-top: 1px solid var(--editor-border);
+  }
+
+  .card-crop-editor__control-row--secondary button {
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .card-crop-editor__preview-label {
+    color: var(--editor-muted);
+    font-size: 0.74rem;
+  }
+
+  /* The preview is the production MediaCard itself. Archive lists use a
+     `-mx-4` rail around their cards; reproduce that rail here so the card's
+     own width/margin calculation lands on the same pixels at a given viewport.
+     Do not add a second cover/info implementation in this file. */
+  .card-crop-editor__preview-rail {
+    width: calc(100% + 2 * (1rem + 1px + clamp(0.8rem, 2vw, 1.1rem)));
+    margin-inline: calc(-1 * (1rem + 1px + clamp(0.8rem, 2vw, 1.1rem)));
+  }
+
+  .card-crop-editor__panel--preview {
+    overflow: visible;
+  }
+
+  /* A preview is evidence, not an extra navigation target. Disabling pointer
+     interaction also keeps the production card in its non-hover state while
+     the editor is comparing pixels. */
+  :global(.card-crop-editor__card-preview),
+  :global(.card-crop-editor__card-preview .media-card__link) {
+    pointer-events: none;
+  }
+
+  :global(.card-crop-editor__card-preview:is(:hover, :focus-within) .media-card__image) {
+    transform: scale(var(--card-media-zoom, var(--media-card-image-zoom, 1)));
+  }
+
+  .card-crop-editor__decision {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--editor-border);
+  }
+
+  .card-crop-editor__decision strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.86rem;
+  }
+
+  .card-crop-editor__decision p {
+    margin-bottom: 0;
+    color: var(--editor-muted);
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+
+  .card-crop-editor__decision-actions {
+    justify-content: flex-start;
+  }
+
+  .card-crop-editor__decision-actions button {
+    border-radius: 0.55rem;
+  }
+
+  .card-crop-editor__recovery {
+    display: grid;
+    gap: 0.55rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--editor-border);
+  }
+
+  .card-crop-editor__recovery-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .card-crop-editor__recovery-actions > span {
+    color: var(--editor-muted);
+    font-size: 0.7rem;
+  }
+
+  .card-crop-editor__history-panel {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.65rem;
+    border: 1px solid var(--editor-border);
+    border-radius: 0.7rem;
+    background: hsl(var(--background) / 0.5);
+  }
+
+  .card-crop-editor__history-panel[hidden] {
+    display: none;
+  }
+
+  .card-crop-editor__history-panel p {
+    margin: 0;
+    color: var(--editor-muted);
+    font-size: 0.68rem;
+  }
+
+  .card-crop-editor__history-list {
+    display: grid;
+    gap: 0.45rem;
+    max-height: 16rem;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  :global(.card-crop-editor__history-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.5rem;
+    border: 1px solid var(--editor-border);
+    border-radius: 0.55rem;
+    background: hsl(var(--card) / 0.5);
+  }
+
+  :global(.card-crop-editor__history-copy) {
+    display: grid;
+    min-width: 0;
+    gap: 0.16rem;
+  }
+
+  :global(.card-crop-editor__history-copy strong) {
+    overflow: hidden;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.card-crop-editor__history-copy small) {
+    color: var(--editor-muted);
+    font-size: 0.65rem;
+    line-height: 1.35;
+  }
+
+  :global(.card-crop-editor__history-actions) {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  :global(.card-crop-editor__history-actions button) {
+    min-height: 1.8rem;
+    padding-inline: 0.55rem;
+    border-radius: 0.5rem;
+    font-size: 0.67rem;
+  }
+
+  :global(.card-crop-editor__history-empty) {
+    color: var(--editor-muted);
+    font-size: 0.68rem;
+  }
+
+  .card-crop-editor__navigation {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .card-crop-editor__keyboard-help {
+    margin: 0.8rem 0 0;
+    color: var(--editor-muted);
+    font-size: 0.7rem;
+  }
+
+  .card-crop-editor kbd {
+    border: 1px solid var(--editor-border);
+    border-radius: 0.25rem;
+    padding: 0.05rem 0.3rem;
+    background: hsl(var(--muted) / 0.5);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  /* The workbench prioritizes a readable crop canvas. On ordinary laptop
+     widths the queue remains beside the editor, while the two editor panels
+     stack so neither preview is squeezed into a misleading narrow card. */
+  @media (max-width: 1300px) {
+    .card-crop-editor__workspace {
+      grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+    }
+  }
+
+  @container crop-editor-main (max-width: 52rem) {
+    .card-crop-editor__editor-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* The archive card's primary responsive switch is viewport-based at
+     767px.  The queue can make this editor's own container narrower than
+     30rem just above that breakpoint, which would otherwise activate
+     CardMediaFrame's Home/container-query mask too early. Keep Step 1's
+     diagonal geometry identical to the formal archive preview in that small
+     transition band (mobile remains governed by the shared mobile rules). */
+  @media (min-width: 768px) {
+    .card-crop-editor__canvas :global(.card-media-frame--right),
+    .card-crop-editor__canvas :global([data-frame='diagonal-right']) {
+      clip-path: polygon(0 0, 92% 0, 100% 100%, 0 100%) !important;
+    }
+
+    .card-crop-editor__canvas :global(.card-media-frame--left),
+    .card-crop-editor__canvas :global([data-frame='diagonal-left']) {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 8% 100%) !important;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .card-crop-editor__header {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .card-crop-editor__progress {
+      justify-self: start;
+      text-align: left;
+    }
+
+    .card-crop-editor__toolbar {
+      position: static;
+    }
+
+    .card-crop-editor__toolbar-actions {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    .card-crop-editor__workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .card-crop-editor__queue {
+      position: static;
+      max-height: none;
+    }
+
+    .card-crop-editor__queue-list {
+      display: flex;
+      max-height: 8.5rem;
+      gap: 0.35rem;
+      padding: 0.5rem;
+      overflow-x: auto;
+    }
+
+    .card-crop-editor__queue-list li {
+      flex: 0 0 11rem;
+    }
+
+    .card-crop-editor__queue-button {
+      grid-template-columns: 2.8rem minmax(0, 1fr);
+    }
+
+    .card-crop-editor__queue-button img {
+      width: 2.8rem;
+      height: 2rem;
+    }
+
+    .card-crop-editor__queue-status {
+      display: none;
+    }
+
+    .card-crop-editor__asset-header,
+    .card-crop-editor__panel-heading {
+      display: grid;
+    }
+
+    .card-crop-editor__asset-status {
+      justify-self: start;
+    }
+
+    .card-crop-editor__frame-switch {
+      justify-content: flex-start;
+    }
+
+    .card-crop-editor__control-row--secondary {
+      align-items: flex-start;
+    }
+
+    .card-crop-editor__coordinates {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    :global(.card-crop-editor__history-item) {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-crop-editor button,
+    .card-crop-editor__canvas-hint {
+      transition: none;
+    }
+  }
+</style>

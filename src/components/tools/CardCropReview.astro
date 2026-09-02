@@ -1,0 +1,12 @@
+---
+/**
+ * Backward-compatible alias for the unified crop workbench.
+ *
+ * Older local links/imports can continue to refer to `CardCropReview`, while
+ * the actual editor implementation lives in `CardCropEditor` and uses the
+ * same `CardMediaFrame` as production cards.
+ */
+import CardCropEditor from '@/components/tools/CardCropEditor.astro'
+---
+
+<CardCropEditor />

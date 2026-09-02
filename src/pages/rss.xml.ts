@@ -10,7 +10,7 @@ import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 import config from 'virtual:config'
 
-import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
+import { getSourceEntry, loadContentCatalog, sortContentRecords } from '@/lib/content-layer'
 
 // Get dynamic import of images as a map collection
 const imagesGlob = import.meta.glob<{ default: ImageMetadata }>(
@@ -54,7 +54,8 @@ const renderContent = async (post: CollectionEntry<'blog'>, site: URL) => {
 }
 
 const GET = async (context: AstroGlobal) => {
-  const allPostsByDate = sortMDByDate(await getBlogCollection()) as CollectionEntry<'blog'>[]
+  const contentCatalog = await loadContentCatalog()
+  const allPostsByDate = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
   const siteUrl = context.site ?? new URL(import.meta.env.SITE)
 
   return rss({
@@ -68,14 +69,29 @@ const GET = async (context: AstroGlobal) => {
     description: config.description,
     site: import.meta.env.SITE,
     items: await Promise.all(
-      allPostsByDate.map(async (post) => ({
-        pubDate: post.data.publishDate,
-        link: `/blog/${post.id}`,
-        customData: `<h:img src="${typeof post.data.heroImage?.src === 'string' ? post.data.heroImage?.src : post.data.heroImage?.src.src}" />
-          <enclosure url="${typeof post.data.heroImage?.src === 'string' ? post.data.heroImage?.src : post.data.heroImage?.src.src}" />`,
-        content: await renderContent(post, siteUrl),
-        ...post.data
-      }))
+      allPostsByDate.map(async (record) => {
+        const post = getSourceEntry(contentCatalog, 'blog', record.id)
+        if (!post) throw new Error(`RSS source entry not found for ${record.key}`)
+        const heroImageSource =
+          typeof post.data.heroImage?.src === 'string'
+            ? post.data.heroImage.src
+            : post.data.heroImage?.src?.src
+        const heroImageUrl = heroImageSource ? new URL(heroImageSource, siteUrl).href : null
+
+        return {
+          // RSS is ordered by the same editorial date as the Blog archive so
+          // an updated post does not appear with an older feed timestamp.
+          pubDate: post.data.updatedDate ?? post.data.publishDate,
+          link: `/blog/${post.id}`,
+          ...(heroImageUrl
+            ? {
+                customData: `<h:img src="${heroImageUrl}" />\n<enclosure url="${heroImageUrl}" />`
+              }
+            : {}),
+          content: await renderContent(post, siteUrl),
+          ...post.data
+        }
+      })
     )
   })
 }
