@@ -74,9 +74,9 @@ expect(
 expect(!/^\s*base\s*:/m.test(astroConfig), 'Astro base is not configured')
 
 for (const path of [
-  'docs/IMPLEMENTATION_PLAN.zh-CN.md',
+  'docs/archive/IMPLEMENTATION_PLAN.zh-CN.md',
   'docs/SOURCE_LEDGER.md',
-  'docs/PREPARATION_STATUS.md',
+  'docs/archive/PREPARATION_STATUS.md',
   'docs/DEVELOPMENT.md',
   'docs/FINAL_RELEASE_HANDOFF.zh-CN.md',
   'docs/VISUAL_BASELINE.md',

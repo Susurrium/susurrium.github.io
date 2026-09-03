@@ -80,7 +80,7 @@ bun run verify:phase6
 bun run release:gate --strict
 ```
 
-严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。当前 release-prep 候选暂不纳入历史内容并覆盖空集合路径，但真实内容、素材权利、个人资料和公开位置仍需人工确认；历史路径的完整对账见 [分支/检查点对账报告](./BRANCH_STATE_RECONCILIATION.zh-CN.md)。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
+严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。当前生产基线支持 Blog/Trace 空集合和现有 Saying 内容，但真实内容、素材权利、个人资料和公开位置仍需人工确认；历史路径的完整对账见 [归档审计报告](./archive/BRANCH_STATE_RECONCILIATION.zh-CN.md)。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
 
 已确认的运行时例外只包括当前保留的功能：CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像。它们按精确服务/路径登记；文章正文中的其他远程图片、音频、视频、iframe、脚本或样式不会因为“同一域名”而自动放行。
 

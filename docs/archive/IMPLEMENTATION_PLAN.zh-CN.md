@@ -1,15 +1,15 @@
 # Susurrium 博客重构实施方案
 
-> 状态：Phase 0–6 已完成，生产基线 `main@26acfc2` 已发布；后续内容和功能变更遵循 [DEVELOPMENT.md](./DEVELOPMENT.md)｜方案版本：1.1｜冻结日期：2026-08-27｜适用仓库：`Susurrium/susurrium.github.io`
+> 归档说明：本文档记录首版重构的实施方案和验收过程，不是当前操作指南。当前生产基线为 `main@7993411`；后续内容和功能变更遵循 [DEVELOPMENT.md](../DEVELOPMENT.md)。
 > 上游基线：`zhuozhiyongde/Arthals-Ink@15f5ad110af8ed8f38a1e506dd890d2d921f118f`
 
 > **发布准备历史记录（2026-09-02）**：候选分支为 `codex/release-prep`，从本机
 > `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be` 固化。Blog/Trace 空集合是当前受测试覆盖的
 > 合法状态；历史内容与旧聚合路由暂不纳入当前候选并在仓库外快照/bundle 中保留，真实内容
-> 是否恢复以 `docs/BRANCH_STATE_RECONCILIATION.zh-CN.md` 的逐项确认结果为准。候选尚未 push 或
-> deploy。纳入、排除、隐私和素材权利决定以 `docs/RELEASE_PREP_AUDIT.zh-CN.md` 为准。
+> 是否恢复以 `BRANCH_STATE_RECONCILIATION.zh-CN.md` 的逐项确认结果为准。候选阶段尚未 push 或
+> deploy。纳入、排除、隐私和素材权利决定以 `RELEASE_PREP_AUDIT.zh-CN.md` 为准。
 
-> **当前流程说明**：生产和开发基线已于 2026-09-03 收敛到 `26acfc2`；当前 Pages workflow 仍为手动触发。后续不要从已归档的 `codex/release-prep` 创建分支，统一从最新 `develop` 创建 `codex/*` 工作分支。
+> **归档时点说明**：发布准备阶段结束后，生产和开发基线已于 2026-09-03 收敛到 `7993411`；当前 Pages workflow 仍为手动触发。不要从已归档的 `codex/release-prep` 创建分支，统一从最新 `develop` 创建 `codex/*` 工作分支。
 
 ## 1. 文档作用
 
@@ -395,7 +395,7 @@ Slug 或内容 ID 必须稳定，不能使用数组下标作为路由。
 | 测试                                        | 历史测试 + 新测试                                                                         | 大量复用 + 补充               | 新路由和生命周期                                         |
 | Pages workflow                              | Astro/GitHub 官方模板                                                                     | 官方方案配置                  | 无 schedule                                              |
 
-每项精确 URL、SHA、抓取日期和授权状态见 [SOURCE_LEDGER.md](./SOURCE_LEDGER.md)。
+每项精确 URL、SHA、抓取日期和授权状态见 [SOURCE_LEDGER.md](../SOURCE_LEDGER.md)。
 
 ## 13. 各参考效果验收
 
@@ -731,7 +731,7 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 - 原作者占位资源和文字。
 - 所有 TODO、demo、placeholder 和测试域名。
 
-开发期间允许占位存在；正式发布门禁必须报告并清除。最终发布时先删除/替换已确认的测试内容，再逐项处理门禁列出的未知远程媒体；不需要现在为了让开发测试通过而清空内容。每一项的唯一替换入口和发布顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
+开发期间允许占位存在；正式发布门禁必须报告并清除。最终发布时先删除/替换已确认的测试内容，再逐项处理门禁列出的未知远程媒体；不需要现在为了让开发测试通过而清空内容。每一项的唯一替换入口和发布顺序见 [最终内容替换与 GitHub Pages 发布交接](../FINAL_RELEASE_HANDOFF.zh-CN.md)。
 
 ## 23. 已锁定与仍需输入
 
