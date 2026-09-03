@@ -136,7 +136,10 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
     }
 
     #selectForCurrentVisit() {
-      if (!this.isConnected || window.location.pathname !== '/home') return
+      // This element is rendered only by Home. Do not gate selection on the
+      // URL: static hosts may normalize `/home` to `/home/`, and the element's
+      // own connection state is the more reliable page-scope signal.
+      if (!this.isConnected) return
 
       const catalogElement = this.querySelector<HTMLScriptElement>('[data-random-saying-catalog]')
       if (!catalogElement?.textContent) return
