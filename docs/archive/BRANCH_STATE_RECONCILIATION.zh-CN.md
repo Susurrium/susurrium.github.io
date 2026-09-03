@@ -1,8 +1,10 @@
 # 分支、检查点与工作树对账报告
 
+> 归档说明：本文档是发布准备阶段的历史审计证据。当前分支状态和操作流程以仓库根目录的 [README.md](../../README.md) 与 [DEVELOPMENT.md](../DEVELOPMENT.md) 为准。
+
 > **报告状态（2026-09-02，Asia/Shanghai）**：技术历史审计、owner 内容/个人资料/媒体授权决定、最终本地验证和可审计提交均已完成。`develop` 与 `codex/release-prep` 当前同一提交；线上 push、merge、Pages 设置和部署仍未授权。本报告是发布准备的事实底稿，不等同于“所有历史文件都应恢复”。
 
-> **后续状态（2026-09-03）**：发布准备随后已合并到 `main@26acfc2` 并成功部署到 GitHub Pages；`develop` 已快进同步到同一生产基线。`codex/release-prep` 已清理。当前 `codex/site-optimization` 含有尚未进入生产的后续改动，因此仍保留待审阅。
+> **后续状态（2026-09-03）**：发布准备随后已合并到 `main@26acfc2` 并成功部署到 GitHub Pages；之后 `codex/site-optimization` 也已合并到 `main`/`develop@7993411` 并再次部署。`codex/release-prep` 与 `codex/site-optimization` 均已清理。本文件保留原始审计结论，不作为当前分支清单。
 
 ## 1. 先给结论
 
@@ -14,7 +16,7 @@
 4. **技术架构并非简单落后。** 当前 About 和 Home 通过同一份 `profileIntro` 数据渲染，旧组件、旧路由和旧资源已被新架构替代。不能用整棵旧 tree 覆盖当前树，否则会重新引入旧身份、旧链接、废弃路由和临时预览文件。
 5. **处理原则是“逐路径、逐事实决策”，不是机械合并。** 临时物、生成预览和已被替代的运行时代码已按机器矩阵排除；93 个真实历史内容、个人事实、外部媒体和授权事项已由站长在 owner 记录中明确决定；机器矩阵仍必须保持 `UNCLASSIFIED=0`。
 
-因此，**本节结论仅适用于 2026-09-02 的发布准备时点**。当前开发和发布流程以 [docs/DEVELOPMENT.md](./DEVELOPMENT.md) 为准；生产基线是 `main@26acfc2`，历史 93 个内容仍不恢复。
+因此，**本节结论仅适用于 2026-09-02 的发布准备时点**。当前开发和发布流程以 [DEVELOPMENT.md](../DEVELOPMENT.md) 为准；历史审计之后的生产基线是 `main@7993411`，历史 93 个内容仍不恢复。
 
 ## 2. 审计范围、基准和证据
 
@@ -216,7 +218,7 @@ blob `c608280867e605c138b3370cf1bf882f526d254e`（SHA-256：`18acdde27e25b4b47b3
 
 ### 7.4 站长决定已记录
 
-上述问题已由站长在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)
+上述问题已由站长在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](../OWNER_CONFIRMATION_RECORD.zh-CN.md)
 和外部工作单中逐项回答：About=`KEEP_CUSTOM`；学校、院系、current、`2025-09`=`KEEP`；
 双学位、旧教育、助教经历及其链接=`REJECT`；93 个历史内容=`ALL_REJECT`；媒体/链接/字体
 范围=`OWNER_CONFIRMED`；Residence=`CITY`。后续若新增或改变公开资料，必须建立新的逐项

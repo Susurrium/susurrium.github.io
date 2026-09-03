@@ -2,7 +2,7 @@
 
 Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongde/Arthals-Ink) 的真实 Fork 开发。站点主体延续 Arthals 的视觉与架构，并在独立开发阶段接入已确认的入口动画、三类内容、三类卡片和装饰效果。
 
-当前状态：生产版本已经发布到 GitHub Pages，远程 `main`、`develop` 均已收敛到生产提交 `26acfc2`。当前发布基线包含 5 篇 Saying，Blog/Trace 仍为空集合；后续正式文章按本文档和 [开发、验证与 Git 流程](./docs/DEVELOPMENT.md) 进入发布链路。`codex/site-optimization` 仍保留两项尚未进入生产的居住地/首页改动，需单独审阅。历史分支、checkpoint 与工作树的逐路径对账见 [分支/检查点对账报告](./docs/BRANCH_STATE_RECONCILIATION.zh-CN.md)。
+当前状态：生产版本已经发布到 GitHub Pages，远程 `main`、`develop` 均已收敛到生产提交 `7993411`。当前发布基线包含 5 篇 Saying，Blog/Trace 仍为空集合；后续正式文章按本文档和 [开发、验证与 Git 流程](./docs/DEVELOPMENT.md) 进入发布链路。历史审计和发布准备材料已归档，当前分支结构只保留 `main`、`develop` 与短生命周期的 `codex/*` 工作分支。
 
 ## 锁定基线
 
@@ -15,11 +15,15 @@ Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongd
 
 ## 文档
 
-- [完整实施方案](./docs/IMPLEMENTATION_PLAN.zh-CN.md)
 - [最终内容替换与发布交接](./docs/FINAL_RELEASE_HANDOFF.zh-CN.md)
-- [开发前准备状态](./docs/PREPARATION_STATUS.md)
+- [内容数据架构](./docs/CONTENT_DATA_ARCHITECTURE.zh-CN.md)
+- [卡片裁剪工作台](./docs/CARD_CROP_REVIEW.md)
 - [来源与复用台账](./docs/SOURCE_LEDGER.md)
+- [第三方素材说明](./docs/THIRD_PARTY_NOTICES.md)
+- [视觉基线](./docs/VISUAL_BASELINE.md)
 - [开发、验证与 Git 流程](./docs/DEVELOPMENT.md)
+
+历史审计材料见 [`docs/archive/`](./docs/archive/)。
 
 ## 本地命令
 
@@ -29,7 +33,7 @@ bun run dev
 bun run ci
 ```
 
-`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、全部 `test/` 测试、发布就绪审计和资源体积检查。当前候选的 Blog/Trace 目录可以为空；历史文章暂未纳入当前发布树，但仍保存在仓库外快照/bundle 中，是否恢复须按对账报告逐篇确认。`bun run release:gate --strict` 必须在新构建后运行；它按最终渲染 DOM 检查 SEO、资源、旧身份和未登记外部媒体。
+`bun run ci` 会依次执行环境预检、只读 ESLint、Astro 检查与静态构建、阶段契约、全部 `test/` 测试、发布就绪审计和资源体积检查。当前生产基线的 Blog/Trace 目录可以为空；历史文章暂未纳入当前发布树，但仍保存在仓库外快照/bundle 中，是否恢复须按归档对账报告逐篇确认。`bun run release:gate --strict` 必须在新构建后运行；它按最终渲染 DOM 检查 SEO、资源、旧身份和未登记外部媒体。
 
 ## 分支
 

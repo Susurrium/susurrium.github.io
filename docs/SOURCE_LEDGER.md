@@ -1,6 +1,6 @@
 # 来源与复用台账
 
-> 台账版本：1.7｜冻结日期：2026-08-27｜release-prep 更新：2026-09-02｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–6 已按本台账落地，当前候选的纳入/排除与 owner 决定见 [RELEASE_PREP_AUDIT.zh-CN.md](./RELEASE_PREP_AUDIT.zh-CN.md) 与 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)
+> 台账版本：1.8｜冻结日期：2026-08-27｜最近更新：2026-09-03｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./archive/IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–6 已按本台账落地，生产基线为 `main@7993411`，历史发布准备记录见 [归档审计材料](./archive/)。
 
 ## 1. 作用与边界
 
@@ -42,7 +42,7 @@
 - `origin`：`https://github.com/Susurrium/susurrium.github.io.git`
 - `upstream`：`https://github.com/zhuozhiyongde/Arthals-Ink.git`
 - `upstream` push URL：`DISABLED`
-- `main` 与 `develop` 本轮保持不变；发布准备候选为 `codex/release-prep`，从 `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be` 开始整理。
+- `main` 与 `develop` 当前均指向生产提交 `7993411`；发布准备候选已完成合并并清理。历史整理起点和逐路径决定保留在 [归档对账报告](./archive/BRANCH_STATE_RECONCILIATION.zh-CN.md) 中。
 
 ## 4. 历史项目固定快照
 

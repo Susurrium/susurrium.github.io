@@ -8,12 +8,12 @@ body:
         ##  Quick Checklist
         Thank you for taking the time to file a bug report! Please fill out this form as completely as possible.
 
-        ✅ I am using the **latest version of `astro-theme-pure`** and all plugins.
-        ✅ I am using a version of Node that Astro supports (`v18.17.1` or `v20.3.0` or higher.)
+        ✅ I am testing the repository's pinned `astro-pure@1.4.6` dependency.
+        ✅ I am using Node.js `>=22.12.0` and Bun `1.4.0` from the repository baseline.
   - type: textarea
     id: environment-auto-check
     attributes:
-      label: Run command like `bun astro-pure info`, `bun astro info`
+      label: Run `bun run preflight` and include the output
       description: Paste your auto check command information.
   - type: textarea
     id: bug-description

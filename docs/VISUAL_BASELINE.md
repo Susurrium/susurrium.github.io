@@ -1,12 +1,12 @@
 # Arthals 视觉基线复核
 
-本文件落实 [实施方案 §18.3](./IMPLEMENTATION_PLAN.zh-CN.md#183-arthals-视觉基线门禁)。目标不是把本博客退回为无差别的 Arthals 镜像，而是在既定、已授权的首版定制之外，持续守住 Arthals-Ink 的主题架构、排版语言和交互外壳。
+本文件落实 [实施方案 §18.3](./archive/IMPLEMENTATION_PLAN.zh-CN.md#183-arthals-视觉基线门禁)。目标不是把本博客退回为无差别的 Arthals 镜像，而是在既定、已授权的首版定制之外，持续守住 Arthals-Ink 的主题架构、排版语言和交互外壳。
 
 ## 对照产物
 
 - 上游：`zhuozhiyongde/Arthals-Ink@15f5ad110af8ed8f38a1e506dd890d2d921f118f`。
 - 当前：本仓库当前提交的静态 `dist` 或生产预览。
-- 对照映射：上游 `/` 对当前 `/home`；其余 canonical 路径 `/blog`、文章详情、Blog 标签（当前 `/blog/tags`，上游 `/tags`）、`/archives`、`/search`、`/about` 与 `/links` 一一对应。当前候选采用 `trailingSlash: 'never'`，因此采集脚本使用无尾斜杠 URL；Trace/Saying 标签分别位于 `/traces/tags`、`/sayings/tags`，不参与跨类型对照。
+- 对照映射：上游 `/` 对当前 `/home`；其余 canonical 路径 `/blog`、文章详情、Blog 标签（当前 `/blog/tags`，上游 `/tags`）、`/archives`、`/search`、`/about` 与 `/links` 一一对应。当前生产配置采用 `trailingSlash: 'never'`，因此采集脚本使用无尾斜杠 URL；Trace/Saying 标签分别位于 `/traces/tags`、`/sayings/tags`，不参与跨类型对照。
 
 上游所用 Astro 5/Vite 在本机 Node 24 下会发生模块传输超时；这是上游工具链与当前运行时的兼容性问题，不是当前站点的构建错误。建立对照产物时使用隔离 Node 22：
 
@@ -60,8 +60,8 @@ Links（桌面/移动、明色），确认 Header、主内容、About 删除线�
 
 ## 发布前复核
 
-当前 release-prep 候选的截图作为仓库外人工证据保留；本轮已在干净候选树对应的
+当前生产基线的截图作为仓库外人工证据保留；本轮已在干净候选树对应的
 生产预览完成采集、代表性人工复核，并同时通过 `bun run ci`、
 `bun run links:check:dry` 与 `bun run release:gate --strict`。只有截图复核、
-浏览器回归、严格发布门禁都通过，且用户明确授权发布，才可以开启 `main` 推送
-部署并修改 GitHub Pages 生产状态。
+浏览器回归和严格发布门禁均已通过。后续视觉或内容变更仍须在合并到 `main` 前
+重新完成相同检查，再通过 GitHub Pages workflow 发布。

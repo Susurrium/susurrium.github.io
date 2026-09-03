@@ -1,14 +1,14 @@
 # 开发前准备状态
 
-> 历史记录说明：本文档记录发布前的准备阶段，不代表当前线上状态。生产基线 `main@26acfc2` 已发布到 GitHub Pages，`develop` 已同步到该基线；当前日常开发请以 [DEVELOPMENT.md](./DEVELOPMENT.md) 为准。
+> 历史归档说明：本文档记录发布前的准备阶段，不代表当前线上状态。生产基线后来已推进到 `main@7993411` 并发布到 GitHub Pages；当前日常开发请以 [DEVELOPMENT.md](../DEVELOPMENT.md) 为准。
 
-> 记录范围：Phase 0 准备阶段（历史快照，截至 2026-08-27）｜当前 release-prep 候选以本文件 §10 和 [RELEASE_PREP_AUDIT.zh-CN.md](./RELEASE_PREP_AUDIT.zh-CN.md) 为准。
+> 记录范围：Phase 0 准备阶段（历史快照，截至 2026-08-27）｜当时的 release-prep 候选以本文件 §10 和 [RELEASE_PREP_AUDIT.zh-CN.md](./RELEASE_PREP_AUDIT.zh-CN.md) 为准。
 
-## 当前 release-prep 候选（2026-09-02）
+## 发布前 release-prep 候选（历史记录，2026-09-02）
 
 - 分支：`codex/release-prep`（当前与 `develop` 同一提交）；owner 决定应用基线：`70c0e97bcdeeee35d1701aa66cc03428f7d0f07d`；前一整合基线为 `5fabdb5`，历史整理起点为 `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be`。
 - 本轮只在本地整理，不 push、不 merge、不部署、不修改 Pages 设置。
-- 历史 Blog/Trace/Saying 内容和旧聚合路由暂不纳入当前候选；站长已在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md) 明确 93 个真实历史内容全部不恢复，原始文件继续保存在仓库外快照和 bundle 中，不等于历史脱敏或永久删除。
+- 历史 Blog/Trace/Saying 内容和旧聚合路由暂不纳入当时候选；站长已在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](../OWNER_CONFIRMATION_RECORD.zh-CN.md) 明确 93 个真实历史内容全部不恢复，原始文件继续保存在仓库外快照和 bundle 中，不等于历史脱敏或永久删除。
 - Blog、Trace 目录以 `.gitkeep` 保留，空集合行为已纳入 phase 1/2、RSS、分页和浏览器验证；当前 Saying 候选为 5 篇。
 - 当前静态构建约生成 21 个页面；数量以提交后干净 worktree 的最新日志为准，不沿用下方历史 164 页数字。
 - 当前候选的自动链接写回 workflow 被排除；部署仅手动触发，链接检查使用 `links:check:dry`。
@@ -147,8 +147,8 @@ Pure 1.4.6 要求 quote 配置存在，因此开发期继续指向本地 `/data/
 ## 7. 准备阶段文件
 
 - [完整实施方案](./IMPLEMENTATION_PLAN.zh-CN.md)
-- [来源台账](./SOURCE_LEDGER.md)
-- [开发与 Git 流程](./DEVELOPMENT.md)
+- [来源台账](../SOURCE_LEDGER.md)
+- [开发与 Git 流程](../DEVELOPMENT.md)
 - CI workflow。
 - 手动 Pages workflow。
 - Node/Bun 版本约束。
@@ -174,7 +174,7 @@ Phase 0 至此完成。后续功能阶段以此冻结基线为准；当前实际
 
 ## 9. 已确认的发布输入与仍需线上授权的事项
 
-- About、学校/院系/current/`2025-09`、媒体/链接/字体范围和 Residence 城市级粒度：已由 owner 工作单确认，详见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)。
+- About、学校/院系/current/`2025-09`、媒体/链接/字体范围和 Residence 城市级粒度：已由 owner 工作单确认，详见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](../OWNER_CONFIRMATION_RECORD.zh-CN.md)。
 - 93 个真实历史内容：`ALL_REJECT`，不恢复；外部快照/bundle 保留证据。
 - 自定义域名和真实 Pages 发布设置。首版候选不启用自动部署或定时链接写回。
 

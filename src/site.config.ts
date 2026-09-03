@@ -134,8 +134,9 @@ export const integ: IntegrationUserConfig = {
   },
   // Enable page search function
   pagefind: true,
-  // Pure 1.4.6 requires a quote provider. Keep it local until the Sayings
-  // collection replaces this temporary development fallback.
+  // Pure 1.4.6 requires a quote provider even though this site renders the
+  // Saying collection through its own content layer. Keep this local
+  // compatibility fallback to satisfy the integration contract.
   quote: {
     server: '/data/development-quote.json',
     target: `(data) => data.text || 'Sayings are being prepared.'`
