@@ -46,6 +46,10 @@ function contentEntries(directory) {
         const id = relative(base, absolute)
           .replace(/\\/g, '/')
           .replace(/\.(?:md|mdx)$/, '')
+          // Match Astro's content id for directory-based entries: an
+          // `index.md` file is addressed by its directory name, not by an
+          // additional `/index` path segment.
+          .replace(/\/index$/, '')
         entries.push({
           id,
           source,
@@ -177,7 +181,10 @@ for (const path of ['archives/index.html', 'rss.xml']) {
     .map((match) => match[1])
     .join('\n')
   expect(!routeLinks.includes('/traces/'), `${path} excludes Trace routes from Blog-only surfaces`)
-  expect(!routeLinks.includes('/sayings/'), `${path} excludes Saying routes from Blog-only surfaces`)
+  expect(
+    !routeLinks.includes('/sayings/'),
+    `${path} excludes Saying routes from Blog-only surfaces`
+  )
 }
 
 // Taxonomy is intentionally scoped to its content type.  There is no

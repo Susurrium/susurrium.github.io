@@ -169,6 +169,78 @@ async function dispatchKey(cdp, key, code, keyCode) {
   })
 }
 
+/**
+ * The Home card is selected on the client, so verify the actual selected
+ * identity/image pair against the live Saying archive rather than checking
+ * only the server-rendered fallback.
+ */
+async function assertSayingImageConsistency(cdp) {
+  await navigate(cdp, `${siteUrl}/home`)
+  await delay(250)
+  const homeCard = await evaluate(
+    cdp,
+    `(() => {
+      const card = document.querySelector('[data-home-random-saying] [data-media-card]')
+      if (!card) return null
+      const image = card.querySelector('[data-card-image]')
+      return {
+        id: card.getAttribute('data-content-id'),
+        imageFile: card.getAttribute('data-image-file'),
+        imageKey: card.getAttribute('data-image-key'),
+        imageSrc: image?.getAttribute('src') ?? null,
+        frame: card.getAttribute('data-card-crop-frame'),
+        imageSide: card.getAttribute('data-card-image-side'),
+        layoutVariant: card.getAttribute('data-card-layout-variant')
+      }
+    })()`
+  )
+  if (!homeCard?.id) {
+    pass('Home/Saying image pairing check skipped because no Saying is published')
+    return
+  }
+
+  await navigate(cdp, `${siteUrl}/sayings`)
+  const archiveCard = await evaluate(
+    cdp,
+    `(() => {
+      const id = ${JSON.stringify(homeCard.id)}
+      const card = [...document.querySelectorAll('[data-sayings-archive] [data-media-card]')]
+        .find((candidate) => candidate.getAttribute('data-content-id') === id)
+      if (!card) return null
+      const image = card.querySelector('[data-card-image]')
+      return {
+        imageFile: card.getAttribute('data-image-file'),
+        imageKey: card.getAttribute('data-image-key'),
+        imageSrc: image?.getAttribute('src') ?? null,
+        frame: card.getAttribute('data-card-crop-frame'),
+        imageSide: card.getAttribute('data-card-image-side'),
+        layoutVariant: card.getAttribute('data-card-layout-variant')
+      }
+    })()`
+  )
+  if (!archiveCard) {
+    // A future finite archive page may put the random identity on another
+    // page. Its detail route still carries the same canonical opening media.
+    await navigate(cdp, `${siteUrl}/sayings/${encodeURIComponent(homeCard.id)}`)
+    const detailImage = await evaluate(
+      cdp,
+      `document.querySelector('[data-reading-opening-media-image]')?.getAttribute('src') ?? null`
+    )
+    assert(
+      detailImage === homeCard.imageSrc,
+      `Home Saying ${homeCard.id} keeps its image when opened in the detail route`
+    )
+    return
+  }
+
+  assert(
+    ['imageFile', 'imageKey', 'imageSrc', 'frame', 'imageSide', 'layoutVariant'].every(
+      (field) => homeCard[field] === archiveCard[field]
+    ),
+    `Home Saying ${homeCard.id} keeps the archive image/frame/layout assignment`
+  )
+}
+
 const detailPath = await discoverDetailPath('/blog')
 
 const targetResponse = await fetch(`${cdpEndpoint}/json/new?${encodeURIComponent('about:blank')}`, {
@@ -369,6 +441,8 @@ try {
       )
     }
   }
+
+  await assertSayingImageConsistency(cdp)
 
   await navigate(cdp, `${siteUrl}/search`)
   await delay(500)

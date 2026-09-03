@@ -54,6 +54,12 @@ function collectionEntries(directory) {
           id: relative(base, absolute)
             .replace(/\\/g, '/')
             .replace(/\.(?:md|mdx)$/, '')
+            // Astro content collections treat a directory index file as the
+            // directory's entry id (for example `qa-local/index.md` →
+            // `qa-local`). Keep this source-side inventory in the same
+            // canonical form so local preview fixtures are verified exactly
+            // like production content.
+            .replace(/\/index$/, '')
             .toLocaleLowerCase('en-US')
         })
       }
@@ -317,7 +323,9 @@ if (existsSync(distFile('home/index.html'))) {
     profileSegment.includes('Developer / Designer / Blogger') &&
       profileSegment.includes('你好，我是 Susurrium，一个目前就读于北京大学医学部非典型医学牲。') &&
       profileSegment.includes('<del>分化生化物化</del>药理药代药动') &&
-      profileSegment.includes('<del>完成CS231n 的 Assignment</del>查找loss 不下降原因时心态崩溃。') &&
+      profileSegment.includes(
+        '<del>完成CS231n 的 Assignment</del>查找loss 不下降原因时心态崩溃。'
+      ) &&
       profileSegment.includes('非常佩服A神，于是选择用相同的模版做了这个博客。') &&
       profileSegment.includes('<del>那个夏天的</del>ow。'),
     'Home ProfileIntro renders the canonical About introduction copy'
@@ -419,10 +427,7 @@ if (existsSync(distFile('home/index.html'))) {
     JSON.stringify(slides) === JSON.stringify([0, 1, 2, 3, 4, 5]),
     'Hero has six ordered slides'
   )
-  expect(
-    (home.match(/href="#gentle-wave"/g) ?? []).length === 4,
-    'Hero has four Media wave layers'
-  )
+  expect((home.match(/href="#gentle-wave"/g) ?? []).length === 4, 'Hero has four Media wave layers')
   expect(!home.includes('https://s2.loli.net/'), 'Home does not hotlink Media image assets')
 
   for (const asset of [
@@ -644,8 +649,7 @@ if (sayingPages.length > 0) {
     taxonomyPath: '/sayings/tags'
   })
   expect(
-    (html.match(/data-presentation="media-decorative"/g) ?? []).length ===
-      sayingFirstPageCount,
+    (html.match(/data-presentation="media-decorative"/g) ?? []).length === sayingFirstPageCount,
     'Saying archive resolves its default presentation centrally'
   )
   expect(
@@ -733,10 +737,7 @@ for (const { kind, path } of [
 }
 expect(!existsSync(distFile('tags')), 'No aggregate /tags output is generated')
 
-const mediaCardSource = readFileSync(
-  resolve(root, 'src/components/cards/MediaCard.astro'),
-  'utf8'
-)
+const mediaCardSource = readFileSync(resolve(root, 'src/components/cards/MediaCard.astro'), 'utf8')
 expect(
   mediaCardSource.includes('@media (max-width: 767px)') &&
     mediaCardSource.includes('flex-direction: column'),

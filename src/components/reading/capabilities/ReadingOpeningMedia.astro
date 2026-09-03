@@ -2,9 +2,9 @@
 /**
  * The opening-media capability used by reading headers.
  *
- * `layered-blur` preserves the established main-image + blurred-backdrop
- * visual without assigning it to one content type. `standard` remains the
- * source-agnostic single-image option.
+ * `layered-blur` reuses the reference site's main-image + blurred duplicate
+ * composition without assigning it to one content type. `standard` remains
+ * the source-agnostic single-image option.
  */
 import { Image } from 'astro:assets'
 import type { ReadingOpeningMediaData } from '@/lib/content-layer/reading-data'
@@ -25,24 +25,27 @@ interface Props {
 const { backdrop, data, variant = 'standard' } = Astro.props as Props
 const imageMetadata = typeof data.source === 'string' ? undefined : data.source
 const backdropMode = backdrop?.mode ?? (variant === 'layered-blur' ? 'on' : 'off')
-const backdropVariant = backdrop?.variant ?? 'blur'
+const backdropVariant = backdrop?.variant ?? 'projected-blur'
 const showBackdrop =
-  backdropVariant === 'blur' && isReadingFeatureVisible(backdropMode, Boolean(data.source))
+  (backdropVariant === 'blur' || backdropVariant === 'projected-blur') &&
+  isReadingFeatureVisible(backdropMode, Boolean(data.source))
 const useLayeredMedia = variant === 'layered-blur' || showBackdrop
 const imageClass =
-  'cover-image reading-opening-media__image relative z-10 block h-auto w-full rounded-2xl object-contain'
+  'cover-image reading-opening-media__image relative z-10 h-auto w-full max-w-[65ch] rounded-2xl object-contain'
 ---
 
 {
   useLayeredMedia ? (
+    // The wrapper is a short projection rail: the cover keeps its 65ch cap and
+    // the duplicate gets a deliberate 3rem lower-right runway. Capping the
+    // rail prevents no-TOC article columns from turning the duplicate into a
+    // wide, detached panel while retaining the reference composition.
     <div
-      class:list={[
-        'hero-image reading-opening-media reading-opening-media--layered relative w-full max-w-[65ch]',
-        showBackdrop ? 'reading-opening-media--with-backdrop' : 'mb-6'
-      ]}
+      class='hero-image reading-opening-media reading-opening-media--layered relative mb-6 w-full max-w-[calc(65ch+3rem)]'
       data-reading-opening-media
       data-reading-opening-media-layered
       data-reading-opening-media-variant={variant}
+      data-reading-opening-media-backdrop-variant={showBackdrop ? backdropVariant : undefined}
       data-reading-opening-backdrop-root={showBackdrop ? '' : undefined}
     >
       {imageMetadata ? (
@@ -64,7 +67,13 @@ const imageClass =
           src={data.src}
         />
       )}
-      {showBackdrop && <ReadingOpeningMediaBackdrop source={data.source} src={data.src} />}
+      {showBackdrop && (
+        <ReadingOpeningMediaBackdrop
+          source={data.source}
+          src={data.src}
+          variant={backdropVariant}
+        />
+      )}
     </div>
   ) : (
     <figure
@@ -94,20 +103,3 @@ const imageClass =
     </figure>
   )
 }
-
-<style>
-  /*
-   * The backdrop is intentionally positioned out of flow. Reserve only the
-   * small amount of visual bleed that remains below it so the metadata row
-   * never sits on top of the ambient layer.
-   */
-  .reading-opening-media--with-backdrop {
-    margin-bottom: calc(1.5rem + 0.75rem);
-  }
-
-  @media (max-width: 639px) {
-    .reading-opening-media--with-backdrop {
-      margin-bottom: calc(1.5rem + 0.5rem);
-    }
-  }
-</style>

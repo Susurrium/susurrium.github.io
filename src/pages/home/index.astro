@@ -525,55 +525,8 @@ const meta = {
 <script>
   declare global {
     interface Window {
-      __homeContentCoverCleanup?: () => void
       __homeEntryHandoffCleanup?: () => void
     }
-  }
-
-  const initializeHomeContentCover = () => {
-    const page = document.querySelector<HTMLElement>('[data-page-kind="home"]')
-    const hero = page?.querySelector<HTMLElement>('[data-home-hero]')
-    const cover = page?.querySelector<HTMLElement>('[data-home-content-cover]')
-    if (!page || !hero || !cover) return
-
-    window.__homeContentCoverCleanup?.()
-
-    const controller = new AbortController()
-    const { signal } = controller
-    let frame = 0
-
-    const sync = () => {
-      frame = 0
-      const pageTop = page.getBoundingClientRect().top + window.scrollY
-      const boundary = hero.getBoundingClientRect().bottom + window.scrollY
-      const top = Math.max(0, boundary - pageTop)
-      const covered = hero.getBoundingClientRect().bottom <= 0
-      cover.style.setProperty('--home-content-cover-top', `${top}px`)
-      cover.dataset.coverTop = String(Math.round(top))
-      cover.dataset.coverMode = covered ? 'released' : 'hero'
-    }
-
-    const schedule = () => {
-      if (frame === 0) frame = window.requestAnimationFrame(sync)
-    }
-
-    const resizeObserver = new ResizeObserver(schedule)
-    resizeObserver.observe(page)
-    resizeObserver.observe(hero)
-
-    const cleanup = () => {
-      controller.abort()
-      resizeObserver.disconnect()
-      if (frame) window.cancelAnimationFrame(frame)
-      frame = 0
-      if (window.__homeContentCoverCleanup === cleanup) delete window.__homeContentCoverCleanup
-    }
-
-    window.__homeContentCoverCleanup = cleanup
-    window.addEventListener('scroll', schedule, { passive: true, signal })
-    window.addEventListener('resize', schedule, { passive: true, signal })
-    document.addEventListener('astro:before-swap', cleanup, { once: true, signal })
-    sync()
   }
 
   const waitForFirstHeroImage = async (source: string, signal: AbortSignal) => {
@@ -674,8 +627,6 @@ const meta = {
     void reveal()
   }
 
-  initializeHomeContentCover()
   initializeHomeEntryHandoff()
-  document.addEventListener('astro:page-load', initializeHomeContentCover)
   document.addEventListener('astro:page-load', initializeHomeEntryHandoff)
 </script>

@@ -558,7 +558,8 @@ async function assertOpeningMediaLifecycle(cdp, pathname) {
   const state = await evaluate(
     cdp,
     `new Promise((resolve) => {
-      let image = document.querySelector('[data-reading-opening-media-backdrop]')
+      let root = document.querySelector('[data-reading-opening-backdrop-root]')
+      let image = root?.querySelector('[data-reading-opening-media-backdrop]')
       let fixture = null
       // Current development articles may intentionally have no opening image.
       // Create a DOM-only fixture in that case so the lifecycle contract is
@@ -574,6 +575,7 @@ async function assertOpeningMediaLifecycle(cdp, pathname) {
         spacer.style.height = '300vh'
         fixture.append(spacer)
         document.body.append(fixture)
+        root = fixture
         document.dispatchEvent(new Event('astro:page-load'))
       }
       if (!(image instanceof HTMLElement)) {
@@ -588,47 +590,117 @@ async function assertOpeningMediaLifecycle(cdp, pathname) {
         const inline = Number.parseFloat(image.style.opacity)
         return Number.isFinite(inline) ? inline : Number.parseFloat(getComputedStyle(image).opacity)
       }
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-      requestAnimationFrame(() => {
-        const top = read()
-        window.scrollTo({ top: Math.max(window.innerHeight * 0.5, 1), left: 0, behavior: 'instant' })
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const middle = read()
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-            requestAnimationFrame(() =>
-              requestAnimationFrame(() => {
-                const restored = read()
-                window.__readingOpeningMediaBackdropCleanup?.()
-                fixture?.remove()
-                resolve({
-                  exists: true,
-                  fixture: Boolean(fixture),
-                  top,
-                  middle,
-                  restored,
-                  scrollY: window.scrollY,
-                  scrollHeight: document.documentElement.scrollHeight,
-                  viewportHeight: window.innerHeight
-                })
-              })
-            )
-          })
+      const visual = () => {
+        const style = getComputedStyle(image)
+        const cover = root?.querySelector('[data-reading-opening-media-image]')
+        const rootRect = root?.getBoundingClientRect()
+        const backdropRect = image.getBoundingClientRect()
+        const coverRect = cover?.getBoundingClientRect()
+        return {
+          containerRight: rootRect?.right ?? null,
+          containerWidth: rootRect?.width ?? null,
+          coverRight: coverRect?.right ?? null,
+          coverWidth: coverRect?.width ?? null,
+          backdropRight: backdropRect.right,
+          backdropWidth: backdropRect.width,
+          filter: style.filter,
+          mask: style.maskImage,
+          objectFit: style.objectFit,
+          variant: image.dataset.readingOpeningMediaBackdropVariant ?? null,
+          offsetX: coverRect ? backdropRect.left - coverRect.left : null,
+          offsetY: coverRect ? backdropRect.top - coverRect.top : null,
+          rightDelta: coverRect ? backdropRect.right - coverRect.right : null
+        }
+      }
+      const afterFrames = (callback) =>
+        requestAnimationFrame(() => requestAnimationFrame(callback))
+      const sampleAt = (top) =>
+        new Promise((sampleResolve) => {
+          window.scrollTo({ top, left: 0, behavior: 'instant' })
+          afterFrames(() => sampleResolve({ requested: top, actual: window.scrollY, opacity: read() }))
         })
-      })
+
+      const run = async () => {
+        const viewportHeight = Math.max(window.innerHeight, 1)
+        const top = await sampleAt(0)
+        const visualState = visual()
+        const first = await sampleAt(viewportHeight / 9 + 2)
+        const second = await sampleAt((viewportHeight * 2) / 9 + 2)
+        const third = await sampleAt((viewportHeight * 3) / 9 + 2)
+        const returned = await sampleAt(0)
+        window.__readingOpeningMediaBackdropCleanup?.()
+        fixture?.remove()
+        resolve({
+          exists: true,
+          fixture: Boolean(fixture),
+          top: top.opacity,
+          first: first.opacity,
+          second: second.opacity,
+          third: third.opacity,
+          returned: returned.opacity,
+          actualScroll: { first: first.actual, second: second.actual, third: third.actual },
+          visual: visualState,
+          scrollY: window.scrollY,
+          scrollHeight: document.documentElement.scrollHeight,
+          viewportHeight
+        })
+      }
+      run()
     })`
   )
 
+  const containerCoverGap =
+    Number.isFinite(state.visual?.containerWidth) && Number.isFinite(state.visual?.coverWidth)
+      ? Math.max(state.visual.containerWidth - state.visual.coverWidth, 0)
+      : null
+  const duplicateUsesContainerRightEdge =
+    Number.isFinite(state.visual?.containerRight) && Number.isFinite(state.visual?.backdropRight)
+      ? Math.abs(state.visual.backdropRight - state.visual.containerRight) <= 2
+      : false
+  const coverStaysInsideContainer =
+    Number.isFinite(state.visual?.containerRight) && Number.isFinite(state.visual?.coverRight)
+      ? state.visual.coverRight <= state.visual.containerRight + 2
+      : false
+  const duplicateFollowsContainerGap =
+    Number.isFinite(containerCoverGap) && Number.isFinite(state.visual?.rightDelta)
+      ? Math.abs(state.visual.rightDelta - containerCoverGap) <= 2
+      : false
+  // The cover is capped at 65ch and the containing rail intentionally adds a
+  // small lower-right runway. This keeps pages without a TOC from exposing a
+  // detached, article-column-wide duplicate while allowing responsive shrink.
+  const projectionGapIsBounded =
+    Number.isFinite(containerCoverGap) && containerCoverGap >= -2 && containerCoverGap <= 64
+  const referenceContract =
+    state.visual?.variant === 'projected-blur' &&
+    state.visual.objectFit === 'fill' &&
+    state.visual.filter.includes('blur(24px)') &&
+    (state.visual.mask === 'none' || state.visual.mask === '') &&
+    state.visual.offsetY >= 15 &&
+    state.visual.offsetY <= 17 &&
+    duplicateUsesContainerRightEdge &&
+    coverStaysInsideContainer &&
+    duplicateFollowsContainerGap &&
+    projectionGapIsBounded
+  const referenceOpacitySteps =
+    Math.abs(state.top - 0.6) <= 0.01 &&
+    Math.abs(state.first - 0.45) <= 0.01 &&
+    Math.abs(state.second - 0.3) <= 0.01 &&
+    Math.abs(state.third - 0.15) <= 0.01 &&
+    Math.abs(state.returned - state.third) <= 0.01
+  const fixtureOpacitySteps =
+    state.top > 0 &&
+    state.top <= 1 &&
+    state.first < state.top &&
+    state.second < state.first &&
+    state.third < state.second &&
+    state.returned > 0 &&
+    state.returned <= 1
+
   expect(
     state.exists &&
-      state.top > 0 &&
-      state.top <= 1 &&
-      state.middle < state.top &&
-      state.restored > 0 &&
-      state.restored <= 1 &&
-      Math.abs(state.restored - state.top) <= 0.01,
+      (state.fixture ? fixtureOpacitySteps : referenceContract && referenceOpacitySteps),
     state.exists
-      ? `${pathname} opening-media blur opacity follows scroll and restores on upward scroll${state.fixture ? ' (DOM fixture)' : ''} [top=${state.top}, middle=${state.middle}, restored=${state.restored}, scrollY=${state.scrollY}, scrollHeight=${state.scrollHeight}, viewport=${state.viewportHeight}]`
+      ? `${pathname} opening-media matches the reference duplicate, offset and opacity steps${state.fixture ? ' (DOM fixture)' : ''} [top=${state.top}, first=${state.first}, second=${state.second}, third=${state.third}, returned=${state.returned}, variant=${state.visual?.variant ?? 'none'}, fit=${state.visual?.objectFit ?? 'none'}, filter=${state.visual?.filter ?? 'none'}, mask=${state.visual?.mask ?? 'none'}, offset=${state.visual?.offsetX ?? 'n/a'}x${state.visual?.offsetY ?? 'n/a'}, rightDelta=${state.visual?.rightDelta ?? 'n/a'}, containerGap=${containerCoverGap ?? 'n/a'}, scrollY=${state.scrollY}, scrollHeight=${state.scrollHeight}, viewport=${state.viewportHeight}]`
       : `${pathname} exposes the opening-media lifecycle initializer for verification`
   )
 }
@@ -1004,7 +1076,7 @@ try {
   // route carrying the layered-media marker; otherwise exercise the existing
   // DOM fixture on the first live detail route and report that distinction.
   let openingMediaChecks = 0
-  for (const archivePath of ['/blog', '/traces']) {
+  for (const archivePath of ['/blog', '/traces', '/sayings']) {
     const archiveSpec = archiveDetailSpecs[archivePath]
     await navigateWithClientRouter(cdp, '/home')
     await navigateWithClientRouter(cdp, archivePath)
@@ -1066,7 +1138,9 @@ try {
     openingMediaChecks += 1
   }
   if (openingMediaChecks === 0)
-    pass('no published Blog/Trace article detail exists; opening-media lifecycle check skipped')
+    pass(
+      'no published Blog/Trace/Saying article detail exists; opening-media lifecycle check skipped'
+    )
 
   await navigateWithClientRouter(cdp, '/search')
   await assertRoute(

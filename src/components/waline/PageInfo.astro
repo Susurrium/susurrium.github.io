@@ -1,6 +1,7 @@
 ---
 import { cn } from 'astro-pure/utils'
 import Pageview from '@/components/waline/Pageview.astro'
+import { normalizeWalinePath } from '@/lib/waline-path'
 import config from '@/site-config'
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
 
 const { view, comment, class: className, ...props } = Astro.props
 
-const path = Astro.url.pathname
+const path = normalizeWalinePath(Astro.url.pathname)
 const enabled = config.integ.waline.enable
 ---
 

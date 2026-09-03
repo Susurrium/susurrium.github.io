@@ -1,6 +1,6 @@
 import type { PaginateFunction } from 'astro'
 
-import { createPageItem } from './page-data'
+import { buildSayingImageAssignmentMap, createPageItem } from './page-data'
 import { resolveContentPageSize, type ContentPaginationInput } from './pagination'
 import { contentTagHref, isContentSurfaceEnabled } from './policy'
 import { contentKinds, contentTagPath, getContentTypeDefinition } from './registry'
@@ -106,11 +106,21 @@ export function buildTagStaticPaths(
   const definition = getContentTypeDefinition(kind)
   if (!definition.capabilities.tags || !isContentSurfaceEnabled(kind, 'tags')) return []
   const tags = getContentTagCounts(catalog, kind)
+  // Saying image placement is an archive-level decision.  Build it from the
+  // complete Saying catalog once so a filtered tag page never reuses its own
+  // page-local index and gives an existing Saying a different image/frame.
+  const sayingImageAssignments =
+    kind === 'saying' ? buildSayingImageAssignmentMap(catalog.byKind.saying) : undefined
 
   return tags.flatMap(({ tag }) => {
-    const items: PageItem[] = getTagRecords(catalog, kind, tag).map((record, index) =>
-      createPageItem(record, { detailed: true, index })
-    )
+    const items: PageItem[] = getTagRecords(catalog, kind, tag).map((record, index) => {
+      const imageAssignment = sayingImageAssignments?.get(record.key)
+      return createPageItem(record, {
+        detailed: true,
+        ...(imageAssignment ? { imageAssignment } : {}),
+        index
+      })
+    })
     return paginate(items, {
       pageSize: resolveContentPageSize(pageSize),
       params: { tag }

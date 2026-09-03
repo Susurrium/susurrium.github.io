@@ -27,6 +27,7 @@
     "verify:phase5": "bun scripts/verify-phase5.mjs",
     "verify:phase6": "bun scripts/verify-phase6.mjs",
     "verify:phase6:browser": "node scripts/verify-phase6-browser.mjs",
+    "verify:home-hero": "node scripts/verify-home-hero.mjs",
     "verify:browser:lifecycle": "node scripts/verify-browser-lifecycle.mjs",
     "capture:visual-baseline": "node scripts/capture-visual-baseline.mjs",
     "branch:audit": "node scripts/branch-state-audit.mjs",
