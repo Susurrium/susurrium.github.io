@@ -9,11 +9,18 @@ import { toContentCardViewData, toTextCardViewData } from '../src/lib/content-la
 import {
   buildCollectionPageData,
   buildDetailPageData,
+  buildHomePageData,
+  buildSayingImageAssignmentMap,
   createPageItem,
   getPageItems,
   toMediaCardData,
   toStandardCardData
 } from '../src/lib/content-layer/page-data'
+import {
+  buildCollectionStaticPaths,
+  resolveContentPageSize,
+  toPaginatorProps
+} from '../src/lib/content-layer/pagination'
 import {
   contentPolicyConfig,
   resolveContentPolicy,
@@ -39,15 +46,11 @@ import {
 } from '../src/lib/content-layer/reading-policy'
 import { contentTagPath, contentTypeRegistry } from '../src/lib/content-layer/registry'
 import {
+  buildTagStaticPaths,
   getContentTagCounts,
   getContentTagIndexEntries,
   getTagRecords
 } from '../src/lib/content-layer/tags'
-import {
-  buildCollectionStaticPaths,
-  resolveContentPageSize,
-  toPaginatorProps
-} from '../src/lib/content-layer/pagination'
 import type {
   BlogEntry,
   ContentCatalog,
@@ -111,6 +114,14 @@ function makeSayingEntry(id = 'canonical-saying'): SayingEntry {
       text: 'A normalized Saying.'
     }
   } as unknown as SayingEntry
+}
+
+function makeTaggedSayingEntry(id: string, tags: string[]): SayingEntry {
+  const entry = makeSayingEntry(id)
+  return {
+    ...entry,
+    data: { ...entry.data, tags }
+  } as SayingEntry
 }
 
 function makeCatalog(): ContentCatalog {
@@ -242,9 +253,7 @@ describe('presentation projections', () => {
     expect(toContentCardViewData(resolvedItem(blog)).family).toBe('text')
     expect(toContentCardViewData(resolvedItem(trace)).family).toBe('media')
     expect(toContentCardViewData(resolvedItem(saying)).family).toBe('media')
-    expect(
-      toContentCardViewData(resolvedItem(trace, { presentation: 'text' })).family
-    ).toBe('text')
+    expect(toContentCardViewData(resolvedItem(trace, { presentation: 'text' })).family).toBe('text')
   })
 
   test('keeps Blog-only metadata in the text view model instead of the renderer', () => {
@@ -324,6 +333,63 @@ describe('page data hierarchy', () => {
     })
   })
 
+  test('keeps one Saying image/frame assignment across Home, archive, tag, and detail views', () => {
+    const first = adaptSayingEntry(makeTaggedSayingEntry('first', ['content']))
+    const second = adaptSayingEntry(makeTaggedSayingEntry('second', ['content', 'voice']))
+    const third = adaptSayingEntry(makeTaggedSayingEntry('third', ['voice']))
+    const sayings = [first, second, third]
+    const baseCatalog = makeCatalog()
+    const catalog: ContentCatalog = {
+      ...baseCatalog,
+      all: [...baseCatalog.all.filter((record) => record.kind !== 'saying'), ...sayings],
+      byKind: { ...baseCatalog.byKind, saying: sayings }
+    }
+    const canonical = buildSayingImageAssignmentMap(sayings)
+    const homeItems = getPageItems(buildHomePageData(catalog), 'featured-saying', 'candidates')
+    const archiveItems = getPageItems(
+      // Deliberately pass a different render order: identity, not this local
+      // order, must own the assignment.
+      buildCollectionPageData('saying-archive', '/sayings', [third, first, second]),
+      'content',
+      'items'
+    )
+    const tagCalls: Array<{ items: unknown[]; options: Record<string, unknown> }> = []
+    const paginate = ((items: unknown[], options: Record<string, unknown>) => {
+      tagCalls.push({ items, options })
+      return []
+    }) as never
+    buildTagStaticPaths(catalog, 'saying', paginate, { enabled: true, pageSize: 8 })
+    const voiceItems = (tagCalls.find((call) => call.options.params?.tag === 'voice')?.items ??
+      []) as Array<{ contentKey: string; placement: { imageAssignment?: unknown } }>
+
+    for (const record of sayings) {
+      const expected = canonical.get(record.key)
+      expect(expected).toBeDefined()
+      expect(
+        homeItems.find((item) => item.contentKey === record.key)?.placement.imageAssignment
+      ).toEqual(expected)
+      expect(
+        archiveItems.find((item) => item.contentKey === record.key)?.placement.imageAssignment
+      ).toEqual(expected)
+    }
+
+    for (const item of voiceItems) {
+      expect(item.placement.imageAssignment).toEqual(canonical.get(item.contentKey))
+    }
+
+    const archiveSecond = archiveItems.find((item) => item.contentKey === second.key)
+    const detail = buildDetailPageData('saying-detail', '/sayings/second', second, sayings, {
+      primaryMeaning: '当前 Saying 文章',
+      relatedGroupKey: 'sayings',
+      relatedMeaning: '相关推荐',
+      relatedSectionMeaning: 'Saying 详情页相邻导航内容',
+      primaryCardPlacement: archiveSecond?.placement
+    })
+    expect(getPageItems(detail, 'article', 'primary')[0]?.placement.imageAssignment).toEqual(
+      canonical.get(second.key)
+    )
+  })
+
   test('centralizes presentation defaults and page-level overrides', () => {
     const trace = adaptTraceEntry(makeTraceEntry())
     const defaultItem = createPageItem(trace)
@@ -342,9 +408,7 @@ describe('archive pagination', () => {
     expect(resolveContentPageSize({ enabled: true, pageSize: 8 })).toBe(8)
     expect(resolveContentPageSize({ enabled: false, pageSize: 8 })).toBe(Number.POSITIVE_INFINITY)
     expect(resolveContentPageSize(3)).toBe(3)
-    expect(() => resolveContentPageSize({ enabled: true, pageSize: 0 })).toThrow(
-      'positive integer'
-    )
+    expect(() => resolveContentPageSize({ enabled: true, pageSize: 0 })).toThrow('positive integer')
   })
 
   test('builds the complete collection PageData before handing items to Astro pagination', () => {
@@ -580,7 +644,7 @@ describe('reading projections', () => {
         layout: 'media-first-article',
         metadataVariant: 'blog',
         openingMedia: {
-          backdrop: { mode: 'on', variant: 'blur' },
+          backdrop: { mode: 'on', variant: 'projected-blur' },
           mode: 'auto',
           variant: 'layered-blur'
         },
@@ -595,7 +659,7 @@ describe('reading projections', () => {
         commentInfo: 'auto',
         layout: 'article',
         openingMedia: {
-          backdrop: { mode: 'on', variant: 'blur' },
+          backdrop: { mode: 'on', variant: 'projected-blur' },
           mode: 'auto',
           variant: 'layered-blur'
         }
@@ -608,9 +672,9 @@ describe('reading projections', () => {
     expect(saying.header.layout).toBe('quote')
     expect(saying.footer.relatedVariant).toBe('cards')
     expect(saying.header.openingMedia).toEqual({
-      backdrop: { mode: 'off', variant: 'blur' },
+      backdrop: { mode: 'on', variant: 'projected-blur' },
       mode: 'auto',
-      variant: 'standard'
+      variant: 'layered-blur'
     })
     expect(saying.background).toEqual({ mode: 'on', variant: 'gradient' })
 
@@ -635,7 +699,7 @@ describe('reading projections', () => {
       footer: { copyright: 'on', related: 'none' },
       header: {
         openingMedia: {
-          backdrop: { mode: 'on', variant: 'blur' },
+          backdrop: { mode: 'on', variant: 'projected-blur' },
           mode: 'on',
           variant: 'standard'
         },
@@ -681,7 +745,7 @@ describe('reading projections', () => {
       updatedAt: undefined
     })
 
-    expect(toReadingBackgroundData(blogHeader, '#fallback')).toEqual({ color: '#659EB9' })
+    expect(toReadingBackgroundData(blogHeader, '#fallback')).toEqual({ color: '#fallback' })
     expect(toReadingBackgroundData(blogHeader, '#fallback', '#explicit')).toEqual({
       color: '#explicit'
     })

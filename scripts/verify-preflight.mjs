@@ -101,8 +101,9 @@ expect(
 )
 expect(
   ciWorkflow.includes('bun run verify:phase6:browser') &&
+    ciWorkflow.includes('bun run verify:home-hero') &&
     ciWorkflow.includes('bun run verify:browser:lifecycle'),
-  'CI runs both mobile accessibility and ClientRouter lifecycle browser regressions'
+  'CI runs mobile accessibility, Home Hero boundary, and ClientRouter lifecycle browser regressions'
 )
 
 const lifecycleRegression = read('scripts/verify-browser-lifecycle.mjs')
@@ -115,13 +116,8 @@ const deployWorkflow = read('.github/workflows/deploy.yml')
 const hasManualPagesTrigger = /^[ \t]*workflow_dispatch:[ \t]*$/m.test(deployWorkflow)
 const hasPushTrigger = /^[ \t]*push:[ \t]*$/m.test(deployWorkflow)
 const hasMainOnlyPushTrigger =
-  /^[ \t]*push:[ \t]*\r?\n[ \t]+branches:[ \t]*\[[ \t]*main[ \t]*\][ \t]*$/m.test(
-    deployWorkflow
-  )
-expect(
-  hasManualPagesTrigger,
-  'Pages deployment can be triggered manually'
-)
+  /^[ \t]*push:[ \t]*\r?\n[ \t]+branches:[ \t]*\[[ \t]*main[ \t]*\][ \t]*$/m.test(deployWorkflow)
+expect(hasManualPagesTrigger, 'Pages deployment can be triggered manually')
 expect(
   !hasPushTrigger || hasMainOnlyPushTrigger,
   'Pages deployment is manual during preparation or restricted to main for a clean release'

@@ -133,6 +133,8 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 </section>
 
 <script>
+  import { resolveHeroVisibility } from '@/lib/home/hero-visibility'
+
   declare global {
     interface Window {
       __heroGalleryCleanup?: () => void
@@ -149,6 +151,8 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
     )
     const media = hero?.querySelector<HTMLElement>('[data-home-hero-media]')
     if (!hero || !media) return
+    const page = hero.closest<HTMLElement>('[data-page-kind="home"]')
+    const cover = page?.querySelector<HTMLElement>('[data-home-content-cover]')
 
     window.__heroGalleryCleanup?.()
 
@@ -159,14 +163,36 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
     const sync = () => {
       frame = 0
 
-      // The Hero's bottom is the point at which the wave has completely
-      // passed over the fixed image. Keep the decision tied to layout rather
-      // than a hard-coded pixel value so mobile and resized viewports behave
-      // identically.
-      const covered = hero.getBoundingClientRect().bottom <= 0
-      media.dataset.mediaCovered = String(covered)
-      media.dataset.scrollMode = covered ? 'flow' : 'fixed'
-      hero.dataset.heroPhase = covered ? 'released' : 'hero'
+      const heroRect = hero.getBoundingClientRect()
+      const mediaRect = media.getBoundingClientRect()
+      const visibility = resolveHeroVisibility(heroRect.bottom, heroRect.height, mediaRect.height)
+
+      /*
+       * Keep the fixed layer top-anchored and clip only the part that has
+       * passed the viewport.  This is deliberately continuous: at a boundary
+       * of eight pixels, only eight pixels of the image can paint, even while
+       * opacity/visibility transitions are settling.
+       */
+      media.style.setProperty('--hero-gallery-clip-bottom', `${visibility.clipBottom}px`)
+      media.style.setProperty('--hero-gallery-visible-height', `${visibility.visibleMediaHeight}px`)
+      media.dataset.mediaCovered = String(visibility.covered)
+      media.dataset.mediaVisibleHeight = String(Math.round(visibility.visibleMediaHeight))
+      media.dataset.scrollMode = visibility.covered ? 'flow' : 'fixed'
+      hero.dataset.heroPhase = visibility.covered ? 'released' : 'hero'
+
+      /*
+       * The transition veil used to have a second, independent scroll
+       * listener.  Updating it from this same frame keeps the Hero boundary,
+       * fixed media clip, and content handoff on one geometry snapshot.
+       */
+      if (page && cover) {
+        const pageTop = page.getBoundingClientRect().top + window.scrollY
+        const boundary = heroRect.bottom + window.scrollY
+        const top = Math.max(0, boundary - pageTop)
+        cover.style.setProperty('--home-content-cover-top', `${top}px`)
+        cover.dataset.coverTop = String(Math.round(top))
+        cover.dataset.coverMode = visibility.covered ? 'released' : 'hero'
+      }
     }
 
     const schedule = () => {
@@ -175,6 +201,8 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 
     const resizeObserver = new ResizeObserver(schedule)
     resizeObserver.observe(hero)
+    resizeObserver.observe(media)
+    if (page) resizeObserver.observe(page)
 
     const cleanup = () => {
       controller.abort()
@@ -217,24 +245,29 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
     z-index: 0;
     width: 100%;
     height: var(--hero-gallery-image-height);
-    min-height: 25rem;
+    /* Match the Hero layout box exactly.  The runtime still handles a
+       defensive mismatch by mapping the visible ratio onto this box. */
+    min-height: var(--hero-gallery-image-height);
     overflow: hidden;
     background-color: #363636;
+    -webkit-clip-path: inset(0 0 var(--hero-gallery-clip-bottom, 0px) 0);
+    clip-path: inset(0 0 var(--hero-gallery-clip-bottom, 0px) 0);
     pointer-events: none;
+    will-change: clip-path, opacity;
     transition:
       opacity 180ms ease,
       visibility 0s linear 0s;
   }
 
-  /* Once the wave has reached the top of the viewport, release the media
-     from fixed positioning. The Hero's stage remains as a layout spacer, so
-     this transition cannot pull the following content upward. The normal
-     page background takes over after the wave; no second Hero image remains
-     behind the page content. */
+  /* `flow` remains a diagnostic state for the handoff contract.  Keep the
+     element fixed even while hidden: switching positioning modes at the exact
+     reverse-scroll boundary was the source of the full-image flash. */
   .hero-gallery__media[data-scroll-mode='flow'] {
-    position: absolute;
+    position: fixed;
     visibility: hidden;
     opacity: 0;
+    -webkit-clip-path: inset(0 0 100% 0);
+    clip-path: inset(0 0 100% 0);
   }
 
   .hero-gallery__media::before {

@@ -163,17 +163,20 @@ export function toReadingStatsData(
 }
 
 /**
- * Resolve the current background input without coupling the renderer to a
- * collection. Explicit page input wins, then media-provided color, then the
- * shared reading fallback.
+ * Resolve the page-level reading background without coupling the renderer to a
+ * collection. Explicit page input wins, then the shared reading fallback.
+ *
+ * The opening image may still carry its own color for media-specific effects,
+ * but that color must not recolor the page gradient. Keeping those concerns
+ * separate preserves the site's stable blue reading-surface baseline.
  */
 export function toReadingBackgroundData(
-  headerData: Pick<ReadingHeaderData, 'openingMedia'>,
+  _headerData: Pick<ReadingHeaderData, 'openingMedia'>,
   fallbackColor: string,
   explicitColor?: string
 ): ReadingBackgroundData {
   return {
-    color: explicitColor ?? headerData.openingMedia?.color ?? fallbackColor
+    color: explicitColor ?? fallbackColor
   }
 }
 

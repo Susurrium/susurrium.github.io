@@ -84,13 +84,17 @@ bun run release:gate --strict
 
 已确认的运行时例外只包括当前保留的功能：CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像。它们按精确服务/路径登记；文章正文中的其他远程图片、音频、视频、iframe、脚本或样式不会因为“同一域名”而自动放行。
 
-浏览器回归分成两项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape、空 Blog 归档和减少动画；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre UMD 加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、Blog/Trace 公共 Opening Media 向下淡出并向上恢复、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。脚本会从当前构建动态发现详情路由，因此不会把某一篇测试文章写死。GitHub Linux CI 会在生产预览上自动执行两项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
+浏览器回归分成三项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape、空 Blog 归档和减少动画，并确认 Home 随机 Saying 与归档保持同一图片/裁剪身份；`verify:home-hero` 验证固定 Hero 在越界、边界反向滚动和不同视口下的连续裁剪；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre UMD 加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、Blog/Trace/Saying 公共 Opening Media 是否复用同源图片并满足参考站的右对齐/向下偏移、`blur(24px)` 与 `.6/.45/.3/.15` 四档透明度、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。脚本会从当前构建动态发现详情路由，因此不会把某一篇测试文章写死。GitHub Linux CI 会在生产预览上自动执行三项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
 
 ```powershell
 bun run preview -- --host 127.0.0.1 --port 4321
 bun run verify:phase6:browser
+# Home Hero 固定媒体在边界和反向滚动时的连续裁剪
+bun run verify:home-hero
 bun run verify:browser:lifecycle
 ```
+
+`verify:home-hero` 会在桌面、标准移动和短移动视口分别采样 Hero 顶部、完全越界、边界反向返回等状态，确认固定媒体的裁剪高度与 Hero 剩余可见高度一致；如使用其他端口，设置 `HOME_HERO_SITE_URL`。
 
 视觉基线取证使用另一个、不会把截图提交到 Git 的命令。它需要将冻结的 Arthals 产物服务在 `4322`、当前 `dist`/预览服务在 `4321`，并启动带 `--remote-debugging-port=9224` 的 Chrome：
 
@@ -99,6 +103,8 @@ bun run capture:visual-baseline
 ```
 
 该命令会采集 `/`（上游）对 `/home`（当前）以及 Blog、标签、归档、搜索、About、Links 的桌面/移动、明/暗主题顶部和底部截图，并写入 `artifacts/visual-baseline/`。详情页不再写死测试 slug；如需详情证据，设置 `VISUAL_CURRENT_BLOG_DETAIL_PATH`（及可选的 upstream/GitHub 详情变量）。复核范围和已登记差异见 [VISUAL_BASELINE.md](./VISUAL_BASELINE.md)。
+
+Opening Media 的本地视觉样本使用 `qa-local-*` 与 `zz-qa-visual-*` 前缀，覆盖 Blog、Trace、Saying 的正方形、宽幅、深浅色和 fallback 图片。它们必须在本地构建后重新启动预览服务才能出现；审阅结束后要按前缀连同 `src/assets/qa-local-media/` 一起移出，不能把这些占位内容带入正式发布树。
 
 资源预算：
 

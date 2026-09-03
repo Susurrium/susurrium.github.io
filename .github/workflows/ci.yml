@@ -109,6 +109,7 @@ jobs:
       - name: Run browser regressions
         run: |
           bun run verify:phase6:browser
+          bun run verify:home-hero
           bun run verify:browser:lifecycle
 
       - name: Stop local browser services

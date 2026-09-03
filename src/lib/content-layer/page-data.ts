@@ -5,6 +5,7 @@ import {
   traceFallbackImages
 } from '@/data/home-media'
 import { buildAlternatingCardImageAssignments } from '@/lib/card-layout/alternating'
+import type { CardImageAssignment } from '@/lib/card-layout/types'
 import { normalizeContentPresentation } from '@/lib/compatibility/content-presentation'
 
 import { contentTagHref, resolveContentPolicy } from './policy'
@@ -25,6 +26,7 @@ import type {
   PageSection,
   PageSectionRole,
   ResolvedPageItem,
+  SayingRecord,
   StandardCardData
 } from './types'
 
@@ -32,12 +34,46 @@ export interface PageItemOptions {
   readonly actionLabel?: string
   readonly detailed?: boolean
   readonly headingLevel?: HeadingLevel
-  readonly imageAssignment?: import('@/lib/card-layout/types').CardImageAssignment
+  readonly imageAssignment?: CardImageAssignment
   readonly index?: number
   readonly key?: string
   /** A page-level visual decision. Omit it to use the registry/policy default. */
   /** Canonical value, or a historical persisted value accepted at this boundary. */
   readonly presentation?: ContentPresentation | string
+}
+
+/**
+ * Build the one canonical image assignment for every Saying identity.
+ *
+ * The archive planner is intentionally positional: it alternates the two
+ * confirmed visual-side queues.  That is correct for an archive sequence, but
+ * using the filtered/page-local index on Home or a tag page makes the same
+ * Saying acquire a different image.  Resolve the queue once against the
+ * complete stable ID order, then address it by the record's stable content
+ * key everywhere else.
+ *
+ * The helper accepts a mixed record list so callers at a broad content-layer
+ * boundary do not need to narrow their catalog first.  Non-Saying records are
+ * ignored and the returned map is safe to use for any page projection.
+ */
+export function buildSayingImageAssignmentMap(
+  records: readonly ContentRecord[]
+): ReadonlyMap<string, CardImageAssignment> {
+  const sayings = sortContentRecords(
+    records.filter((record): record is SayingRecord => record.kind === 'saying'),
+    'id-asc'
+  )
+  const assignments = buildAlternatingCardImageAssignments(sayingDecorativeImages, sayings.length, {
+    source: 'decorative'
+  })
+
+  return new Map(
+    sayings.map((record, index) => {
+      const assignment = assignments[index]
+      if (!assignment) throw new Error(`Unable to assign a Saying image at slot ${index}.`)
+      return [record.key, assignment] as const
+    })
+  )
 }
 
 function footerFor(record: ContentRecord): string {
@@ -234,23 +270,22 @@ export function buildCollectionPageData(
   records: readonly ContentRecord[],
   options: PageItemOptions = {}
 ): PageData {
+  const sayingImageAssignments =
+    kind === 'saying-archive' ? buildSayingImageAssignmentMap(records) : undefined
   const imageAssignments =
-    kind === 'saying-archive'
-      ? buildAlternatingCardImageAssignments(sayingDecorativeImages, records.length, {
-          source: 'decorative'
+    kind === 'trace-archive'
+      ? buildAlternatingCardImageAssignments(traceFallbackImages, records.length, {
+          source: 'fallback'
         })
-      : kind === 'trace-archive'
-        ? buildAlternatingCardImageAssignments(traceFallbackImages, records.length, {
-            source: 'fallback'
-          })
-        : []
-  const items = records.map((record, index) =>
-    createPageItem(record, {
+      : []
+  const items = records.map((record, index) => {
+    const imageAssignment = sayingImageAssignments?.get(record.key) ?? imageAssignments[index]
+    return createPageItem(record, {
       ...options,
-      ...(imageAssignments[index] ? { imageAssignment: imageAssignments[index] } : {}),
+      ...(imageAssignment ? { imageAssignment } : {}),
       index: options.index ?? index
     })
-  )
+  })
   return createPageData(kind, route, [
     createPageSection(
       'content',
@@ -279,6 +314,7 @@ export function buildHomePageData(
   const sayingsById = sortContentRecords(sayings, 'id-asc')
   const recentBlogs = blogsByPublishDate.slice(0, recentLimit)
   const recentTraces = tracesByPublishDate.slice(0, recentLimit)
+  const sayingImageAssignments = buildSayingImageAssignmentMap(sayingsById)
 
   const yearInChina = (date: Date) => getContentYear(date)
   const currentYear = yearInChina(options.now ?? new Date())
@@ -300,9 +336,14 @@ export function buildHomePageData(
           (post) => post.publishedAt && yearInChina(post.publishedAt) === timelineYear
         )
 
-  const sayingItems = sayingsById.map((record, index) =>
-    createPageItem(record, { actionLabel: 'Read', index })
-  )
+  const sayingItems = sayingsById.map((record, index) => {
+    const imageAssignment = sayingImageAssignments.get(record.key)
+    return createPageItem(record, {
+      actionLabel: 'Read',
+      ...(imageAssignment ? { imageAssignment } : {}),
+      index
+    })
+  })
   const recentBlogItems = recentBlogs.map((record, index) =>
     createPageItem(record, { detailed: true, index })
   )

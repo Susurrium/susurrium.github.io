@@ -34,26 +34,42 @@
       const controller = new AbortController()
       const { signal } = controller
       let frame = 0
-      let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const backdropVariant = image.dataset.readingOpeningMediaBackdropVariant ?? 'blur'
+      const projected = backdropVariant === 'projected-blur'
+      const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+      let reducedMotion = reducedMotionQuery.matches
+      // Astro Pure's Hero.astro captures these thresholds once per page. Keep
+      // the same 1/9, 2/9 and 3/9 viewport steps instead of interpolating a
+      // project-specific fade curve.
+      const viewportHeight = Math.max(window.innerHeight, 1)
+      const threshold1 = viewportHeight / 9
+      const threshold2 = (viewportHeight * 2) / 9
+      const threshold3 = (viewportHeight * 3) / 9
 
       const sync = () => {
         frame = 0
 
-        // Keep the original three visual steps, but use the lighter ambient
-        // range so the backdrop remains a source hint rather than a second
-        // image. Recompute on every viewport change and restore the top
-        // opacity when scrolling back up.
+        const scrollDistance = Math.max(window.scrollY, 0)
+
+        if (projected) {
+          // This is the reference site's intentional one-way fade: once a
+          // threshold has been crossed, scrolling upward does not restore the
+          // previous inline opacity until the page is remounted.
+          if (scrollDistance >= threshold3) image.style.opacity = '0.15'
+          else if (scrollDistance >= threshold2) image.style.opacity = '0.3'
+          else if (scrollDistance >= threshold1) image.style.opacity = '0.45'
+          return
+        }
+
+        // Legacy mode stays available as an explicit rollback. It uses the
+        // former four-step values and is not selected by the three baseline
+        // detail-page presets.
         if (reducedMotion) {
           image.style.opacity = '0.26'
           return
         }
 
-        const viewportHeight = Math.max(window.innerHeight, 1)
-        const scrollDistance = Math.max(window.scrollY, 0)
-        const threshold1 = viewportHeight / 9
-        const threshold2 = (viewportHeight * 2) / 9
-        const threshold3 = (viewportHeight * 3) / 9
-        const opacity =
+        image.style.opacity =
           scrollDistance >= threshold3
             ? '0.08'
             : scrollDistance >= threshold2
@@ -61,15 +77,12 @@
               : scrollDistance >= threshold1
                 ? '0.24'
                 : '0.34'
-
-        image.style.opacity = opacity
       }
 
       const schedule = () => {
         if (frame === 0) frame = window.requestAnimationFrame(sync)
       }
 
-      const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
       const handleMotionChange = (event: MediaQueryListEvent) => {
         reducedMotion = event.matches
         schedule()
@@ -86,8 +99,7 @@
 
       window.__readingOpeningMediaBackdropCleanup = cleanup
       window.addEventListener('scroll', schedule, { passive: true, signal })
-      window.addEventListener('resize', schedule, { passive: true, signal })
-      motionQuery.addEventListener('change', handleMotionChange, { signal })
+      reducedMotionQuery.addEventListener('change', handleMotionChange, { signal })
       document.addEventListener('astro:before-swap', cleanup, { once: true, signal })
       sync()
     }

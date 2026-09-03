@@ -326,11 +326,11 @@ Slug 或内容 ID 必须稳定，不能使用数组下标作为路由。
 
 产品上有三种卡片，代码层只有两个视觉原语。
 
-| 业务用途 | 默认 presentation        | 视觉来源   | 图片规则                   |
-| -------- | ------------------------ | ---------- | -------------------------- |
-| Blog     | `text`           | Arthals    | 列表永远无图               |
-| Trace    | `media-content`    | Media | 内容题图优先，否则稳定回退 |
-| Saying   | `media-decorative` | Media | 独立装饰图库按归档顺序循环 |
+| 业务用途 | 默认 presentation  | 视觉来源 | 图片规则                   |
+| -------- | ------------------ | -------- | -------------------------- |
+| Blog     | `text`             | Arthals  | 列表永远无图               |
+| Trace    | `media-content`    | Media    | 内容题图优先，否则稳定回退 |
+| Saying   | `media-decorative` | Media    | 独立装饰图库按归档顺序循环 |
 
 ### 11.1 三个资源池
 
@@ -369,9 +369,9 @@ Slug 或内容 ID 必须稳定，不能使用数组下标作为路由。
 | Blog 无图卡片                               | Arthals-Ink                                                                               | 直接复用                      | 只做数据适配                                             |
 | Traces 数据和详情                           | 历史项目 notes/traces                                                                     | 直接复用 + 重命名             | 最终 Trace schema                                        |
 | Sayings 数据和详情                          | 历史项目 says                                                                             | 直接复用 + 重命名             | 路由改为 `/sayings`                                      |
-| Media Hero 与波浪                      | 原网站视觉核心 + 历史 `ShokaHero` 生命周期外壳 + 本项目挂载胶水                           | 混合复用                      | 原 DOM/CSS/动画参数；仅适配 Astro、路由和 reduced-motion |
-| Saying 卡片                                 | Media 原 DOM/CSS/hover/斜边 + 本项目 Saying 查询和装饰图策略                         | 直接视觉复用 + 薄封装         | 不改原视觉，只接本地数据与无障碍语义                     |
-| Trace 卡片                                  | Media 原 DOM/CSS/hover/斜边 + 本项目 Trace 查询和回退策略                            | 直接视觉复用 + 薄封装         | 不改原视觉，只接内容图、回退图与无障碍语义               |
+| Media Hero 与波浪                           | 原网站视觉核心 + 历史 `ShokaHero` 生命周期外壳 + 本项目挂载胶水                           | 混合复用                      | 原 DOM/CSS/动画参数；仅适配 Astro、路由和 reduced-motion |
+| Saying 卡片                                 | Media 原 DOM/CSS/hover/斜边 + 本项目 Saying 查询和装饰图策略                              | 直接视觉复用 + 薄封装         | 不改原视觉，只接本地数据与无障碍语义                     |
+| Trace 卡片                                  | Media 原 DOM/CSS/hover/斜边 + 本项目 Trace 查询和回退策略                                 | 直接视觉复用 + 薄封装         | 不改原视觉，只接内容图、回退图与无障碍语义               |
 | Home 最近内容双栏                           | 历史项目                                                                                  | 略微调整                      | Blog/Traces 各 3 条                                      |
 | Blog Timeline                               | 历史 `NotesPreview`                                                                       | 基本直接复用                  | 删除 notes 模式，只接 Blog                               |
 | 根路径入口                                  | 历史 `EntranceScene`                                                                      | 直接复用 + 略调               | 删除 session 跳过                                        |
@@ -678,24 +678,24 @@ GitHub Pages 站点和带宽有限，视频与音乐必须在开发初期治理�
 
 验收命令：`bun run ci`（含 `test:all`）、`bun run links:check:dry` 与 `bun run release:gate --strict`。线上发布还需验证 GitHub Actions 成功、`https://susurrium.github.io/` 可访问，以及 canonical、RSS、sitemap 与 404 均指向最终域名。
 
-状态：本地 CI、生产产物审计、移动端目录浏览器回归和真实 ClientRouter 跨页生命周期回归均已实现并按候选构建验证；后者包含入口重放、公共音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion、Blog/Trace 公共 Opening Media 滚动恢复、直接暗色 Home 的透明 iframe 合成和无未捕获异常。Home 的 Saying 与 Blog Timeline 在对应集合为空时整段不渲染，Blog/Trace/Saying 归档仍保留明确空状态；Timeline 按 Asia/Shanghai 选择不晚于当前年的最新有文年份。Links 的 Friend Circle 已从输出和请求路径移除，但历史代码可保留。Waline、生产 Umami、CodeTime 和公共音乐按已登记例外保留；未知远程媒体由严格门禁逐项列出。候选已完成干净 worktree 验证、素材/隐私权利复核记录和自动化视觉/浏览器检查；当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
+状态：本地 CI、生产产物审计、移动端目录浏览器回归和真实 ClientRouter 跨页生命周期回归均已实现并按候选构建验证；后者包含入口重放、公共音乐唯一性、各页面特效 profile、About-only 小人、空白点击过滤、reduced-motion、Blog/Trace/Saying 公共 Opening Media 的参考站同源图片右对齐/向下偏移、`blur(24px)`、四档滚动透明度和直接暗色 Home 中透明 iframe 合成，以及无未捕获异常。Home 的 Saying 与 Blog Timeline 在对应集合为空时整段不渲染，Blog/Trace/Saying 归档仍保留明确空状态；Timeline 按 Asia/Shanghai 选择不晚于当前年的最新有文年份。Links 的 Friend Circle 已从输出和请求路径移除，但历史代码可保留。Waline、生产 Umami、CodeTime 和公共音乐按已登记例外保留；未知远程媒体由严格门禁逐项列出。候选已完成干净 worktree 验证、素材/隐私权利复核记录和自动化视觉/浏览器检查；当前没有修改远端 Pages 设置、没有推送到 `main`，也没有触发部署。
 
 ## 20. 主要风险与处理
 
-| 风险                             | 处理                                                 |
-| -------------------------------- | ---------------------------------------------------- |
-| Pure 与 Astro 小版本不一致       | 首版锁 6.1.8；升级必须独立验证                       |
+| 风险                            | 处理                                                   |
+| ------------------------------- | ------------------------------------------------------ |
+| Pure 与 Astro 小版本不一致      | 首版锁 6.1.8；升级必须独立验证                         |
 | npm Pure 缺少参考项目自定义导出 | 本地登记并维护单一共享组件，并通过来源台账追溯原始实现 |
-| 仓库内旧 Pure 被误检查           | `tsconfig` 排除 `packages/pure`                      |
-| 重复 Astro/Shiki/HAST            | 删除未使用依赖并固定 overrides                       |
-| 原网站无可维护源码               | 先锁作者源码；否则以历史封装和原站录屏校准并记录偏差 |
-| 多个特效泄漏                     | 统一生命周期宿主                                     |
-| ClientRouter 重复初始化          | 页面切换事件显式销毁/挂载                            |
-| 音乐被页面替换                   | 持久化 DOM + 单一状态源                              |
-| GitHub 数据结构变化              | 缓存和本地回退                                       |
-| 历史 dirty worktree 被污染       | 只读提取 + 已创建快照                                |
-| 本地媒体超出 Pages 能力          | 资源预算和 CI 门禁                                   |
-| 上游同步覆盖定制                 | 只选择性 cherry-pick                                 |
+| 仓库内旧 Pure 被误检查          | `tsconfig` 排除 `packages/pure`                        |
+| 重复 Astro/Shiki/HAST           | 删除未使用依赖并固定 overrides                         |
+| 原网站无可维护源码              | 先锁作者源码；否则以历史封装和原站录屏校准并记录偏差   |
+| 多个特效泄漏                    | 统一生命周期宿主                                       |
+| ClientRouter 重复初始化         | 页面切换事件显式销毁/挂载                              |
+| 音乐被页面替换                  | 持久化 DOM + 单一状态源                                |
+| GitHub 数据结构变化             | 缓存和本地回退                                         |
+| 历史 dirty worktree 被污染      | 只读提取 + 已创建快照                                  |
+| 本地媒体超出 Pages 能力         | 资源预算和 CI 门禁                                     |
+| 上游同步覆盖定制                | 只选择性 cherry-pick                                   |
 
 ## 21. 明确不用的实现
 

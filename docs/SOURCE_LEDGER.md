@@ -211,6 +211,17 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 不使用 TNXG 旧公开仓库代码，不增加原需求没有的呼吸或点击互动。实现阶段只提取当前发布 bundle 中与滚动变换直接相关的最小片段；其他 Next.js 应用代码不复制。
 
+### 5.9 Astro Pure Opening Media 投影
+
+| 项目     | 值                                                                                                                                                                                                                         |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 台账 ID  | `PURE-OPENING-MEDIA`                                                                                                                                                                                                        |
+| 页面     | [`https://cworld0.com/blog/vscode-vim`](https://cworld0.com/blog/vscode-vim)；核验日期 2026-09-03                                                                                                                           |
+| 源码     | [`Hero.astro`](https://raw.githubusercontent.com/cworld1/astro-theme-pure/main/packages/pure/components/pages/Hero.astro)；上游仓库采用 Apache-2.0                                                                                       |
+| 实施     | 直接复用同源图片副本、`end-0 top-4`、`h-full max-w-[65ch] rounded-3xl opacity-60` 和 `blur(24px)`；本项目仅以 `data-*` 选择器替代全局 `id`、加入无障碍隐藏属性，并将原内联滚动阈值接入 ClientRouter 清理运行时 |
+
+原站脚本在滚动达到视口高度的 1/9、2/9、3/9 后将副本透明度设为 `.45/.3/.15`；没有额外 mask、缩放或颜色滤镜，也不在同一次页面内回滚透明度。Blog、Trace、Saying 三类详情页统一使用该变体；旧 `blur` 仅保留为显式回退，不属于首版基线。
+
 ## 6. LargeSkull 首版占位图锁
 
 下列图片只用于首版开发占位。实现阶段下载本地并复核哈希；正式发布前由用户资源替换。

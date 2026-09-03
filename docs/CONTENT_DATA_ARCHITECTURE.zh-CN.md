@@ -241,13 +241,13 @@ Blog 的 `BlogTextCardAdapter` 仍接收原始 Blog entry，是因为它需要 A
 
 | 页面          | PageData 组合                                                                                       | 内容来源/排序                          | 视觉边界                                                               |
 | ------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
-| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | Blog/Trace 按发布时间；Saying 按 id    | 现有随机 Saying、Blog 卡片、Trace Media、Timeline 不变            |
+| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | Blog/Trace 按发布时间；Saying 按 id    | 现有随机 Saying、Blog 卡片、Trace Media、Timeline 不变                 |
 | Blog 列表     | `content/items`                                                                                     | Blog 编辑日期倒序；独立 pageSize 分页  | 现有 Blog 卡片 DOM/CSS 不变                                            |
 | Blog 标签页   | `content/items`                                                                                     | Blog 编辑日期倒序后按 tag 筛选         | 与 Blog 列表相同，路由 `/blog/tags`                                    |
 | Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选        | 与 Trace 列表相同，路由 `/traces/tags`                                 |
 | Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选       | 与 Saying 列表相同，路由 `/sayings/tags`                               |
 | 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组          | 现有年份标题和卡片间距不变                                             |
-| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页 | 现有 Trace/Media 输出不变                                         |
+| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页 | 现有 Trace/Media 输出不变                                              |
 | Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页     | 现有装饰卡片输出不变                                                   |
 | 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                     | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
 | RSS           | 不渲染 PageData                                                                                     | Blog 编辑日期倒序                      | 保留原 RSS 字段和可选图片处理                                          |
@@ -315,7 +315,7 @@ src/lib/content-layer/
 - `ReadingHeaderData`：标题、描述、日期、阅读时间、语言、作用域标签、首图和引文等“有什么数据”。适配器在这里把三种 schema 的字段差异解释一次。
 - `ReadingPageConfig.background/header/footer/body`：阅读背景、首图及其附属模糊层、草稿标记、发布日期、更新时间、阅读时间、语言、标签、描述、评论信息、原文、署名、来源链接、分隔线、图片缩放、签名、版权、相关推荐和相邻导航等“当前页面是否展示”。
 
-页头有两个语义布局配方：`article`/`media-first-article` 和 `quote`。它们只负责内容顺序与语义；`ReadingBackground`、`ReadingStats`、`ReadingTags`、`ReadingDescription`、`ReadingOpeningMedia`、`ReadingOpeningMediaBackdrop`、`ReadingEngagement`、`ReadingDivider` 等能力组件负责可复用的局部输出。首图后的模糊层是 Opening Media 的可选附属能力，不属于 Blog 专属组件；当前 Blog 与 Trace 都使用 `layered-blur` 首图配方并开启 `backdrop: { mode: 'on', variant: 'blur' }`，Saying 保持关闭，未来任意类型都可以独立选择。
+页头有两个语义布局配方：`article`/`media-first-article` 和 `quote`。它们只负责内容顺序与语义；`ReadingBackground`、`ReadingStats`、`ReadingTags`、`ReadingDescription`、`ReadingOpeningMedia`、`ReadingOpeningMediaBackdrop`、`ReadingEngagement`、`ReadingDivider` 等能力组件负责可复用的局部输出。首图后的模糊层是 Opening Media 的可选附属能力，不属于某一种内容类型；当前 Blog、Trace 和 Saying 都使用 `layered-blur` 首图配方并开启 `backdrop: { mode: 'on', variant: 'projected-blur' }`。该变体直接复用 Astro Pure `Hero.astro` 的结构：同源第二张图片使用 `end-0 top-4` 右对齐并向下偏移、`rounded-3xl`、`opacity-60` 和 `blur(24px)`；运行时按原站的 `.6 → .45 → .3 → .15` 三个滚动阈值降阶，避免额外 mask、缩放或颜色滤镜。旧 `blur` 变体保留为显式回退。缺少首图的数据仍然不伪造媒体，能力会在渲染边界自动隐藏。
 
 阅读背景由 `ContentReadingShell` 决策、由 `BaseLayout` 的根层命名插槽承载。当前 `gradient` 变体复刻原有蓝色渐变的节点位置、层级、透明度和 CSS 变量；以后新增背景只需扩展 `ReadingBackgroundVariant` 和对应渲染器，不需要把背景重新塞回全局布局。非 Reading 页面仍保留 `BaseLayout` 原有的 `highlightColor` 回退行为。
 
@@ -331,7 +331,7 @@ export const readingPageConfig = {
         openingMedia: {
           mode: 'on',
           variant: 'standard',
-          backdrop: { mode: 'on', variant: 'blur' }
+          backdrop: { mode: 'on', variant: 'projected-blur' }
         },
         readingTime: 'on'
       },

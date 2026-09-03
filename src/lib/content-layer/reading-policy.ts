@@ -28,7 +28,7 @@ export type ReadingHeaderLayout = 'article' | 'media-first-article' | 'quote'
 export type ReadingMediaVariant = 'standard' | 'layered-blur'
 
 /** Backdrop implementations attached to opening media, rather than to a type. */
-export type ReadingOpeningMediaBackdropVariant = 'blur'
+export type ReadingOpeningMediaBackdropVariant = 'blur' | 'projected-blur'
 
 export interface ReadingOpeningMediaBackdropConfig {
   readonly mode: ReadingFeatureMode
@@ -210,7 +210,7 @@ const baselineReadingPages: Record<ReadingDetailPageKind, ReadingPageDefaults> =
       layout: 'media-first-article',
       metadataVariant: 'blog',
       openingMedia: {
-        backdrop: { mode: 'on', variant: 'blur' },
+        backdrop: { mode: 'on', variant: 'projected-blur' },
         mode: 'auto',
         variant: 'layered-blur'
       },
@@ -236,7 +236,7 @@ const baselineReadingPages: Record<ReadingDetailPageKind, ReadingPageDefaults> =
       commentInfo: 'auto',
       description: { mode: 'auto', variant: 'quoted' },
       openingMedia: {
-        backdrop: { mode: 'on', variant: 'blur' },
+        backdrop: { mode: 'on', variant: 'projected-blur' },
         mode: 'auto',
         variant: 'layered-blur'
       },
@@ -262,9 +262,9 @@ const baselineReadingPages: Record<ReadingDetailPageKind, ReadingPageDefaults> =
       layout: 'quote',
       metadataVariant: 'article',
       openingMedia: {
-        backdrop: { mode: 'off', variant: 'blur' },
+        backdrop: { mode: 'on', variant: 'projected-blur' },
         mode: 'auto',
-        variant: 'standard'
+        variant: 'layered-blur'
       },
       publishedDate: 'off',
       quoteAttribution: 'auto',
@@ -398,7 +398,10 @@ export function validateReadingPageConfig(config: ReadingPageConfig): string[] {
   const validRelatedVariants = new Set<ReadingRelatedVariant>(['article-bottom', 'cards'])
   const validBackgroundVariants = new Set<ReadingBackgroundVariant>(['gradient'])
   const validMediaVariants = new Set<ReadingMediaVariant>(['standard', 'layered-blur'])
-  const validBackdropVariants = new Set<ReadingOpeningMediaBackdropVariant>(['blur'])
+  const validBackdropVariants = new Set<ReadingOpeningMediaBackdropVariant>([
+    'blur',
+    'projected-blur'
+  ])
   const errors: string[] = []
 
   if (!validRelatedVariants.has(config.footer.relatedVariant)) {
