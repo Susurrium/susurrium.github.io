@@ -1,9 +1,10 @@
 # Owner Confirmation Record
 
-> 记录日期：2026-09-02（Asia/Shanghai）｜确认人：Susurrium｜状态：`OWNER_CONFIRMED`
+> 记录日期：2026-09-02（Asia/Shanghai）｜确认人：Susurrium｜状态：`OWNER_CONFIRMED`｜性质：发布准备阶段的历史决定记录
 
 本文件是发布准备树的可追溯决定账本。它把站长确认工作单中的决定映射到仓库
-实现，但不等同于 GitHub push、合并到 `main`、GitHub Pages 部署或任何线上授权。
+实现；相关候选后来已经合并并发布。本文件继续作为内容、隐私、素材和授权边界的
+历史证据，不等同于对未来新增内容的自动授权。
 
 ## 1. 证据来源
 
@@ -77,8 +78,9 @@ Residence 决定为 `PUBLIC_LOCATION_PRECISION: CITY`：仅公开当前配置的
 
 ## 3. 实施边界与剩余授权
 
-本记录授权的范围仅是：在本地 `develop` / `codex/release-prep` 候选树中写入上述
-内容、保留已确认公开粒度、排除明确生成物，并运行完整验证。它不授权：
+本记录当时授权的范围仅是：在本地 `develop` / `codex/release-prep` 候选树中写入上述
+内容、保留已确认公开粒度、排除明确生成物，并运行完整验证。该范围已随发布准备
+阶段结束而关闭；它不构成未来内容的自动授权：
 
 - push 到任何远端、合并到 `main`、修改 Pages 设置或部署；
 - 删除/覆盖外部快照、隔离区、历史 bundle；

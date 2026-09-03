@@ -1,8 +1,8 @@
 # 最终内容替换与 GitHub Pages 发布交接
 
-> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：生产基线 `main@26acfc2` 已发布到 GitHub Pages；`develop` 已同步到同一生产基线。站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)，这里只处理后续内容与功能变更。
+> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：生产基线 `main@7993411` 已发布到 GitHub Pages；`develop` 已同步到同一生产基线。站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)，这里只处理后续内容与功能变更。
 
-这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前候选的 Blog/Trace 集合为空，站长已明确 93 个历史内容全部不恢复，原始内容继续在仓库外快照/bundle 中保留。后续若新增资料或要求恢复内容，必须在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md) 之外新增逐项决定，再通过既有门禁验证。
+这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前生产基线的 Blog/Trace 集合为空，站长已明确 93 个历史内容全部不恢复，原始内容继续在仓库外快照/bundle 中保留。后续若新增资料或要求恢复内容，必须在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md) 之外新增逐项决定，再通过既有门禁验证。
 
 ## 1. 必须由站长提供或确认的资料
 
@@ -19,7 +19,7 @@
 
 `src/site.config.ts` 已切换到当前站点身份（`Susurrium`）。后续若要更换最终身份资料，不要只改首页标题：配置中的 `theme.title`、`author`、`description`、`logo`、`footer`、`integ.links.applyTip` 需要一起更新，并重新运行构建与严格门禁。
 
-Home 图库已按当前候选清单完成一次本地化：源目录为 `E:\UserData\Desktop\blog_image`，54 张图片均已转为 `public/images/home-media/*.webp` 并登记在 `src/data/home-media.ts`。当前 Hero 顺序为 `1381117 → 43935854 → 949729 → 725406 → 986446 → 556375`；Saying 使用 34 张、Trace 无图回退使用 20 张。站长已在 owner 工作单确认当前媒体范围；来源/许可证据仍按 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) 留档。
+Home 图库已按当前生产基线清单完成一次本地化：源目录为 `E:\UserData\Desktop\blog_image`，54 张图片均已转为 `public/images/home-media/*.webp` 并登记在 `src/data/home-media.ts`。当前 Hero 顺序为 `1381117 → 43935854 → 949729 → 725406 → 986446 → 556375`；Saying 使用 34 张、Trace 无图回退使用 20 张。站长已在 owner 工作单确认当前媒体范围；来源/许可证据仍按 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) 留档。
 
 ## 2. 内容与卡片规则
 
@@ -81,4 +81,4 @@ bun run release:gate
 4. 当前 workflow 仍是手动触发，并会在上传产物前再次执行 `release:gate`；合并到 `main` 后必须在 Actions 手动运行 `Deploy to GitHub Pages`。若以后启用自动部署，应保留 `workflow_dispatch` 并只增加 `push → branches: [main]`，不添加 PR 或 `schedule`。
 5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、文章详情、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
 
-发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](./DEVELOPMENT.md)、[准备状态](./PREPARATION_STATUS.md)、[视觉基线](./VISUAL_BASELINE.md) 与 [来源台账](./SOURCE_LEDGER.md)。
+发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./archive/IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](./DEVELOPMENT.md)、[准备状态](./archive/PREPARATION_STATUS.md)、[视觉基线](./VISUAL_BASELINE.md) 与 [来源台账](./SOURCE_LEDGER.md)。

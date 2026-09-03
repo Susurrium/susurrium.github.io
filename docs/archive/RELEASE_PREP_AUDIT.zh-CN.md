@@ -1,8 +1,10 @@
 # Release-prep 候选树审计记录
 
-> 本文件记录 `codex/release-prep` 的本地发布准备候选，不代表已经获得线上发布授权。站长的个人资料、媒体/链接授权、公开位置粒度和内容取舍已记录在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)；最终审计、验证和本地可审计提交已经完成，仍未授权推送或部署。历史分支、checkpoint 与工作树的完整对账以 [BRANCH_STATE_RECONCILIATION.zh-CN.md](./BRANCH_STATE_RECONCILIATION.zh-CN.md) 为准。
+> 归档说明：本文档只保存发布准备阶段的历史审计证据，不作为当前发布状态或分支操作指南。当前流程以 [DEVELOPMENT.md](../DEVELOPMENT.md) 为准。
 
-> **历史记录说明（2026-09-03）**：上段描述属于发布准备阶段。之后生产基线已合并为 `main@26acfc2` 并成功部署，`develop` 也已同步；本文件保留原始审计证据，不作为当前发布状态说明。
+> 本文件记录 `codex/release-prep` 的本地发布准备候选，不代表已经获得线上发布授权。站长的个人资料、媒体/链接授权、公开位置粒度和内容取舍已记录在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](../OWNER_CONFIRMATION_RECORD.zh-CN.md)；最终审计、验证和本地可审计提交已经完成，仍未授权推送或部署。历史分支、checkpoint 与工作树的完整对账以 [BRANCH_STATE_RECONCILIATION.zh-CN.md](./BRANCH_STATE_RECONCILIATION.zh-CN.md) 为准。
+
+> **历史记录说明（2026-09-03）**：上段描述属于发布准备阶段。之后生产基线已合并为 `main@7993411` 并成功部署，`develop` 也已同步；本文件保留原始审计证据，不作为当前发布状态说明。
 
 ## 1. 范围与不可变边界
 
@@ -55,7 +57,7 @@
 
 - Residence 候选仅公开北京城市级坐标（39.9, 116.4），并在数据与测试中锁定 `publicPrecision: 'city'`；该粒度已由站长确认，不会把约 10 米级坐标写入新的候选提交。
 - 站点身份、学校、社交链接、Waline、友链和收款二维码等当前候选资料已由 owner 工作单确认；未来新增资料仍需新的决定。
-- Home 图库、favicon、头像、二维码、`tracer-companion.webp`、Paralines 和当前字体的 owner 决定已记录，但第三方来源/许可证说明仍保留在 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)；项目 Apache-2.0 不被误读为素材许可证。
+- Home 图库、favicon、头像、二维码、`tracer-companion.webp`、Paralines 和当前字体的 owner 决定已记录，但第三方来源/许可证说明仍保留在 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md)；项目 Apache-2.0 不被误读为素材许可证。
 - `scripts/check-links.mjs` 默认模式会写两个文件；候选流程只运行 `--dry-run`，部署 workflow 不再执行有副作用的检查。`public/links.json` 是人工快照，不由 CI 自动提交。
 
 ## 4. 验证记录
@@ -76,7 +78,7 @@
 本机未安装 `agent-browser` CLI；浏览器验收使用仓库 CI 同等的生产 preview、隔离
 Edge Chrome CDP 和项目内浏览器脚本。脚本覆盖打开、等待、DOM 快照、交互、网络/
 生命周期断言和关闭服务；视觉采集另记录完整上下游截图和 shell 量测，结果已写入
-本表及 [`VISUAL_BASELINE.md`](./VISUAL_BASELINE.md)。
+本表及 [`VISUAL_BASELINE.md`](../VISUAL_BASELINE.md)。
 
 构建日志中关于 `src/content/docs/` 基目录不存在以及 Blog/Trace collection 为空的提示是本候选“正式支持空集合”策略的预期非阻断信息；它们不属于 Astro check 诊断，也不会使 CI 或严格门禁失败。
 
@@ -94,4 +96,4 @@ Edge Chrome CDP 和项目内浏览器脚本。脚本覆盖打开、等待、DOM 
 
 候选提交正文已包含基线 SHA、纳入/排除类别、owner 决定、验证命令和“不 push/不部署”声明；验证 worktree 已完全重建，严格门禁和浏览器回归均通过，最终 refs 与 bundle 已核对并封存。线上发布仍需另行明确批准部署开关和远端操作。
 
-本轮 owner 决定的完整逐项记录见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)。
+本轮 owner 决定的完整逐项记录见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](../OWNER_CONFIRMATION_RECORD.zh-CN.md)。
