@@ -1,6 +1,6 @@
 # 最终内容替换与 GitHub Pages 发布交接
 
-> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：`codex/release-prep` 候选已完成最终本地验证和可审计提交，尚未上线；站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)，这里只处理其后续变更。
+> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：生产基线 `main@26acfc2` 已发布到 GitHub Pages；`develop` 已同步到同一生产基线。站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)，这里只处理后续内容与功能变更。
 
 这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前候选的 Blog/Trace 集合为空，站长已明确 93 个历史内容全部不恢复，原始内容继续在仓库外快照/bundle 中保留。后续若新增资料或要求恢复内容，必须在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md) 之外新增逐项决定，再通过既有门禁验证。
 
@@ -55,9 +55,9 @@ Links 的 Friend Circle 已关闭：页面不输出标题、空占位区、状�
 
 ## 4. 逐项替换顺序
 
-1. 在 `codex/release-prep` 或其后继分支替换站点身份和静态页面；当前候选不纳入历史 Blog/Trace/Saying 内容与旧聚合路由，93 个真实历史内容已按 owner 决定全部不恢复，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料和二维码若发生新增变更，必须先建立新的逐项 owner 记录。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
+1. 从最新 `develop` 创建 `codex/<topic>` 分支替换站点身份、静态页面或内容；当前发布基线不纳入历史 Blog/Trace/Saying 内容与旧聚合路由，93 个真实历史内容已按 owner 决定全部不恢复，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料、居住地和二维码若发生新增或精度变化，必须先建立新的逐项 owner 记录。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
 2. 本次图库已完成本地化；若后续继续替换，请在 `public/images/home-media/` 生成同源 WebP，并同步更新 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使复用同一批图，也要保持独立，避免一次替换误伤另一种卡片策略。Media 的装饰斜边参考由 `src/data/home-media.ts` 的 `cardCutSideByFilename` 按文件名固定，不要恢复按索引奇偶交替。图片源内容的保留侧不能再从斜边方向推断；请使用本地 `/tools/card-crop-review` 统一裁剪工作台逐张拖动/缩放与正式卡片同步的两个斜边框，确认后导出 JSON，并用 `scripts/apply-card-crops.mjs` 应用到 `src/data/card-crop-selections.generated.ts`。未确认的图继续使用安全回退。
-3. 填写居住地并确认公共音乐配置；确认音频不自动播放，只在用户点击后播放。
+3. 填写居住地并确认公共音乐配置；居住地默认只公开城市级精度，任何区域/街道级展示都必须先取得新的明确确认。确认音频不自动播放，只在用户点击后播放。
 4. 运行下方的完整验证。候选验证必须在干净 worktree 中执行 `bun run ci`、`bun run links:check:dry` 和 `bun run release:gate --strict`；不要把最终资料写入白名单，也不要删除检查来“通过”。
 5. 人工浏览 `/`、`/home`、Blog/Trace/Saying 详情、`/about`、`/links`、移动端和暗色主题，确认自己的图、文案、坐标和链接均符合预期。
 
@@ -76,9 +76,9 @@ bun run release:gate
 只有这三项完成且站长明确授权上线后，才执行发布动作：
 
 1. 复核 `git status`，只暂存本次已审核的文件。
-2. 合并并推送已验证的提交到 `main`。
-3. 在 GitHub 仓库 Settings → Pages 中选择 **GitHub Actions**。
-4. 当前 workflow 仍是手动触发，并会在上传产物前再次执行 `release:gate`，测试资料无法被误发。若决定启用后续自动部署，保留 `workflow_dispatch` 并只增加 `push → branches: [main]`；现有预检与 Phase 6 已支持这种最终状态，首版始终不添加 PR 或 `schedule`。
-5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
+2. 通过 PR 将已验证的 `codex/<topic>` 合并到 `develop`，再通过发布 PR 合并到 `main`。
+3. 在 GitHub 仓库 Settings → Pages 中确认发布源为 **GitHub Actions**。
+4. 当前 workflow 仍是手动触发，并会在上传产物前再次执行 `release:gate`；合并到 `main` 后必须在 Actions 手动运行 `Deploy to GitHub Pages`。若以后启用自动部署，应保留 `workflow_dispatch` 并只增加 `push → branches: [main]`，不添加 PR 或 `schedule`。
+5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、文章详情、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
 
 发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](./DEVELOPMENT.md)、[准备状态](./PREPARATION_STATUS.md)、[视觉基线](./VISUAL_BASELINE.md) 与 [来源台账](./SOURCE_LEDGER.md)。

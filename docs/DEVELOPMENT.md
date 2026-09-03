@@ -143,13 +143,73 @@ bun run ci
 
 ## 3. 分支
 
-- `main`：生产。
-- `develop`：首版集成。
-- `feat/<name>`：功能。
-- `fix/<name>`：修复。
-- `chore/<name>`：工程维护。
+- `main`：生产分支，只接收经过验证的发布合并。
+- `develop`：集成分支，必须包含当前生产基线；所有日常功能和文章分支都从这里创建。
+- `codex/*`：短生命周期的功能、文章、修复、同步或文档分支，完成后通过 PR 合并并清理。
+- `upstream`：Arthals-Ink 的只读参考源，不直接合并未经审阅的代码。
 
-功能分支从 `develop` 创建，完成后合并回 `develop`。正式发布时再将 `develop` 合并到 `main`。
+分支关系固定为：
+
+```text
+main（生产）
+  ↑ 经过验证的发布 PR
+develop（集成，始终不落后于生产）
+  ↑ 功能/文章 PR
+codex/<topic>（短生命周期工作分支）
+```
+
+### 3.1 基线收敛
+
+如果 `develop` 曾落后于已发布的 `main`，先将生产基线同步回 `develop`，再开始新的功能开发。共享分支不要 rebase、force-push 或 reset：
+
+```powershell
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git switch -c codex/sync-production-baseline origin/develop
+git merge --ff-only origin/main
+git push -u origin codex/sync-production-baseline
+```
+
+创建 `codex/sync-production-baseline → develop` 的 PR，等待 CI 通过后合并。若仓库明确允许直接快进更新，也可以在确认工作树干净后将同一快进提交推送到 `develop`。完成后确认：
+
+```powershell
+git fetch origin
+git rev-list --left-right --count origin/develop...origin/main
+```
+
+结果应为 `0 0`，表示开发和生产没有基线差异。已合并且没有独有提交的旧分支可以先保留归档，确认无误后再使用安全删除：
+
+```powershell
+git branch -d codex/<merged-topic>
+git push origin --delete codex/<merged-topic>
+```
+
+删除前必须先检查 `git log origin/main..origin/<merged-topic>` 为空；任何仍有独有提交的分支都不得删除。
+
+### 3.2 日常开发
+
+```powershell
+git fetch origin
+git switch develop
+git pull --ff-only origin develop
+git switch -c codex/<topic>
+
+# 开发和本地预览
+bun run dev
+
+# 提交前验证
+bun run ci
+bun run release:gate --strict
+bun run links:check:dry
+
+git status
+git add <明确需要提交的文件>
+git commit -m "feat: describe change"
+git push -u origin codex/<topic>
+```
+
+功能分支通过 PR 合并到 `develop`。当前 CI 对 `develop`/`main` 的 push 和针对这两个分支的 PR 执行；功能分支单独 push 不等于已经完成 CI，因此应始终创建 PR。
 
 ## 4. 提交边界
 
@@ -199,15 +259,37 @@ git log --oneline --decorate develop..upstream/main
 
 ## 8. 部署
 
-准备阶段的 Pages workflow 只有手动触发。
+当前生产地址是 `https://susurrium.github.io/`，部署平台是 GitHub Pages，不是 Vercel。生产发布链路为：
 
-正式发布前：
+```text
+codex/<topic>
+  → PR 合并到 develop
+  → PR 合并到 main
+  → main push 触发 CI
+  → Actions 手动运行 Deploy to GitHub Pages
+  → 验证线上页面
+```
 
-1. 替换个人内容和资源。
-2. 运行 `bun run ci` 和 `bun run release:gate`，清除所有严格门禁项；Pages workflow 也会在上传产物前再次运行严格门禁，不能依赖人工跳过。
-3. 本地验证深层路由、404、RSS、sitemap 和减少动画。
-4. 获得上线确认后，保留 `workflow_dispatch` 并将 deploy workflow 增加 `push → branches: [main]`；现有预检与 Phase 6 已只允许这种自动触发形式，仍禁止 PR 与 `schedule`。
-5. 将已验证提交合并、推送到 `main`，在仓库 Settings → Pages 选择 **GitHub Actions**，并验证实际部署 URL。
+### 8.1 发布文章或功能
+
+1. 从最新 `develop` 创建 `codex/<topic>` 分支。
+2. Blog 文件放在 `src/content/blog/`；Trace 放在 `src/content/traces/`；Saying 放在 `src/content/sayings/`。schema 和字段约束以 `src/content.config.ts` 为准。
+3. 正式内容使用 `draft: false`；Blog 必须有 `title`、`description`、`publishDate`；Trace 设置 `cover` 时必须同时设置 `coverAlt`。
+4. 图片、音频、视频优先使用仓库内资源，并检查正文没有未登记的远程媒体。
+5. 本地运行 `bun run ci`、`bun run release:gate --strict` 和 `bun run links:check:dry`。
+6. 提交并推送分支，创建 `codex/<topic> → develop` PR；CI 和人工预览通过后合并。
+7. 创建 `develop → main` 发布 PR；合并前再次核对 `git status`、内容、素材权利和个人公开信息。
+
+### 8.2 GitHub Pages 发布
+
+当前 `.github/workflows/deploy.yml` 保留 `workflow_dispatch`，所以 `main` push 不会自动部署。合并到 `main` 后：
+
+1. 确认 `CI` 的 `validate` 和 `browser-regression` 成功。
+2. 在 GitHub Actions 选择 `Deploy to GitHub Pages`，点击 **Run workflow**，选择 `main`。
+3. 等待 workflow 内的 `bun run ci` 和严格 `bun run release:gate` 通过；严格门禁失败时不得绕过。
+4. 验证 `/`、`/home`、文章详情、标签、归档、`/404`、`/rss.xml`、sitemap、移动端、暗色主题和关键第三方运行时。
+
+如以后需要合并即自动上线，才在保留 `workflow_dispatch` 的同时增加 `push → branches: [main]`；不得添加 PR 或 `schedule` 部署触发。自动发布前应先启用 `main` 分支保护，要求 PR、CI 状态检查和禁止 force-push。
 
 首版不创建 `schedule`。
 

@@ -2,7 +2,7 @@
 
 Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongde/Arthals-Ink) 的真实 Fork 开发。站点主体延续 Arthals 的视觉与架构，并在独立开发阶段接入已确认的入口动画、三类内容、三类卡片和装饰效果。
 
-当前状态：`codex/release-prep` 正在固化为可审计的本地候选基线（目前与 `develop` 同一提交）。当前候选可在空 Blog/Trace 集合下构建，尚未对外上线；素材权利、个人资料和最终内容仍需站长单独确认。历史分支、checkpoint 与工作树的逐路径对账见 [分支/检查点对账报告](./docs/BRANCH_STATE_RECONCILIATION.zh-CN.md)。
+当前状态：生产版本已经发布到 GitHub Pages，远程 `main`、`develop` 均已收敛到生产提交 `26acfc2`。当前发布基线包含 5 篇 Saying，Blog/Trace 仍为空集合；后续正式文章按本文档和 [开发、验证与 Git 流程](./docs/DEVELOPMENT.md) 进入发布链路。`codex/site-optimization` 仍保留两项尚未进入生产的居住地/首页改动，需单独审阅。历史分支、checkpoint 与工作树的逐路径对账见 [分支/检查点对账报告](./docs/BRANCH_STATE_RECONCILIATION.zh-CN.md)。
 
 ## 锁定基线
 
@@ -33,11 +33,12 @@ bun run ci
 
 ## 分支
 
-- `main`：保留为生产分支。
-- `develop`：首版集成分支。
-- 功能分支：从 `develop` 创建。
+- `main`：生产分支，只接收经过验证的发布合并。
+- `develop`：集成分支，必须保持包含当前生产基线。
+- `codex/*`：短生命周期的功能、文章、修复或文档分支，完成后通过 PR 合并并清理。
+- `upstream`：Arthals-Ink 只读参考源，不直接合并未经审阅的代码。
 
-当前部署工作流只允许手动触发，不监听 `main` push，也没有定时任务；上传 Pages 产物前强制执行 `release:gate`。链接健康检查仅作为人工 `links:check:dry` 工具，候选不包含会自动 commit/push 的 workflow。最终发布清单通过且获得你的上线确认后，才启用自动发布并在 GitHub Pages 中完成实际部署设置。
+当前 GitHub Pages 部署工作流保留 `workflow_dispatch`，因此 `main` push 会触发 CI，但不会自动发布；需要在 Actions 中手动运行 `Deploy to GitHub Pages`。部署前强制执行 `bun run ci` 和严格 `release:gate`。链接健康检查仅使用人工 `links:check:dry`，不会自动 commit/push。
 
 ## 许可与来源
 

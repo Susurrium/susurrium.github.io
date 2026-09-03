@@ -2,6 +2,8 @@
 
 > 本文件记录 `codex/release-prep` 的本地发布准备候选，不代表已经获得线上发布授权。站长的个人资料、媒体/链接授权、公开位置粒度和内容取舍已记录在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)；最终审计、验证和本地可审计提交已经完成，仍未授权推送或部署。历史分支、checkpoint 与工作树的完整对账以 [BRANCH_STATE_RECONCILIATION.zh-CN.md](./BRANCH_STATE_RECONCILIATION.zh-CN.md) 为准。
 
+> **历史记录说明（2026-09-03）**：上段描述属于发布准备阶段。之后生产基线已合并为 `main@26acfc2` 并成功部署，`develop` 也已同步；本文件保留原始审计证据，不作为当前发布状态说明。
+
 ## 1. 范围与不可变边界
 
 | 项目 | 决定 |

@@ -1,5 +1,7 @@
 # 开发前准备状态
 
+> 历史记录说明：本文档记录发布前的准备阶段，不代表当前线上状态。生产基线 `main@26acfc2` 已发布到 GitHub Pages，`develop` 已同步到该基线；当前日常开发请以 [DEVELOPMENT.md](./DEVELOPMENT.md) 为准。
+
 > 记录范围：Phase 0 准备阶段（历史快照，截至 2026-08-27）｜当前 release-prep 候选以本文件 §10 和 [RELEASE_PREP_AUDIT.zh-CN.md](./RELEASE_PREP_AUDIT.zh-CN.md) 为准。
 
 ## 当前 release-prep 候选（2026-09-02）

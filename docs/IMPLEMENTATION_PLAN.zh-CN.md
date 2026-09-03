@@ -1,13 +1,15 @@
 # Susurrium 博客重构实施方案
 
-> 状态：Phase 0–5 已完成；Phase 6 的本地审计实现已完成，正式上线待最终资料与确认｜方案版本：1.1｜冻结日期：2026-08-27｜适用仓库：`Susurrium/susurrium.github.io`
+> 状态：Phase 0–6 已完成，生产基线 `main@26acfc2` 已发布；后续内容和功能变更遵循 [DEVELOPMENT.md](./DEVELOPMENT.md)｜方案版本：1.1｜冻结日期：2026-08-27｜适用仓库：`Susurrium/susurrium.github.io`
 > 上游基线：`zhuozhiyongde/Arthals-Ink@15f5ad110af8ed8f38a1e506dd890d2d921f118f`
 
-> **当前 release-prep 记录（2026-09-02）**：候选分支为 `codex/release-prep`，从本机
+> **发布准备历史记录（2026-09-02）**：候选分支为 `codex/release-prep`，从本机
 > `8b05952ca54ca32843cdbbcc2f815b6d61a5a9be` 固化。Blog/Trace 空集合是当前受测试覆盖的
 > 合法状态；历史内容与旧聚合路由暂不纳入当前候选并在仓库外快照/bundle 中保留，真实内容
 > 是否恢复以 `docs/BRANCH_STATE_RECONCILIATION.zh-CN.md` 的逐项确认结果为准。候选尚未 push 或
 > deploy。纳入、排除、隐私和素材权利决定以 `docs/RELEASE_PREP_AUDIT.zh-CN.md` 为准。
+
+> **当前流程说明**：生产和开发基线已于 2026-09-03 收敛到 `26acfc2`；当前 Pages workflow 仍为手动触发。后续不要从已归档的 `codex/release-prep` 创建分支，统一从最新 `develop` 创建 `codex/*` 工作分支。
 
 ## 1. 文档作用
 
