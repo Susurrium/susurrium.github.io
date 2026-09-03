@@ -14,9 +14,13 @@ import config from '@/site-config'
       const pageview = await import(`${npmCDN}/@waline/client@v3/dist/pageview.js`)
       const el = document.querySelector('.waline-pageview-count')
       if (el) {
+        // PageInfo exposes the canonical path used by comments and counts.
+        // Keep a defensive fallback for standalone use of this component.
+        const rawPath = el.getAttribute('data-path') || window.location.pathname
+        const path = rawPath === '/' ? '/' : rawPath.replace(/\/+$/, '') || '/'
         pageview.pageviewCount({
           serverURL: walineServer,
-          path: window.location.pathname
+          path
         })
       }
     } catch (e) {

@@ -1,5 +1,6 @@
 ---
 import config from '@/site-config'
+import { normalizeWalinePath } from '@/lib/waline-path'
 
 import '@waline/client/style'
 
@@ -10,7 +11,7 @@ const { class: className } = Astro.props
 
 {
   config.integ.waline.enable && (
-    <comment-component>
+    <comment-component data-waline-path={normalizeWalinePath(Astro.url.pathname)}>
       <div id='waline' class={cn('not-prose', className)}>
         Comment seems to stuck. Try to refresh?✨
       </div>
@@ -41,13 +42,15 @@ const { class: className } = Astro.props
       const emoji = walineConfig.emoji?.map(
         (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
       )
+      const path = this.dataset.walinePath || window.location.pathname.replace(/\/+$/, '') || '/'
 
       walineInit({
         el: '#waline',
         serverURL: walineConfig.server || '',
         emoji,
         reaction: ['/icons/heart-item.svg'],
-        ...walineConfig.additionalConfigs
+        ...walineConfig.additionalConfigs,
+        path
       })
     }
   }
