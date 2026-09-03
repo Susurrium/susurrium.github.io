@@ -106,11 +106,15 @@ expect(
 )
 expect(
   residenceData.includes("publicPrecision: 'city'") &&
+    residenceData.includes("displayName: '北京 · 海淀'") &&
+    residenceData.includes("label: '北京 · 海淀'") &&
     residenceData.includes('latitude: 39.9') &&
     residenceData.includes('longitude: 116.4') &&
     !residenceData.includes('位置占位') &&
-    !residenceData.includes('海淀'),
-  'residence candidate exposes only city-level location copy and coordinates'
+    residenceData.includes('mapZoom: 8') &&
+    residenceData.includes('mapImageAlt:') &&
+    residenceController.includes('residence-district-labels'),
+  'residence candidate keeps city-level coordinates with a regional district-aware map'
 )
 expect(
   heatmap.includes("username = 'Susurrium'") &&
