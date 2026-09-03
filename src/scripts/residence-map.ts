@@ -6,6 +6,7 @@ import {
   shortestLongitudeFrom,
   type Coordinate,
 } from './residence-map-geometry';
+import { beijingDistrictLabels } from '@/data/beijing-district-labels';
 
 type MapLibreApi = typeof import('maplibre-gl');
 type MapInstance = import('maplibre-gl').Map;
@@ -189,6 +190,48 @@ function applyChineseMapLabels(map: MapInstance) {
   }
 }
 
+function addDistrictLabels(map: MapInstance) {
+  const sourceId = 'residence-district-labels';
+  const layerId = 'residence-district-labels';
+  if (map.getLayer(layerId)) return;
+
+  if (!map.getSource(sourceId)) {
+    map.addSource(sourceId, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: beijingDistrictLabels.map(({ name, longitude, latitude }) => ({
+          type: 'Feature' as const,
+          properties: { name },
+          geometry: {
+            type: 'Point' as const,
+            coordinates: [longitude, latitude],
+          },
+        })),
+      },
+    });
+  }
+
+  map.addLayer({
+    id: layerId,
+    type: 'symbol',
+    source: sourceId,
+    minzoom: 7,
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-size': 11,
+      'text-anchor': 'center',
+      'text-allow-overlap': false,
+      'text-ignore-placement': false,
+    },
+    paint: {
+      'text-color': isDarkTheme() ? '#d7dee7' : '#64707b',
+      'text-halo-color': isDarkTheme() ? '#182331' : '#f8faf9',
+      'text-halo-width': 1.25,
+    },
+  } as unknown as import('maplibre-gl').SymbolLayerSpecification);
+}
+
 function createAvatarMarker(
   api: MapLibreApi,
   map: MapInstance,
@@ -370,6 +413,7 @@ function setupResidenceScene(scene: HTMLElement) {
       }
       mapLoaded = true;
       applyChineseMapLabels(map);
+      addDistrictLabels(map);
       normalMarker = createNormalMarker(api, map, owner);
       scene.dataset.mapState = 'ready';
       map.resize();
@@ -679,7 +723,12 @@ function setupResidenceScene(scene: HTMLElement) {
       };
       mainStyleUrl = targetStyle;
       map.setStyle(targetStyle);
-      map.once('style.load', () => map?.jumpTo(camera));
+      map.once('style.load', () => {
+        if (!map) return;
+        applyChineseMapLabels(map);
+        addDistrictLabels(map);
+        map.jumpTo(camera);
+      });
     }
     if (globeMap && dialog?.dataset.globeState === 'ready' && targetStyle && targetStyle !== globeStyleUrl) {
       const camera = {

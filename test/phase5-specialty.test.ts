@@ -4,6 +4,7 @@ import {
   parseGitHubContributionHtml
 } from '../src/data/github-contributions'
 import { residence } from '../src/data/residence'
+import { beijingDistrictLabels } from '../src/data/beijing-district-labels'
 import {
   globeFitPaddingForDistance,
   globeFitZoomForDistance,
@@ -60,12 +61,17 @@ describe('Phase 5 SkyWT residence geometry', () => {
   test('keeps development location data and all runtime marker assets explicit', () => {
     expect(residence.city).toBe('北京')
     expect(residence.publicPrecision).toBe('city')
+    expect(residence.displayName).toBe('北京 · 海淀')
+    expect(residence.label).toBe('北京 · 海淀')
+    expect(residence.region).toBe('海淀')
+    expect(residence.mapZoom).toBe(8)
     expect(Math.abs(residence.latitude * 10 - Math.round(residence.latitude * 10))).toBe(0)
     expect(Math.abs(residence.longitude * 10 - Math.round(residence.longitude * 10))).toBe(0)
     expect(residence.label).not.toContain('位置占位')
-    expect(residence.label).not.toContain('海淀')
     expect(residence.mapStyle).toContain('basemaps.cartocdn.com')
     expect(residence.ownerAvatar).toBe('/media/residence/avatar.jpg')
     expect(residence.visitorAvatar).toBe('/media/residence/visitor-avatar.svg')
+    expect(beijingDistrictLabels).toHaveLength(16)
+    expect(beijingDistrictLabels.some(({ name }) => name === '海淀区')).toBe(true)
   })
 })
