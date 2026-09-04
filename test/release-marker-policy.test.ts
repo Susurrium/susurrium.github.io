@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   arthalsMarkerText,
+  isEditorialContentPage,
   manifestContainsArthalsFriend,
   stripAllowedArthalsFriend
 } from '../scripts/release-marker-policy.mjs'
@@ -26,6 +27,14 @@ const renderedFriend = arthalsMarkerText({
 })
 
 describe('strict release Arthals marker exception', () => {
+  test('does not audit editorial content detail pages for release markers', () => {
+    expect(isEditorialContentPage('blog/susurrium-blog-development/index.html')).toBe(true)
+    expect(isEditorialContentPage('traces/debug-session/index.html')).toBe(true)
+    expect(isEditorialContentPage('sayings/example/index.html')).toBe(true)
+    expect(isEditorialContentPage('about/index.html')).toBe(false)
+    expect(isEditorialContentPage('blog/tags/index.html')).toBe(false)
+  })
+
   test('requires the manifest-declared friend and strips only its exact fields on /links', () => {
     expect(manifestContainsArthalsFriend(linksManifest)).toBe(true)
     expect(

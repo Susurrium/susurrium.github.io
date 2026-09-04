@@ -9,6 +9,7 @@
 const ARTHALS_NAME = "Arthals' ink"
 const ARTHALS_LINK = 'https://arthals.ink/'
 const ARTHALS_AVATAR = 'https://cdn.arthals.ink/Arthals.png'
+const EDITORIAL_CONTENT_DETAIL_PATH = /^(?:blog|traces|sayings)\/[^/]+\/index\.html$/
 
 function decodeHtmlEntities(value) {
   return value
@@ -48,6 +49,15 @@ function manifestArthalsFriend(linksManifest) {
  */
 export function arthalsMarkerText({ visibleText, renderedAttributeText }) {
   return decodeHtmlEntities(`${visibleText} ${renderedAttributeText}`)
+}
+
+/**
+ * Editorial content is allowed to discuss upstream projects, identities, and
+ * other marker text as part of its published subject matter. Release marker
+ * checks remain active for site-owned pages and generated configuration.
+ */
+export function isEditorialContentPage(path) {
+  return EDITORIAL_CONTENT_DETAIL_PATH.test(path) && !path.includes('/tags/')
 }
 
 /**
