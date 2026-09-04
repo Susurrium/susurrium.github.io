@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'
 import {
   arthalsMarkerText,
+  isEditorialContentPage,
   stripAllowedArthalsFriend
 } from './release-marker-policy.mjs'
 
@@ -268,6 +269,11 @@ const contentDetailPages = htmlEntries.filter(({ path }) =>
   /^(?:blog|traces|sayings)\/[^/]+\/index\.html$/.test(path) &&
   !path.includes('/tags/')
 )
+// Published editorial content may mention upstream projects or other marker
+// text as part of its subject matter. Keep marker checks focused on
+// site-owned/generated pages while retaining structural and resource checks
+// for every HTML document, including article detail pages.
+const releaseMarkerEntries = htmlEntries.filter(({ path }) => !isEditorialContentPage(path))
 // A taxonomy result page has content cards too, but it is not a reading
 // document.  Require the reading-shell marker so pagination/taxonomy output
 // cannot be mistaken for an article and incorrectly fail the TOC audit.
@@ -489,7 +495,7 @@ const markerChecks = [
 ]
 
 for (const { label, pattern } of markerChecks) {
-  const matches = htmlEntries
+  const matches = releaseMarkerEntries
     .filter(({ path, text }) =>
       pattern.test(
         label === 'Arthals identity/configuration' || label === 'upstream Arthals domain references'
