@@ -1345,11 +1345,13 @@ try {
     media: 'screen',
     features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
   })
-  await delay(180)
+  // Wait for the media-query listener to actually tear down the frames.
+  // A fixed delay can expire before Chromium's next rendering update in CI.
+  const reducedEffects = await waitForEffects(cdp, [])
   const reduced = await readRouteState(cdp)
   expect(
-    frameKinds(reduced).length === 0 && reduced.lifecycle === 'reduced',
-    'reduced-motion disables the standard-page visual frames at runtime'
+    !reducedEffects.timedOut && frameKinds(reduced).length === 0 && reduced.lifecycle === 'reduced',
+    `reduced-motion disables the standard-page visual frames at runtime (lifecycle: ${reduced.lifecycle}, frames: ${frameKinds(reduced).join(',') || 'none'})`
   )
 
   await cdp.call('Emulation.setEmulatedMedia', {
