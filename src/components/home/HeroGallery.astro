@@ -70,6 +70,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
             class='hero-gallery__image-frame'
             imageClass={isEditor ? 'hero-crop-editor__image' : 'hero-gallery__image'}
             loading={index === 0 ? 'eager' : 'lazy'}
+            responsive={!isEditor}
             src={slide.src}
             transform={isEditor ? previewTransform : getHeroCropTransform(slide.src, 'desktop')}
             mobileTransform={
