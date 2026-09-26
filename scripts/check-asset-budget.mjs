@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { extname, resolve } from 'node:path'
+import { parse } from 'node-html-parser'
+
+import { createInitialAssetInspector } from './lib/initial-asset-budget.mjs'
 
 const root = resolve(process.cwd())
 const MiB = 1024 * 1024
@@ -16,6 +19,7 @@ const legacyFingerprints = new Set(
 if (legacyBudget.schemaVersion !== 1) failures.push('unsupported legacy asset budget schema')
 
 const mediaLimits = {
+  '.woff2': { recommended: 0.1 * MiB, hard: 0.2 * MiB },
   '.avif': { recommended: 0.5 * MiB, hard: 2 * MiB },
   '.gif': { recommended: 2 * MiB, hard: 10 * MiB },
   '.jpeg': { recommended: 0.5 * MiB, hard: 2 * MiB },
@@ -59,7 +63,7 @@ async function sha256(file) {
 
 const sourceFiles = (
   await Promise.all(
-    ['public', 'src/assets'].map((directory) => filesUnder(resolve(root, directory)))
+    ['public', 'src/assets', 'src/content'].map((directory) => filesUnder(resolve(root, directory)))
   )
 ).flat()
 const sourceFileMap = new Map(sourceFiles.map((file) => [relativePath(file), file]))
@@ -153,6 +157,41 @@ for (const file of distFiles) {
 const distBytes = (
   await Promise.all(distFiles.map(async (file) => (await stat(file)).size))
 ).reduce((sum, size) => sum + size, 0)
+
+// Count inline code and the local static JS/CSS dependency closure. Third-party
+// downloads, dynamic imports and lazy images require browser measurements.
+let maximumDocumentBytes = 0
+let maximumScriptBytes = 0
+let maximumStyleBytes = 0
+const inspectInitialAssets = createInitialAssetInspector(resolve(root, 'dist'), distFiles)
+for (const file of distFiles.filter((file) => extname(file) === '.html')) {
+  const document = await readFile(file)
+  const html = parse(document.toString('utf8'))
+  const { scripts, styles } = await inspectInitialAssets(
+    html,
+    `https://budget.invalid/${relativePath(file).slice(5)}`
+  )
+  maximumDocumentBytes = Math.max(maximumDocumentBytes, document.byteLength)
+  maximumScriptBytes = Math.max(maximumScriptBytes, scripts)
+  maximumStyleBytes = Math.max(maximumStyleBytes, styles)
+  for (const [kind, bytes, recommended, hard] of [
+    ['HTML', document.byteLength, 0.25 * MiB, 0.5 * MiB],
+    ['local initial JS (gzip)', scripts, 0.2 * MiB, 0.4 * MiB],
+    ['local initial CSS (gzip)', styles, 0.1 * MiB, 0.25 * MiB]
+  ]) {
+    if (bytes > hard)
+      failures.push(
+        `${relativePath(file)} ${kind} is ${formatMiB(bytes)}; hard limit ${formatMiB(hard)}`
+      )
+    else if (bytes > recommended)
+      warnings.push(
+        `${relativePath(file)} ${kind} is ${formatMiB(bytes)}; recommended maximum ${formatMiB(recommended)}`
+      )
+  }
+}
+console.log(
+  `Maximum per-page costs: HTML ${formatMiB(maximumDocumentBytes)}, local initial JS gzip ${formatMiB(maximumScriptBytes)}, local initial CSS gzip ${formatMiB(maximumStyleBytes)}.`
+)
 
 if (distBytes > 900 * MiB) {
   failures.push(`dist is ${formatMiB(distBytes)}; hard limit is 900 MiB`)

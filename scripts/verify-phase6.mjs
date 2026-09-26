@@ -1,5 +1,12 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { dirname, relative, resolve } from 'node:path'
+import { relative, resolve, sep } from 'node:path'
+
+import {
+  cssResourceUrls,
+  htmlDocument,
+  htmlResourceUrls,
+  normalizeResourceUrl
+} from './lib/resource-audit.mjs'
 import {
   arthalsMarkerText,
   isEditorialContentPage,
@@ -8,6 +15,7 @@ import {
 
 const root = resolve(process.cwd())
 const dist = resolve(root, 'dist')
+const site = 'https://susurrium.github.io'
 const strict = process.argv.includes('--strict')
 const showExternalDetails = process.argv.includes('--external-details')
 const failures = []
@@ -50,32 +58,16 @@ function filesUnder(directory) {
   })
 }
 
-function attribute(tag, name) {
-  const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(['\"])(.*?)\\1`, 'i'))
-  return match?.[2] ?? null
-}
-
-function absoluteResourceExists(htmlPath, url) {
-  const cleanUrl = url.split('#')[0]?.split('?')[0] ?? ''
-  if (
-    !cleanUrl ||
-    cleanUrl.startsWith('#') ||
-    /^(?:data|mailto|tel|javascript):/i.test(cleanUrl) ||
-    /^(?:https?:)?\/\//i.test(cleanUrl)
-  ) {
-    return true
-  }
-
-  const file = cleanUrl.startsWith('/')
-    ? resolve(dist, cleanUrl.replace(/^\/+/, ''))
-    : resolve(dirname(htmlPath), cleanUrl)
+function localResourceExists(url) {
+  const pathname = decodeURIComponent(url.pathname)
+  const file = resolve(dist, pathname.replace(/^\/+/, ''))
+  if (file !== dist && !file.startsWith(`${dist}${sep}`)) return false
   return existsSync(file) || existsSync(resolve(file, 'index.html'))
 }
 
 const allowedMusicRuntimePaths = new Set([
   '/anzhiyu-theme-static@1.0.0/aplayer/APlayer.min.css',
-  '/anzhiyu-blog-static@1.0.1/js/APlayer.min.js',
-  '/hexo-anzhiyu-music@1.0.1/assets/js/Meting2.min.js'
+  '/anzhiyu-blog-static@1.0.1/js/APlayer.min.js'
 ])
 
 const allowedUmamiRuntimePaths = new Set(['/script.js'])
@@ -118,20 +110,6 @@ function firstPaths(paths) {
   return paths.slice(0, 5).join(', ')
 }
 
-function resourceUrls(tag) {
-  const urls = [attribute(tag, 'src'), attribute(tag, 'href'), attribute(tag, 'poster')].filter(
-    Boolean
-  )
-  const srcset = attribute(tag, 'srcset')
-  if (srcset) {
-    for (const candidate of srcset.split(',')) {
-      const [url] = candidate.trim().split(/\s+/, 1)
-      if (url) urls.push(url)
-    }
-  }
-  return [...new Set(urls)]
-}
-
 function decodeHtmlEntities(value) {
   return value
     .replace(/&amp;/gi, '&')
@@ -160,10 +138,10 @@ function visibleText(html) {
 
 function renderedAttributeText(html) {
   const values = []
-  const tags = html.match(/<(?:a|img|audio|video|source|iframe|link|meta)\b[^>]*>/gi) ?? []
+  const tags = htmlDocument(html).querySelectorAll('a,img,audio,video,source,iframe,link,meta')
   for (const tag of tags) {
     for (const name of ['href', 'src', 'poster', 'alt', 'title', 'aria-label', 'content']) {
-      const value = attribute(tag, name)
+      const value = tag.getAttribute(name)
       if (value) values.push(value)
     }
   }
@@ -265,9 +243,9 @@ const htmlEntries = htmlFiles.map((file) => ({
   text: readFileSync(file, 'utf8')
 }))
 
-const contentDetailPages = htmlEntries.filter(({ path }) =>
-  /^(?:blog|traces|sayings)\/[^/]+\/index\.html$/.test(path) &&
-  !path.includes('/tags/')
+const contentDetailPages = htmlEntries.filter(
+  ({ path }) =>
+    /^(?:blog|traces|sayings)\/[^/]+\/index\.html$/.test(path) && !path.includes('/tags/')
 )
 // Published editorial content may mention upstream projects or other marker
 // text as part of its subject matter. Keep marker checks focused on
@@ -330,45 +308,66 @@ const missingLocalResources = []
 // `--external-details` prints the complete inventory for an audit pass.
 const externalRenderedResources = new Map()
 
+function auditResource(resource, path) {
+  let url
+  try {
+    url = normalizeResourceUrl(resource.url, new URL(`/${path}`, site))
+  } catch (error) {
+    missingLocalResources.push(`${path}: ${resource.url} (${error.message})`)
+    return
+  }
+  if (url.protocol === 'data:' || url.protocol === 'blob:') return
+  if (url.origin === site) {
+    if (!localResourceExists(url)) missingLocalResources.push(`${path}: ${resource.url}`)
+    return
+  }
+  const { tagName, kind } = resource
+  const approvedFriendAvatar = tagName === 'img' && isAllowedFriendAvatar(url.href)
+  const approved =
+    kind !== 'css' &&
+    url.protocol === 'https:' &&
+    (isAllowedExternalRuntime(url.href) || approvedFriendAvatar)
+  if (!approved) {
+    const key = `${tagName}:${url.hostname}`
+    const record = externalRenderedResources.get(key) ?? {
+      count: 0,
+      pages: new Set(),
+      urls: new Set()
+    }
+    record.count += 1
+    record.urls.add(url.href)
+    record.pages.add(path)
+    externalRenderedResources.set(key, record)
+  }
+}
+
 for (const entry of htmlEntries) {
-  for (const tag of entry.text.match(/<img\b[^>]*>/gi) ?? []) {
-    if (!/\balt(?:\s*=|\s|>)/i.test(tag)) missingImageAlt.push(entry.path)
+  const document = htmlDocument(entry.text)
+  for (const element of document.querySelectorAll('img')) {
+    if (!element.hasAttribute('alt')) missingImageAlt.push(entry.path)
   }
-
-  for (const tag of entry.text.match(/<a\b[^>]*>/gi) ?? []) {
+  for (const element of document.querySelectorAll('a')) {
     if (
-      attribute(tag, 'target') === '_blank' &&
-      !/\brel\s*=\s*(['"])[^'"]*\b(?:noopener|noreferrer)\b/i.test(tag)
-    ) {
+      element.getAttribute('target') === '_blank' &&
+      !/(?:^|\s)(?:noopener|noreferrer)(?:\s|$)/i.test(element.getAttribute('rel') ?? '')
+    )
       insecureBlankLinks.push(entry.path)
-    }
   }
+  try {
+    for (const resource of htmlResourceUrls(document)) auditResource(resource, entry.path)
+  } catch (error) {
+    fail(`${entry.path}: cannot parse rendered resources: ${error.message}`)
+  }
+}
 
-  for (const tag of entry.text.match(/<(?:script|link|img|audio|video|source|iframe)\b[^>]*>/gi) ??
-    []) {
-    for (const url of resourceUrls(tag)) {
-      if (!absoluteResourceExists(entry.file, url))
-        missingLocalResources.push(`${entry.path}: ${url}`)
-
-      if (/^https?:\/\//i.test(url)) {
-        const tagName = tag.match(/^<([a-z]+)/i)?.[1]?.toLowerCase()
-        const hostname = new URL(url).hostname
-        const sameOrigin = hostname === 'susurrium.github.io'
-        const approvedFriendAvatar = tagName === 'img' && isAllowedFriendAvatar(url)
-        if (!sameOrigin && !isAllowedExternalRuntime(url) && !approvedFriendAvatar) {
-          const key = `${tagName}:${hostname}`
-          const record = externalRenderedResources.get(key) ?? {
-            count: 0,
-            pages: new Set(),
-            urls: new Set()
-          }
-          record.count += 1
-          record.urls.add(url)
-          record.pages.add(entry.path)
-          externalRenderedResources.set(key, record)
-        }
-      }
-    }
+const generatedCss = filesUnder(dist).filter((file) => file.endsWith('.css'))
+for (const file of generatedCss) {
+  const path = relative(dist, file).replaceAll('\\', '/')
+  try {
+    for (const url of cssResourceUrls(readFileSync(file, 'utf8')))
+      auditResource({ tagName: 'style', kind: 'css', url }, path)
+  } catch (error) {
+    fail(`${path}: cannot parse CSS resources: ${error.message}`)
   }
 }
 
@@ -423,6 +422,10 @@ const walineServer =
   siteConfigSource.match(/waline:\s*{[\s\S]*?\bserver:\s*['"]([^'"]+)['"]/)?.[1] ?? ''
 const forbiddenClientApis = [
   {
+    label: 'legacy auto-loading Meting2 runtime',
+    pattern: /Meting2\.min\.js/i
+  },
+  {
     label: 'GitHub repository-card runtime API',
     pattern: /api\.github\.com\/repos\//i
   },
@@ -458,11 +461,10 @@ if (walineEnabled) {
   )
 }
 
-const generatedCss = filesUnder(dist).filter((file) => file.endsWith('.css'))
-const externalCssUrls = generatedCss.filter((file) =>
-  /(?:url\(\s*|@import\s+(?:url\()?\s*['"]?)https?:\/\//i.test(readFileSync(file, 'utf8'))
+expect(
+  ![...externalRenderedResources.keys()].some((key) => key.startsWith('style:')),
+  'generated CSS does not hotlink or import external assets'
 )
-expect(externalCssUrls.length === 0, 'generated CSS does not hotlink or import external assets')
 
 const residenceSource = readFileSync(resolve(root, 'src/data/residence.ts'), 'utf8')
 const residenceUrls = residenceSource.match(/https:\/\/[^'"\s]+/g) ?? []

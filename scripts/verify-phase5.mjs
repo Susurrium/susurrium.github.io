@@ -62,12 +62,24 @@ const localAssets = [
     hash: '415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351'
   },
   {
-    path: 'vendor/maplibre-gl@5.24.0/maplibre-gl.js',
-    hash: '45a9b07a9189ce56054c620a947ccf41e291e58c95e9b61533b740aaa65ee5cb'
+    path: 'vendor/maplibre-gl@6.4.1/maplibre-gl.mjs',
+    hash: '97e8b9a39ab8b823d6a0caf9c312237262bc9138a6162d9e29606f5f8d24127d'
   },
   {
-    path: 'vendor/maplibre-gl@5.24.0/maplibre-gl.css',
-    hash: 'ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732'
+    path: 'vendor/maplibre-gl@6.4.1/maplibre-gl-shared.mjs',
+    hash: 'fcf4d81450df235da0aea74897cc23926774b5228d38ae1de6a7d701c5905785'
+  },
+  {
+    path: 'vendor/maplibre-gl@6.4.1/maplibre-gl-worker.mjs',
+    hash: 'ce4957017fe705ac2f9ebef206cca966d08d8621756c39326a78cf09757e7d75'
+  },
+  {
+    path: 'vendor/maplibre-gl@6.4.1/maplibre-gl.js',
+    hash: 'b444622ac66e84a2306bfbe4f0e9e03a5a4a3538b79cd6d4c5a561d0d5ed846b'
+  },
+  {
+    path: 'vendor/maplibre-gl@6.4.1/maplibre-gl.css',
+    hash: '8e2dbbab312dc57656fbb76e9fa5308c75c9d7c7ba5808a7d55bcdb64cc813fa'
   }
 ]
 
