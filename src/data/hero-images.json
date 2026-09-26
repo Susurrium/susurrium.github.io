@@ -1,0 +1,32 @@
+{
+  "/images/home-media/thumb-1920-1381117.webp": {
+    "srcset": "/images/home-hero/thumb-1920-1381117-768.webp 768w, /images/home-hero/thumb-1920-1381117-1280.webp 1280w, /images/home-hero/thumb-1920-1381117-1920.webp 1920w",
+    "width": 1920,
+    "height": 1076
+  },
+  "/images/home-media/43935854_p0_master1200.webp": {
+    "srcset": "/images/home-hero/43935854_p0_master1200-768.webp 768w, /images/home-hero/43935854_p0_master1200-1200.webp 1200w",
+    "width": 1200,
+    "height": 750
+  },
+  "/images/home-media/thumb-1920-949729.webp": {
+    "srcset": "/images/home-hero/thumb-1920-949729-768.webp 768w, /images/home-hero/thumb-1920-949729-1280.webp 1280w, /images/home-hero/thumb-1920-949729-1920.webp 1920w",
+    "width": 1920,
+    "height": 1080
+  },
+  "/images/home-media/thumb-1920-725406.webp": {
+    "srcset": "/images/home-hero/thumb-1920-725406-768.webp 768w, /images/home-hero/thumb-1920-725406-1280.webp 1280w, /images/home-hero/thumb-1920-725406-1920.webp 1920w",
+    "width": 1920,
+    "height": 1080
+  },
+  "/images/home-media/thumb-1920-986446.webp": {
+    "srcset": "/images/home-hero/thumb-1920-986446-768.webp 768w, /images/home-hero/thumb-1920-986446-1280.webp 1280w, /images/home-hero/thumb-1920-986446-1920.webp 1920w",
+    "width": 1920,
+    "height": 1080
+  },
+  "/images/home-media/thumb-1920-556375.webp": {
+    "srcset": "/images/home-hero/thumb-1920-556375-768.webp 768w, /images/home-hero/thumb-1920-556375-1280.webp 1280w, /images/home-hero/thumb-1920-556375-1920.webp 1920w",
+    "width": 1920,
+    "height": 1080
+  }
+}

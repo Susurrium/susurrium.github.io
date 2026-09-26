@@ -12,13 +12,19 @@ const meta = {
 
 <PageLayout effectProfile='reading' musicMode='compact' {meta}>
   <main class='card-crop-review-page' data-page-kind='card-crop-review'>
-    <nav class='media-workbench-tabs' aria-label='媒体编辑模式' data-media-workbench-tabs>
+    <div
+      class='media-workbench-tabs'
+      role='tablist'
+      aria-label='媒体编辑模式'
+      data-media-workbench-tabs
+    >
       <button
         type='button'
         class='is-active'
         role='tab'
         aria-selected='true'
         aria-controls='card-crop-panel'
+        id='card-crop-tab'
         data-media-workbench-tab='cards'>卡片裁剪</button
       >
       <button
@@ -26,13 +32,25 @@ const meta = {
         role='tab'
         aria-selected='false'
         aria-controls='hero-crop-panel'
+        id='hero-crop-tab'
         data-media-workbench-tab='hero'>Hero 定位</button
       >
-    </nav>
-    <section id='card-crop-panel' data-media-workbench-panel='cards'>
+    </div>
+    <section
+      id='card-crop-panel'
+      role='tabpanel'
+      aria-labelledby='card-crop-tab'
+      data-media-workbench-panel='cards'
+    >
       <CardCropEditor />
     </section>
-    <section id='hero-crop-panel' data-media-workbench-panel='hero' hidden>
+    <section
+      id='hero-crop-panel'
+      role='tabpanel'
+      aria-labelledby='hero-crop-tab'
+      data-media-workbench-panel='hero'
+      hidden
+    >
       <HeroCropEditor />
     </section>
   </main>
@@ -43,6 +61,9 @@ const meta = {
     const root = document.querySelector<HTMLElement>('[data-media-workbench-tabs]')
     if (!root || root.dataset.initialized === 'true') return
     root.dataset.initialized = 'true'
+    const controller = new AbortController()
+    const { signal } = controller
+    document.addEventListener('astro:before-swap', () => controller.abort(), { once: true, signal })
     const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-media-workbench-tab]'))
     const panels = Array.from(
       document.querySelectorAll<HTMLElement>('[data-media-workbench-panel]')
@@ -61,24 +82,32 @@ const meta = {
       })
       if (updateHash) {
         const hash = selected === 'hero' ? '#hero-crop' : '#card-crop'
-        if (window.location.hash !== hash) history.replaceState(null, '', hash)
+        if (window.location.hash !== hash) history.replaceState(history.state, '', hash)
       }
     }
 
     tabs.forEach((tab) => {
-      tab.addEventListener('click', () => setMode(tab.dataset.mediaWorkbenchTab ?? 'cards'))
-      tab.addEventListener('keydown', (event) => {
-        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-        event.preventDefault()
-        const index = tabs.indexOf(tab)
-        const next =
-          tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]
-        next.focus()
-        setMode(next.dataset.mediaWorkbenchTab ?? 'cards')
+      tab.addEventListener('click', () => setMode(tab.dataset.mediaWorkbenchTab ?? 'cards'), {
+        signal
       })
+      tab.addEventListener(
+        'keydown',
+        (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+          event.preventDefault()
+          const index = tabs.indexOf(tab)
+          const next =
+            tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]
+          next.focus()
+          setMode(next.dataset.mediaWorkbenchTab ?? 'cards')
+        },
+        { signal }
+      )
     })
-    window.addEventListener('hashchange', () =>
-      setMode(window.location.hash === '#hero-crop' ? 'hero' : 'cards')
+    window.addEventListener(
+      'hashchange',
+      () => setMode(window.location.hash === '#hero-crop' ? 'hero' : 'cards', false),
+      { signal }
     )
     setMode(window.location.hash === '#hero-crop' ? 'hero' : 'cards', false)
   }

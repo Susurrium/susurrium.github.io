@@ -4,7 +4,7 @@
 
 要求：
 
-- Node.js 22.12 或更高。
+- Node.js 22.12 或更高；项目和 CI 固定使用 `.node-version` 的 24.18.0。
 - Bun 1.4.0。
 - Git。
 
@@ -46,7 +46,9 @@ bun run lint:check
 bun run build
 ```
 
-如果开发覆盖层提示 `Failed to load url /vendor/maplibre...`，先停止并重新启动开发服务器，再硬刷新浏览器。MapLibre 的锁定运行时是 `public/vendor` 下的 UMD 文件，`src/scripts/residence-map.ts` 会在地图接近视口时以普通 `<script>` 加载；不要把它改回 `import()`，因为 Vite 不会将 `public/` 文件作为源码模块转换。
+Windows 本地建议直接运行 `node scripts/run-sequential.mjs build`，完整 CI 对应 `node scripts/run-sequential.mjs ci`，检查内容与 Bun 命令完全相同。2026-09-12 的本机验证中，Bun 启动链曾在 `Building static entrypoints` 停滞；检查发现 esbuild 子进程输入管道存在未完成写入，换直接 Node 入口后完整流程通过。该现象尚未定位到上游根因，不依赖自动重试掩盖失败。重新构建前先用 `bun run preview -- stop` 停止本项目的后台预览。
+
+如果开发覆盖层提示 `Failed to load url /vendor/maplibre...`，先停止并重新启动开发服务器，再硬刷新浏览器。MapLibre 6.4.1 的发行模块、shared、worker 和 CSS 都固定在 `public/vendor`；地图接近视口时通过本地 `<script type="module">` 桥接加载，不交给 Vite 重打包。替换版本必须同步全部依赖模块、来源台账和 `verify:phase5` 哈希。
 
 已完成阶段的静态契约回归：
 
@@ -72,6 +74,8 @@ bun run verify:phase6
 
 `bun run ci` 还会运行 `bun run test:all`，覆盖 `test/` 下的全部测试文件，而不只运行按阶段命名的测试。
 
+2026-09-08 工具链已升级为 Astro 7.3.1 / Pure 1.4.7 / MDX 8.0.0 / sharp 0.35.4。构建通过 Node 运行，Pure 兼容补丁保存在 `patches/`，安装时由 Bun 自动重放。Markdown 明确使用 unified，保留原有插件。ESLint 同时检查 `src/`、`scripts/` 和根配置，完整 CI 的各测试只执行一次。
+
 需要逐条审阅全部未知远程资源时，可在构建后运行 `node scripts/verify-phase6.mjs --external-details`；它只读取 `dist`，在不改变门禁结论的前提下输出完整 URL/页面清单。不要把该清单中的整域名直接加入白名单。
 
 候选或最终资料替换完成后，必须在新构建之后额外执行严格门禁：
@@ -84,7 +88,7 @@ bun run release:gate --strict
 
 已确认的运行时例外只包括当前保留的功能：CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像。它们按精确服务/路径登记；文章正文中的其他远程图片、音频、视频、iframe、脚本或样式不会因为“同一域名”而自动放行。
 
-浏览器回归分成三项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape、空 Blog 归档和减少动画，并确认 Home 随机 Saying 与归档保持同一图片/裁剪身份；`verify:home-hero` 验证固定 Hero 在越界、边界反向滚动和不同视口下的连续裁剪；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre UMD 加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、Blog/Trace/Saying 公共 Opening Media 是否复用同源图片并满足参考站的右对齐/向下偏移、`blur(24px)` 与 `.6/.45/.3/.15` 四档透明度、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。脚本会从当前构建动态发现详情路由，因此不会把某一篇测试文章写死。GitHub Linux CI 会在生产预览上自动执行三项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
+浏览器回归分成三项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape、空 Blog 归档和减少动画，并确认 Home 随机 Saying 与归档保持同一图片/裁剪身份；`verify:home-hero` 验证固定 Hero 在越界、边界反向滚动和不同视口下的连续裁剪；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre ESM 运行时加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、Blog/Trace/Saying 公共 Opening Media 是否复用同源图片并满足参考站的右对齐/向下偏移、`blur(24px)` 与 `.6/.45/.3/.15` 四档透明度、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。脚本会从当前构建动态发现详情路由，因此不会把某一篇测试文章写死。GitHub Linux CI 会在生产预览上自动执行三项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
 
 ```powershell
 bun run preview -- --host 127.0.0.1 --port 4321
@@ -114,6 +118,30 @@ bun run check:assets
 
 上游遗留的大图只可通过 `scripts/asset-budget-legacy.json` 的精确路径、字节数和 SHA-256 临时豁免。不要为新资源增加宽泛例外；替换上游占位图时同时删除对应条目。
 
+预算同时扫描 `public/`、`src/assets/`、`src/content/` 与生成的 `dist/`。另统计单页 HTML 和初始 JS/CSS 的 gzip 大小；它不代表懒加载地图/音乐等完整交互成本。Hero 原图或图库列表变更后执行 `bun run generate:hero-images`，将候选图和 `src/data/hero-images.json` 一起审阅。字体页面使用 WOFF2，原始字体和可选重建脚本 `scripts/generate-fonts.py` 保留。
+
+## 内容创建与维护
+
+```powershell
+bun run new --type blog --folder --language zh-CN "新的文章"
+bun run new --type trace "一段记录"
+bun run new --type saying --author "作者" --source "出处" "一句话"
+bun run new --type blog --mdx --dry-run "先预览创建结果"
+bun run date --dry-run
+```
+
+创建命令默认 `draft: true`；显式 `--publish` 才创建公开条目，也可以审阅正文后手动更改 frontmatter。支持 `--slug`、`--folder`、`--mdx`；`--language` 使用现行字段，旧 `--lang` / `-l` 保留兼容。标题、引号和多行描述由 YAML 序列化，不要手工拼接脚本输入。
+
+日期脚本递归处理 Blog 的 Markdown/MDX，使用相对路径维护校验记录；不带 `--dry-run` 才应用。解析任何文章失败都会终止写入。展示时区统一为 Asia/Shanghai。
+
+## 当前浏览器与发布行为
+
+音乐控件首次点击才请求 APlayer 和 Meting 歌单；站点不再加载 Meting2 runtime。失败时显示重试和歌单链接，路由切换保留播放实例。浏览器回归先激活播放，再验证事件订阅数量和持久化。
+
+Astro 7 支持后台预览：`bun run preview -- --background --host 127.0.0.1 --port 4321`；停止使用 `bun run preview -- stop`。代理环境可能自动使用后台模式，不应假定启动命令退出就意味着服务已停止。
+
+CI 的浏览器任务下载静态验证生成的 dist，不再次构建。手动 Pages 工作流仅允许 main；上传前对这份产物执行严格门禁和同一套浏览器检查。所有详情、搜索词和目录分支从真实内容发现，缺失分支明确报告；测试内容不会注入待部署产物。
+
 友链健康检查：
 
 ```powershell
@@ -137,11 +165,14 @@ bun run ci
 ```
 
 构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以
-`bun run astro -- build` 刷新内容/类型，再运行 `bun run astro -- check --noSync`；CI 内联同一组命令而不再嵌套
-`bun run build`。这避免 Windows 下直接 Node Astro 入口或嵌套 Bun launcher 偶发停在
-`Building static entrypoints`。Linux CI 仍执行同一组构建与诊断门槛。
+`node node_modules/astro/bin/astro.mjs build` 刷新内容/类型，再用同一个 Node 入口运行 `check --noSync`；CI 内联同一组命令而不再嵌套
+`bun run build`。Windows 本机推荐 `node scripts/run-sequential.mjs ci`，减少嵌套 Bun launcher 导致子进程管道停滞的风险。Linux CI 仍执行同一组构建与诊断门槛。
 
 ## 3. 分支
+
+这是 Fork 仓库。GitHub CLI 可能默认选择上游仓库；首次使用先执行
+`gh repo set-default Susurrium/susurrium.github.io`。创建 PR、查询 CI、合并和触发部署时仍建议显式传入
+`--repo Susurrium/susurrium.github.io`，避免把发布操作发给上游。
 
 - `main`：生产分支，只接收经过验证的发布合并。
 - `develop`：集成分支，必须包含当前生产基线；所有日常功能和文章分支都从这里创建。
@@ -251,9 +282,8 @@ git log --oneline --decorate develop..upstream/main
 ## 7. 依赖规则
 
 - 不使用 `latest`。
-- Astro 首版固定 6.1.8。
-- Pure 首版固定 1.4.6。
-- 不直接编辑 `node_modules`。
+- 当前 Astro 固定 7.3.1，Pure 固定 1.4.7；历史首版来源见 SOURCE_LEDGER。
+- 依赖兼容修复使用 `bun patch`，将补丁及锁文件一并审阅，不保留只存在于 `node_modules` 的临时修改。
 - 新依赖必须说明用途、是否进入浏览器、是否增加外部请求。
 - 若依赖只为一个小函数服务，优先评估本地纯函数。
 

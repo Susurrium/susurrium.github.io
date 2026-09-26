@@ -1,3 +1,4 @@
+import { contentTimeZone } from '../content'
 import type {
   ContentCatalog,
   ContentKind,
@@ -8,7 +9,7 @@ import type {
 } from './types'
 
 /** Return a calendar year using the site's single content timezone. */
-export function getContentYear(date: Date, timeZone = 'Asia/Shanghai'): number {
+export function getContentYear(date: Date, timeZone = contentTimeZone): number {
   return Number(new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric' }).format(date))
 }
 
@@ -36,7 +37,7 @@ export function sortContentRecords<T extends ContentRecord>(
   const sorted = [...records]
   if (sort === 'id-asc') return sorted.sort(compareIds)
   return sorted.sort((left, right) =>
-    compareDates(left, right, sort === 'editorial-date-desc', sort === 'publish-date-desc')
+    compareDates(left, right, sort === 'editorial-date-desc', true)
   )
 }
 
@@ -64,6 +65,5 @@ export function getRecordOfKind<K extends ContentKind>(
   id: string
 ): ContentRecordOf<K> | undefined {
   return catalog.all.find((record) => record.kind === kind && record.id === id) as
-    | ContentRecordOf<K>
-    | undefined
+    ContentRecordOf<K> | undefined
 }

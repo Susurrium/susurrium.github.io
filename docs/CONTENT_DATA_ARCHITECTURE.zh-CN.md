@@ -1,6 +1,6 @@
-# 统一内容数据层实施规范（最终版）
+# 统一内容数据层实施规范
 
-本文是 Blog、Trace、Saying 统一数据层的最终开发依据。它定义数据边界、页面层级、组件契约和视觉基线；后续新增内容类型或页面时，应优先遵守本文，而不是重新设计一套页面专用数据结构。
+本文描述 Blog、Trace、Saying 统一数据层的当前实现，包括 2026-09-08 项目加固后的发布策略、路径、图片、RSS 和构建期查询边界。后续新增内容类型或页面时，应复用这些契约，并让文档与代码同步更新。
 
 ## 1. 目标与范围
 
@@ -33,26 +33,26 @@
 
 - 不把三个物理 collection 合并成一个 Markdown 目录；它们的 schema 和正文形态仍然独立。
 - 不把视觉不同的卡片强行做成一个巨型组件。
-- 不为了“统一数据”重写现有卡片的 HTML、CSS、动效或详情布局。
+- 不为了“统一数据”重写卡片视觉、动效或详情布局；列表项和标题等语义修复可以在保留视觉的前提下完成。
 - 不把原始 Astro collection entry 放进 `PageData` 静态路径 props。
 
 ## 2. 不可破坏的视觉基线
 
 “视觉不变”以生产构建后的 DOM、class、资源选择、响应式断点和交互契约为基线，而不是以旧的数据耦合方式为基线。
 
-以下实现是冻结的视觉原语，数据层迁移不得修改其最终渲染结构和样式：
+以下实现是默认配置下的视觉基线。修复数据、列表语义、标题层级和无障碍属性时应保留其外观与交互：
 
 - 文本卡片视觉族：`TextCard.astro`。它是唯一的通用文本卡片渲染器；`BlogTextCardAdapter.astro` 只作为 Blog 阅读时间等构建期元信息的兼容适配器，最终视觉仍落到同一套文本卡片结构。
 - `TextCardCompat.astro` 保留为旧调用的兼容门面；视觉相同的无图文案统一通过 `StandardCardData` 输入。
 - Trace 卡片：`TraceCard.astro` → `MediaCard.astro`。
 - Saying 卡片：`SayingCard.astro` → `MediaCard.astro`，继续使用装饰图策略。
-- Media 的 HTML、CSS、移动端纵向布局、偶数项镜像和图片 fallback 策略。
+- Media 的 CSS、移动端纵向布局和镜像视觉；图片选择统一按第 7.2 节执行，真实封面优先。
 - Blog 详情：`BlogPost.astro` 及其正文、目录、版权卡片、图片缩放和阅读背景行为。
 - Trace 详情：`TracePost.astro` 的阅读界面和导航行为；文章底部版权卡片按策略关闭。
 - Saying 详情：`SayingPost.astro` 的原文/译文、署名和阅读界面；文章底部版权卡片按策略关闭。
 - Home 的 Hero、Recent 两列、随机 Saying、Timeline，以及现有布局 CSS 和客户端脚本。
 
-允许改变的是“组件收到数据的方式”和“页面如何取得数据”；不允许改变的是上述组件产出的视觉和交互结果。详情页因此保留了旧布局所需的 raw entry 传入，但 raw entry 只能在渲染边界通过稳定 key 回查，不能成为页面数据层的公共结构。
+默认配置保留上述视觉和交互结果；显式 surface 或 presentation 配置可以隐藏入口、停止生成页面或选择其他已有视觉族。详情页保留正文渲染所需的 raw entry，但只能在渲染边界通过稳定 key 回查，不能成为页面数据层的公共结构。
 
 ## 3. 四层职责与唯一数据流
 
@@ -133,14 +133,29 @@ interface ContentCatalog {
 }
 ```
 
-`LoadedContentCatalog` 另外保存按类型索引的原始 source entry，但它只用于构建时渲染边界的回查，不得嵌套到 `PageData` 中。
+`LoadedContentCatalog` 另外保存 `sources.byKind`，以及两张以 `${kind}:${id}` 为键的 Map：
+
+```ts
+recordsByKey: ReadonlyMap<string, ContentRecord>
+sourcesByKey: ReadonlyMap<string, AnyContentEntry>
+```
+
+`hydratePageItem()` 通过 `recordsByKey.get()` 回查内容，`getSourceEntry()` 通过 `sourcesByKey.get()` 回查原始 entry，避免每个卡片都扫描整个集合。Map 只存在于构建期 catalog，不进入 `PageData` 或静态路径 props。公开页面仍通过默认的 published catalog 排除草稿；当前没有根据未来发布日期自动延迟发布的功能。
 
 查询统一使用 `queryContent()` 和 `sortContentRecords()`：
 
-- `editorial-date-desc`：`updatedAt ?? publishedAt` 倒序；并列时保留输入顺序，兼容原 Blog 编辑顺序。
+- `editorial-date-desc`：`updatedAt ?? publishedAt` 倒序；并列时用稳定 key 排序，不依赖加载器枚举顺序。
 - `publish-date-desc`：`publishedAt` 倒序；并列时用稳定 key 排序。
 - `id-asc`：稳定 key 正序，适用于无日期的 Saying。
 - 筛选、标签匹配、offset、limit 都在同一查询策略中完成。
+
+### 4.3 内容校验和日期
+
+`src/lib/content-validation.ts` 提供共享的非空文本、标签、来源链接和编辑日期校验。标题和描述等已声明文本会先 trim；标签单项最长 80 字符，拒绝纯空白，经过 NFC 规范化、小写化和去重。Blog、Trace 及带日期的 docs 都拒绝 `updatedDate < publishDate`。Saying 的 `sourceUrl` 仅接受 HTTP/HTTPS。
+
+`src/lib/content.ts` 的 `contentTimeZone` 与 `src/site.config.ts` 的 `theme.locale.dateOptions.timeZone` 当前都为 `Asia/Shanghai`。内容日期显示、归档年份和 Home 时间线遵循该时区；`datetime` 与 RSS 时间戳仍使用对应的标准时间表示。GitHub 贡献日历使用服务返回的日期键并按 UTC 格式化，是独立的数据约定。
+
+Blog 的本地 `heroImage.src` 是 Astro `ImageMetadata`，不是整个 `heroImage` 对象的字符串字段。适配器从 `heroImage.src` 提取资源 URL，阅读页开图保留原始 metadata 供 Astro 图片组件处理；OG 图、卡片和 RSS 使用同一内容封面来源。
 
 ## 5. PageData 的固定层级
 
@@ -182,11 +197,15 @@ interface PageItem {
 - Home 的 `recent-writing/blog` 表示最近 Blog。
 - Home 的 `recent-writing/trace` 表示最近 Trace。
 - 归档页的 `year-2026/posts` 表示 2026 年 Blog。
-- 详情页的 `article/primary` 表示当前正文，`related/posts` 表示推荐内容。
+- 详情页的 `article/primary` 表示当前正文，`related/*` 只携带当前条目及前后相邻条目的窗口。
 
 这些含义通过 `key` 和 `meaning` 表达；内容记录本身不需要为每个页面增加 `homeTitle`、`archiveTitle`、`detailTitle` 等页面专用字段。
 
 页面构造统一使用 `createPageItem()`、`createPageGroup()`、`createPageSection()`、`createPageData()` 及相应的 `build*PageData()`。页面只负责选择记录和传递页面级 placement（例如 `detailed`、`headingLevel`、`presentation`、`actionLabel`）。
+
+详情路由先对本类型内容排序，再通过 `adjacentContentRecords(records, index)` 取得最多三条记录：上一条、当前条目、下一条。边界页只有两条，单条集合只有一条。当前条目保留在窗口中，供公共导航及 Blog 的 `ArticleBottom` 适配器定位。路径 props 不再为每篇文章复制整个集合，渲染阶段也只 hydrate 该窗口；所有详情页关联引用总量随内容条数线性增长。
+
+当前 `recommendations` 名称保留兼容性，Blog 基线实际展示前后篇；切换到通用推荐卡片时，也只展示传入窗口中的相邻内容。若未来实现按标签评分的推荐，应新增有明确数量上限的查询，不能重新把整个集合嵌入每页。
 
 ### 5.1 历史展示值的兼容边界
 
@@ -237,20 +256,26 @@ Blog 的 `BlogTextCardAdapter` 仍接收原始 Blog entry，是因为它需要 A
 
 `ContentCard` 是唯一的页面级 presentation host：新代码传入一个 `RenderablePageItem`，它根据已经解析好的 `placement.presentation` 选择视觉族。Blog 的阅读时间在 Blog 兼容适配器的渲染边界补入；Trace/Saying 通过同一个 `MediaCard`。旧 props 仅作为迁移兼容入口，内部立即转换为同一个 `PageItem`，不得继续扩展第二套渲染逻辑。
 
+### 6.4 列表容器和标题语义
+
+`ContentCard` 接受 `as='li' | 'article'` 并向各视觉族透传。`ul` 的直接子卡片必须传 `as='li'`，包括标签页、Blog 列表、年份归档、Home Blog 列表和通用推荐列表；普通内容区可以使用 `article`。不能根据“默认是 Blog 卡片”来假定渲染结果一定为 `li`，因为 presentation 可以改变。
+
+文字卡片和 Media 卡片都使用 `placement.headingLevel` 决定标题级别。归档及标签页卡片为 h2，Home 的 Recent 子栏目下为 h4。正文模板从 h2 开始，页面主标题由阅读 header 提供。标签 `plain` 模式保留可读文字而不生成链接；`hidden` 模式隐藏卡片标签文字。
+
 ## 7. 各页面的实现约定
 
-| 页面          | PageData 组合                                                                                       | 内容来源/排序                          | 视觉边界                                                               |
-| ------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
-| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | Blog/Trace 按发布时间；Saying 按 id    | 现有随机 Saying、Blog 卡片、Trace Media、Timeline 不变                 |
-| Blog 列表     | `content/items`                                                                                     | Blog 编辑日期倒序；独立 pageSize 分页  | 现有 Blog 卡片 DOM/CSS 不变                                            |
-| Blog 标签页   | `content/items`                                                                                     | Blog 编辑日期倒序后按 tag 筛选         | 与 Blog 列表相同，路由 `/blog/tags`                                    |
-| Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选        | 与 Trace 列表相同，路由 `/traces/tags`                                 |
-| Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选       | 与 Saying 列表相同，路由 `/sayings/tags`                               |
-| 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组          | 现有年份标题和卡片间距不变                                             |
-| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页 | 现有 Trace/Media 输出不变                                              |
-| Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页     | 现有装饰卡片输出不变                                                   |
-| 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                     | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
-| RSS           | 不渲染 PageData                                                                                     | Blog 编辑日期倒序                      | 保留原 RSS 字段和可选图片处理                                          |
+| 页面          | PageData 组合                                                                                       | 内容来源/排序                                        | 视觉边界                                                               |
+| ------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
+| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | Blog/Trace 按发布时间；Saying 按 id                  | 现有随机 Saying、Blog 卡片、Trace Media、Timeline 不变                 |
+| Blog 列表     | `content/items`                                                                                     | Blog 编辑日期倒序；独立 pageSize 分页                | 现有 Blog 卡片 DOM/CSS 不变                                            |
+| Blog 标签页   | `content/items`                                                                                     | Blog 编辑日期倒序后按 tag 筛选                       | 与 Blog 列表相同，路由 `/blog/tags`                                    |
+| Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选                      | 与 Trace 列表相同，路由 `/traces/tags`                                 |
+| Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选                     | 与 Saying 列表相同，路由 `/sayings/tags`                               |
+| 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组                        | 现有年份标题和卡片间距不变                                             |
+| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页               | 现有 Trace/Media 输出不变                                              |
+| Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页                   | 现有装饰卡片输出不变                                                   |
+| 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                                   | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
+| RSS           | 不渲染 PageData                                                                                     | 启用 rss surface 的内容，编辑日期倒序；默认只有 Blog | 复用正文编译结果并转换成适合订阅读器的 HTML                            |
 
 ### 7.1 归档分页能力与独立参数
 
@@ -274,6 +299,30 @@ Page<PageItem>（data/currentPage/total/prev-next URL）
 - 标签结果页也复用同一页大小解析规则，但可在调用处传入不同参数，因此“主归档参数”和“标签结果参数”仍可独立演进。
 
 详情页的 `PageData` 负责当前条目、关联条目和页面语义；正文渲染前通过 `getSourceEntry(catalog, kind, id)` 回查 raw entry，再在渲染边界投影为 `ReadingHeaderData`。raw entry 只用于正文渲染和无法提前得到的构建元信息，不进入公共页面数据或阅读组件。
+
+### 7.2 Trace 和 Saying 的跨页面图片映射
+
+`buildTraceImageAssignmentMap()` 在完整 Trace 集合上按发布时间及稳定 key 排序，再生成归档交替备用图映射。Home、主归档、标签页和详情首图复用该映射；不能再使用各页局部下标或另一个哈希规则单独选图。
+
+真实 Trace `cover` 始终优先。映射不为有封面的记录覆盖内容图片，`resolveMediaImage()` 也先检查真实封面，因此作者提供的 `coverAlt` 和非装饰性图片语义得以保留。缺少封面的记录才使用装饰性的备用图。
+
+此映射保证同一次构建内跨页面一致，同时保留归档交替视觉；它不是持久化的条目—图片绑定。新增较新的 Trace 会改变队列位置，可能改变旧条目的备用图。若需要永久固定配图，应提供真实 `cover`，或另行设计明确的持久化配图配置。
+
+Saying 使用 `buildSayingImageAssignmentMap()`，在完整的稳定 ID 顺序上生成装饰图片映射，并在 Home、归档、标签和详情之间复用。正文图片与这些卡片裁剪决策相互独立。
+
+### 7.3 RSS 的正文复用和资源地址
+
+`src/pages/rss.xml.ts` 先根据 `rss` surface 筛选 catalog，调用 Astro `render(entry)`，再由 Astro Container 渲染正文；Container 注册 MDX renderer。RSS 不再从 `post.body` 运行一套缺少站点插件的 Markdown 解析器，因此 GFM 表格、提示块、数学公式和 MDX 表达式使用与阅读页相同的编译结果。
+
+`src/lib/rss-content.ts` 对渲染后的 HTML 做订阅读器投影：
+
+- 保留正文、表格、引用及可读提示块；数学公式保留 MathML，移除依赖站点 CSS 的重复 KaTeX HTML 层。
+- 移除脚本、样式、复制按钮和无用的响应式候选，再用允许列表清洗 HTML。客户端交互不进入 RSS；阅读器不支持的交互仍可通过条目链接回到原文。
+- 普通图片与链接转成绝对 URL；尚未由 Astro 转换的源文件相对图片，以 `entry.filePath` 的物理目录查找资源，不从公开 slug 猜测目录。
+- 指向源 Markdown/MDX 的相对链接通过 source 文件路径映射到真实内容 href，并保留查询串和片段。
+- 有封面时把内容封面加入订阅正文；显式启用 Saying RSS 时补入引文与署名。默认只收录 Blog，不再生成缺失必需属性的 enclosure 元素。
+
+RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying 不伪造日期。`rss` 开关控制条目收录，站点级 `/rss.xml` 入口保留，即使最终没有条目也输出有效空 feed。
 
 ## 8. 代码组织与新增内容类型流程
 
@@ -363,6 +412,17 @@ export const readingPageConfig = {
 
 旧 `/tags` 与 `/tags/:tag` 已直接删除，不保留重定向。它们对应的文章和标签是开发期测试数据，不需要 URL 兼容迁移。
 
+详情 href 通过 `contentPath(kind, id)` 逐段编码，保留嵌套 ID 的 `/`。例如 `folder/中文 name` 对应 `/blog/folder/%E4%B8%AD%E6%96%87%20name`。空段、`.`、`..` 和以 `tags` 为首段的 ID 会被拒绝；开启归档分页时还拒绝纯数字 ID。Astro 静态路径参数使用原始 ID，不把已经编码的 href 反写入 `params`。
+
+标签文字与路径 slug 使用以下唯一边界：
+
+- `contentTagSlug(tag)`：普通中文和英文标签保留原值。包含 `/`、`\\`、`?`、`#`、`%` 或以 `~` 开头的标签，使用带 `~` 前缀的可逆单段 slug；例如 `ci/cd` 为 `~ci_2Fcd`，避免被路由误认为多个路径段。
+- `contentTagPath(kind, tag)`：对 slug 做 URL 编码，供实际 href 使用。
+- `buildTagStaticPaths()`：使用未额外 URL 编码的 slug 作为 `params.tag`；普通中文必须仍是原文，避免 Astro 生成阶段解码后无法匹配静态路径。
+- `contentTagLabel(slug)`：标签详情页还原显示文字，筛选和计数仍使用规范化后的原始标签。
+
+不要在页面中复制这些编码规则，也不要把 slug 存回 frontmatter。
+
 策略配置位于 `src/lib/content-layer/policy.ts`，目前支持：
 
 ```text
@@ -373,19 +433,34 @@ custom    在统一默认值上按 kind 覆盖单项策略
 
 三种模式都不会把标签跨类型聚合，也不会为缺失日期、图片或出处制造虚假值。页面级 `placement` 可以在不修改组件的情况下改变同一内容在不同页面的卡片视觉和密度。
 
+surface 是构建期功能策略，与卡片视觉选择分开：
+
+| Surface     | 当前含义及消费边界                                                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reading`   | 是否生成该类型详情。关闭时同时关闭 archive、home、main-nav、rss、search、tags，防止公共入口指向未生成详情。                                  |
+| `archive`   | 是否生成该类型的主列表及分页。关闭时同时关闭 main-nav 和 tags；Home 若仍启用可展示直接指向详情的卡片，但隐藏 View all，详情 Back 回到 Home。 |
+| `home`      | 是否参与 Home 的随机 Saying、Recent 或 Blog Timeline。关闭时隐藏对应内容栏目；不删除仍启用的归档或详情。                                     |
+| `main-nav`  | 是否显示主导航中的内容类型入口；它不独立决定页面生成。                                                                                       |
+| `tags`      | 是否生成标签结果分页、显示标签索引入口和 taxonomy 导航。关闭后 Blog 侧栏也不再输出旧标签链接。                                               |
+| `search`    | 是否进入 Pagefind 正文和搜索页标签筛选数据。阅读页关闭时不标记 pagefind body，并明确排除文章区域；页面本身仍可直接访问。                     |
+| `rss`       | 是否进入全站 RSS 条目列表。默认 Blog 开启、Trace/Saying 关闭。                                                                               |
+| `copyright` | 阅读页版权/分享卡片能力的类型默认值；默认 Blog 开启、Trace/Saying 关闭，页面级 reading override 仍可有意覆盖局部展示。                       |
+
+开关通过 `resolveContentPolicy()` 与 `isContentSurfaceEnabled()` 解析。关闭 `archive` 或 `tags` 后，相应动态页面不生成；已有 `/archives` 与三类 `/tags` 索引静态入口保留为指向可用归档或 Home 的重定向，兼容旧书签，不继续输出已关闭的内容。surface 的消隐会覆盖标签 `links` 模式；显式 `plain` 仍可显示无链接标签。
+
 ### 8.3 归档页的标签可发现性
 
 标签路由存在并不等于访客能够发现它。当前已确定并落地的入口规则如下：
 
 - `/traces` 和 `/sayings` 的标题下方统一渲染 `ContentArchiveTaxonomy.astro`；页面只从 `loadContentCatalog()` 得到 `getContentTagCounts()` 的结果，不直接读取 collection 或手写标签 URL。
-- 归档页最多预览 6 个标签，按使用次数倒序、名称正序排列；`View all tags` 始终保留，指向当前内容类型自己的标签索引。即使该类型暂时没有标签，也显示明确的空状态和索引入口，不伪造标签数据。
+- tags surface 启用时，归档页最多预览 6 个标签，按使用次数倒序、名称正序排列，并保留 `View all tags`。即使该类型暂时没有标签，也显示空状态和索引入口；surface 关闭时整个 taxonomy 入口隐藏。
 - 每个预览标签都指向对应的作用域路由（例如 `/traces/tags/:tag`），不创建跨类型聚合入口；详情页的 `ReadingTags` 能力组件负责当前条目的逐标签链接，旧 `ReadingTagList` 仅保留兼容门面。
-- Trace/Saying 的 `MediaCard` 保持单一主链接。标签不嵌套进整卡链接，而放在归档边界，避免无效的嵌套交互元素，也不改变已冻结的卡片 DOM、CSS 和 hover/移动端行为。
+- Trace/Saying 的 `MediaCard` 保持单一主链接。标签不嵌套进整卡链接，而放在归档边界，避免无效的嵌套交互元素。位于列表中的 MediaCard 通过 `as='li'` 保持正确列表语义。
 - 新增内容类型时，只需在 registry/policy 中声明标签能力，在归档页传入同一个组件和类型化计数；不复制标签视图、不在页面重新实现查询。
 
 ### 8.4 搜索页的类型级标签入口
 
-`/search` 是三类内容的统一全文搜索入口，同时提供一个与 Pagefind 联动的筛选面板。搜索页调用 `getContentTagBrowserEntries(loadContentCatalog())`，由 registry 顺序生成 `All / Blog / Trace / Saying` 类型切换和每个类型的标签计数；选择类型后只展开该类型的标签复选框。类型和标签通过 Pagefind 的真实 filters 联合筛选，不把同名标签跨内容类型混在一起。标签归档仍分别位于 `/blog/tags`、`/traces/tags` 和 `/sayings/tags`，搜索页不再额外渲染一套重复的标签导航。新增内容类型只要注册标签能力并提供内容数据，就会自动进入筛选面板。
+`/search` 是三类内容的统一全文搜索入口，同时提供一个与 Pagefind 联动的筛选面板。搜索页调用 `getContentTagBrowserEntries(loadContentCatalog())`，按 registry 顺序为启用 search 和 tags 的类型生成筛选数据；选择类型后只展开该类型的标签复选框。类型和标签通过 Pagefind 的真实 filters 联合筛选，不把同名标签跨内容类型混在一起。标签归档仍分别位于 `/blog/tags`、`/traces/tags` 和 `/sayings/tags`。新增内容类型必须同时接入相关 surface 和索引标记，不能仅声明一个无人消费的开关。
 
 文章详情底部的版权/分享/二维码卡片属于独立的 `copyright` surface，不属于文章正文数据，也不由各详情路由单独决定。当前基线为 Blog 开启、Trace 和 Saying 关闭；关闭时同时移除卡片下方的 `Support the author` 行。若未来新增内容类型，只需在策略中选择该 surface 是否启用，公共 `ReadingFooter` 无需复制或分叉。全站公共 `Footer` 和 Projects 中的赞助页面不受此开关影响。
 
@@ -394,9 +469,10 @@ custom    在统一默认值上按 kind 覆盖单项策略
 每次修改内容层或卡片契约都必须通过：
 
 ```text
-bun run astro check --noSync
+bun run check
 bun run test:phase2
 bun run test:content-layer
+bun test test/content-hardening.test.ts
 bun run verify:phase1
 bun run verify:phase2
 bun run verify:phase3
@@ -410,13 +486,16 @@ bun run check:assets
 
 生产构建必须成功，并重点检查：
 
-- 三类列表和详情路由数量、draft 过滤、排序结果不变。
+- 默认配置下三类列表和详情路由数量、draft 过滤符合预期；关闭 surface 后页面及入口按策略消失或重定向。
 - Home 的六张 Hero 图、随机 Saying 候选、最近 Blog/Trace 数量和 Timeline 年份不变。
-- Blog、Trace、Saying 卡片的 DOM 标记、图片来源、响应式布局和交互不变。
+- Blog、Trace、Saying 卡片保留必要 DOM 标记及视觉；列表直接子节点为 li，标题层级合理，Trace 真实封面优先且四类页面配图一致。
 - Blog 详情的正文、目录、版权、图片缩放和 compact music 行为不变。
 - Blog 详情显示完整版权卡片；Trace/Saying 详情不生成版权/分享/二维码卡片及其 `Support the author` 行，同时保留相关导航、评论和全站公共页脚。
 - 只有统一 catalog 直接读取 collection；页面和普通组件无 direct collection read。
 - `PageData` 不包含 raw Astro entry，静态路径不会因重复嵌套正文对象而膨胀。
+- 每个详情关联窗口最多三条，1000 条内容的窗口引用总数为 2998；测试不通过重新嵌套整集合来换取导航功能。
+- 真实 Astro 本地图片 metadata、无图条目、乱序输入、特殊标签和嵌套 ID 都有行为用例。
+- RSS 通过 XML 解析后含有真正表格、MathML、可读提示块和绝对资源地址；MDX 表达式应是渲染结果，不能把 import 或组件源代码当正文发布。
 
 ## 10. 后续禁止事项
 
@@ -424,6 +503,6 @@ bun run check:assets
 - 不为同一视觉卡片复制 `BlogCard`、`TraceCard`、`SayingCard` 三份仅字段名不同的实现。
 - 不把 `ContentRecord` 改成所有类型字段都可选的无判别大对象；类型专属字段必须留在 discriminated union 分支。
 - 不在 `PageData` 中保存 `CollectionEntry`、`Content` 组件或不可序列化的正文渲染对象。
-- 不以统一数据层为理由改动冻结的卡片/详情 DOM、CSS 和交互；若确需视觉变化，必须作为独立视觉变更评审。
+- 不以统一数据层为理由扩大视觉变更范围；数据正确性、HTML 语义和已授权的配置行为应正常修复并验证。
 
 这套边界的实际收益是：内容 schema 可以继续独立演进，页面组合可以表达不同含义，而同一视觉组件只实现一次；同时通过 source adapter、PageData 和 render boundary 把“内容是什么”“页面怎么组织”“视觉怎么显示”三个变化轴真正解耦。

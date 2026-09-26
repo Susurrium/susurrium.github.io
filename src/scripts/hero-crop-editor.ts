@@ -863,6 +863,7 @@ export function bootHeroCropEditor(): void {
       })
     )
     download('hero-crop-editor-v1.json', {
+      profile: 'home-hero',
       exportedAt: new Date().toISOString(),
       items: records,
       confirmationHistoryVersion: CONFIRMATION_HISTORY_SCHEMA_VERSION,
@@ -872,12 +873,28 @@ export function bootHeroCropEditor(): void {
   }
 
   const importPayload = (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      throw new Error('Invalid Hero payload')
+    const envelope = value as Record<string, unknown>
+    if (
+      (envelope.profile !== undefined && envelope.profile !== 'home-hero') ||
+      (envelope.schemaVersion !== undefined && envelope.schemaVersion !== HERO_CROP_SCHEMA_VERSION)
+    ) {
+      window.alert('导入失败：文件类型或版本与 Hero 配置不符。')
+      return
+    }
     const source = payloadItems(value)
     const before = snapshot()
     let imported = 0
     let legacyImported = 0
     for (const [filename, candidate] of Object.entries(source)) {
       if (!byFilename.has(filename)) continue
+      if (
+        !candidate ||
+        typeof candidate !== 'object' ||
+        !('desktop' in candidate || 'mobile' in candidate)
+      )
+        continue
       // Before schema v1 exports carried confirmation flags, an exported
       // record represented a reviewed production decision. Preserve that
       // meaning when an older JSON is brought into this editor; new exports
@@ -1070,7 +1087,10 @@ export function bootHeroCropEditor(): void {
       const file = input.files?.[0]
       if (!file) return
       try {
-        importPayload(JSON.parse(await file.text()))
+        if (file.size > 5 * 1024 * 1024) throw new Error('File too large')
+        const content = await file.text()
+        if (!root.isConnected) return
+        importPayload(JSON.parse(content))
       } catch {
         window.alert('导入失败：文件不是有效的 Hero 配置 JSON。')
       } finally {
@@ -1103,6 +1123,7 @@ export function bootHeroCropEditor(): void {
       geometryObserver = undefined
       if (geometryFrame) window.cancelAnimationFrame(geometryFrame)
       geometryFrame = 0
+      if (saveMessageTimer !== undefined) window.clearTimeout(saveMessageTimer)
     },
     { once: true }
   )

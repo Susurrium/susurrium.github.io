@@ -13,9 +13,13 @@
 
 import sharp from 'sharp'
 
+import { discoverPublishedContent } from './lib/browser-content.mjs'
+
 const cdpEndpoint = (process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224').replace(/\/$/, '')
 const siteUrl = (process.env.PHASE6_SITE_URL ?? 'http://127.0.0.1:4321').replace(/\/$/, '')
 const failures = []
+const publishedContent = await discoverPublishedContent(siteUrl)
+const searchSample = publishedContent.find((entry) => entry.indexed && entry.query)
 
 function pass(message) {
   console.log(`PASS ${message}`)
@@ -522,6 +526,10 @@ async function assertSearchLifecycle(cdp) {
         : 'Search initializes a Pagefind input after ClientRouter navigation'
   )
   if (!ui.input || ui.developmentNotice) return
+  if (!searchSample) {
+    pass('Search has no published indexed detail; the initialized empty-search UI was verified')
+    return
+  }
 
   const results = await evaluate(
     cdp,
@@ -531,11 +539,11 @@ async function assertSearchLifecycle(cdp) {
         resolve({ count: 0 })
         return
       }
-      input.value = 'Sisyphus'
+      input.value = ${JSON.stringify(searchSample?.query ?? '')}
       input.dispatchEvent(new Event('input', { bubbles: true }))
       const deadline = performance.now() + 8000
       const inspect = () => {
-        const count = document.querySelectorAll('#site-search .pagefind-ui__result').length
+        const count = [...document.querySelectorAll('#site-search .pagefind-ui__result-link')].filter((link) => new URL(link.href).pathname.replace(/\\/+$/, '') === ${JSON.stringify(searchSample?.path ?? '')}).length
         if (count > 0 || performance.now() >= deadline) {
           resolve({ count })
           return
@@ -551,6 +559,158 @@ async function assertSearchLifecycle(cdp) {
     results.count > 0
       ? `Search returns results after ClientRouter navigation (${results.count})`
       : 'Search returns results after ClientRouter navigation'
+  )
+}
+
+async function assertMusicActivation(cdp) {
+  const idle = await evaluate(
+    cdp,
+    `(() => ({
+    state: document.querySelector('music-player')?.dataset.playbackState,
+    providerRequests: performance.getEntriesByType('resource').filter((entry) => /APlayer\\.min|Meting2\\.min|api\\.injahow\\.cn\\/meting/.test(entry.name)).length
+  }))()`
+  )
+  expect(
+    idle.state === 'idle' && idle.providerRequests === 0,
+    'Music waits for explicit activation before requesting provider resources'
+  )
+  await evaluate(
+    cdp,
+    `(() => {
+    const audit = window.__musicBindingAudit = { instances: 0, subscriptions: {}, fixture: false }
+    const wrap = (Constructor) => new Proxy(Constructor, { construct(target, args, receiver) {
+      const player = Reflect.construct(target, args, receiver)
+      audit.instances++
+      const on = player.on.bind(player)
+      player.on = (name, callback) => { audit.subscriptions[name] = (audit.subscriptions[name] || 0) + 1; return on(name, callback) }
+      return player
+    } })
+    let Constructor = window.APlayer ? wrap(window.APlayer) : undefined
+    Object.defineProperty(window, 'APlayer', { configurable: true, get: () => Constructor, set: (next) => { Constructor = wrap(next) } })
+    document.querySelector('[data-music-toggle]').click()
+  })()`
+  )
+  let activated
+  const deadline = Date.now() + 28_000
+  do {
+    activated = await evaluate(
+      cdp,
+      `(() => ({ state: document.querySelector('music-player')?.dataset.playbackState, player: Boolean(document.querySelector('[data-music-meting]')?.aplayer), error: !document.querySelector('[data-music-error]')?.hidden, retry: Boolean(document.querySelector('[data-music-retry]')), source: Boolean(document.querySelector('[data-music-error] a[href]')) }))()`
+    )
+    if (activated.player || activated.state === 'error') break
+    await delay(150)
+  } while (Date.now() < deadline)
+  expect(
+    activated.player ||
+      (activated.state === 'error' && activated.error && activated.retry && activated.source),
+    'Music activation produces a player or a visible provider error with retry and source link'
+  )
+  if (!activated.player) {
+    // Exercise subscription ownership even when an optional public CDN is unavailable.
+    // This explicit interface fixture never masquerades as successful provider playback.
+    await evaluate(
+      cdp,
+      `(() => {
+      const audit = window.__musicBindingAudit
+      audit.fixture = true
+      const events = new Map()
+      const audio = document.createElement('audio')
+      Object.defineProperty(audio, 'currentSrc', { get: () => 'https://example.invalid/audit.mp3' })
+      const player = { audio, paused: true,
+        on(name, callback) { audit.subscriptions[name] = (audit.subscriptions[name] || 0) + 1; const list = events.get(name) || []; list.push(callback); events.set(name, list) },
+        play() { this.paused = false; for (const fn of events.get('play') || []) fn() },
+        pause() { this.paused = true; for (const fn of events.get('pause') || []) fn() },
+        destroy() { events.clear() }
+      }
+      audit.instances++
+      document.querySelector('[data-music-meting]').aplayer = player
+      document.dispatchEvent(new Event('astro:page-load'))
+      player.play()
+    })()`
+    )
+    pass(
+      'Provider unavailable: persistent subscription regression uses an explicit APlayer interface fixture'
+    )
+  }
+  const binding = await evaluate(cdp, 'window.__musicBindingAudit')
+  expect(
+    binding.instances === 1 &&
+      ['play', 'pause', 'ended', 'listswitch', 'error'].every(
+        (event) => binding.subscriptions[event] === 1
+      ),
+    'The music controller installs one subscription per event on its player'
+  )
+}
+
+async function assertThemePreference(cdp) {
+  const saved = await evaluate(cdp, "localStorage.getItem('theme')")
+  const setPreference = async (value) =>
+    evaluate(
+      cdp,
+      `(() => { localStorage.setItem('theme', ${JSON.stringify(value)}); window.dispatchEvent(new StorageEvent('storage', { key: 'theme', newValue: ${JSON.stringify(value)} })); })()`
+    )
+  const systemColor = async (value) => {
+    await cdp.call('Emulation.setEmulatedMedia', {
+      media: 'screen',
+      features: [
+        { name: 'prefers-color-scheme', value },
+        { name: 'prefers-reduced-motion', value: 'no-preference' }
+      ]
+    })
+    // Media-query change events are dispatched during rendering, not when
+    // CDP acknowledges the override. A fixed 80ms sleep races that dispatch
+    // on a busy/headless runner. Sample after two rendering opportunities.
+    await evaluate(
+      cdp,
+      'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))'
+    )
+  }
+  const assertColor = async (expected, message) => {
+    const deadline = Date.now() + 2000
+    let actual
+    do {
+      actual = await evaluate(cdp, 'document.documentElement.dataset.theme')
+      if (actual === expected) break
+      await delay(25)
+    } while (Date.now() < deadline)
+    expect(actual === expected, `${message} (actual: ${actual})`)
+  }
+  try {
+    await setPreference('system')
+    await systemColor('dark')
+    await assertColor('dark', 'System theme follows a change to dark')
+    await systemColor('light')
+    await assertColor('light', 'System theme follows a change to light')
+    await setPreference('dark')
+    await systemColor('light')
+    await assertColor('dark', 'An explicit dark choice survives a light OS preference')
+    await setPreference('light')
+    await systemColor('dark')
+    await assertColor('light', 'An explicit light choice survives a dark OS preference')
+  } finally {
+    await evaluate(
+      cdp,
+      `(() => { ${saved === null ? "localStorage.removeItem('theme')" : `localStorage.setItem('theme', ${JSON.stringify(saved)})`}; window.dispatchEvent(new StorageEvent('storage', { key: 'theme' })); })()`
+    )
+    await systemColor('light')
+  }
+}
+
+async function assertCommentBoundary(cdp) {
+  const state = await evaluate(
+    cdp,
+    `(() => ({
+    components: document.querySelectorAll('comment-component').length,
+    containers: document.querySelectorAll('#waline').length,
+    expected: decodeURIComponent(location.pathname).replace(/\\/+$/, '') || '/',
+    paths: [...document.querySelectorAll('comment-component')].map((element) => element.dataset.walinePath)
+  }))()`
+  )
+  expect(
+    state.components <= 1 &&
+      state.containers === state.components &&
+      state.paths.every((path) => path === state.expected),
+    'Comments keep one container with the current article identity'
   )
 }
 
@@ -739,7 +899,7 @@ async function assertResidenceMapRuntime(cdp) {
   expect(
     map.exists && map.script && map.global && !map.overlay,
     map.exists
-      ? `Home loads the local MapLibre UMD script without a Vite error overlay${map.mapState ? ` (state: ${map.mapState})` : ''}`
+      ? `Home loads the local MapLibre runtime without a Vite error overlay${map.mapState ? ` (state: ${map.mapState})` : ''}`
       : 'Home renders the residence scene for MapLibre runtime verification'
   )
 }
@@ -887,6 +1047,8 @@ try {
   await evaluate(cdp, "document.querySelector('[data-entrance-scene]')?.click()")
   await enteredHome
   await delay(220)
+  await assertThemePreference(cdp)
+  await assertMusicActivation(cdp)
   const musicMarker = await evaluate(
     cdp,
     `(() => {
@@ -1070,6 +1232,7 @@ try {
       },
       musicMarker
     )
+    await assertCommentBoundary(cdp)
   }
 
   // Opening Media uses the same live-card discovery. Prefer a real detail
@@ -1078,7 +1241,10 @@ try {
   let openingMediaChecks = 0
   for (const archivePath of ['/blog', '/traces', '/sayings']) {
     const archiveSpec = archiveDetailSpecs[archivePath]
-    await navigateWithClientRouter(cdp, '/home')
+    // The main route loop can already end on Home. Astro correctly treats a
+    // same-URL click as a no-op, so it emits no new page-load event to await.
+    if (normalizePathname(await evaluate(cdp, 'window.location.pathname')) !== '/home')
+      await navigateWithClientRouter(cdp, '/home')
     await navigateWithClientRouter(cdp, archivePath)
     const discovered = await discoverRuntimeDetailTargets(cdp, {
       archivePath,
@@ -1155,6 +1321,25 @@ try {
     musicMarker
   )
   await assertSearchLifecycle(cdp)
+
+  // Repeated real ClientRouter moves stress the retained player's subscriptions.
+  for (let index = 0; index < 20; index += 1) {
+    const pathname = index % 2 === 0 ? '/blog' : '/home'
+    await navigateWithClientRouter(cdp, pathname)
+    const bindings = await evaluate(cdp, 'window.__musicBindingAudit')
+    const identity = await evaluate(
+      cdp,
+      "document.querySelector('music-player')?.getAttribute('data-runtime-audit-marker')"
+    )
+    expect(
+      identity === musicMarker &&
+        bindings.instances === 1 &&
+        ['play', 'pause', 'ended', 'listswitch', 'error'].every(
+          (event) => bindings.subscriptions[event] === 1
+        ),
+      `Music subscriptions and DOM identity remain stable after stress navigation ${index + 1}/20`
+    )
+  }
 
   await cdp.call('Emulation.setEmulatedMedia', {
     media: 'screen',

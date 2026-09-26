@@ -42,14 +42,7 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 <link rel='manifest' href='/favicon/site.webmanifest' />
 
 {/* Font preloads */}
-<link rel='preload' href='/fonts/Satoshi-Variable.ttf' as='font' type='font/ttf' crossorigin />
-<link
-  rel='preload'
-  href='/fonts/Satoshi-VariableItalic.ttf'
-  as='font'
-  type='font/ttf'
-  crossorigin
-/>
+<link rel='preload' href='/fonts/Satoshi-Variable.woff2' as='font' type='font/woff2' crossorigin />
 
 {/* Canonical URL */}
 <link rel='canonical' href={canonicalURL} />
@@ -115,7 +108,7 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
       src={umamiScriptUrl}
       data-website-id={umamiWebsiteId}
       data-domains='susurrium.github.io'
-    ></script>
+    />
   )
 }
 

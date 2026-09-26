@@ -18,12 +18,13 @@ type PublishableEntry = {
 }
 
 export type SiteContentEntry =
-  | CollectionEntry<'blog'>
-  | CollectionEntry<'trace'>
-  | CollectionEntry<'saying'>
+  CollectionEntry<'blog'> | CollectionEntry<'trace'> | CollectionEntry<'saying'>
 
 /** Shared accent used by every content detail page's reading background. */
 export const readingHighlightColor = 'hsl(var(--primary) / var(--un-text-opacity))'
+
+/** Calendar boundaries and visible dates must agree on every build host. */
+export const contentTimeZone = 'Asia/Shanghai'
 
 /** Keep draft filtering explicit at every non-preview query boundary. */
 export function published<T extends PublishableEntry>(entries: T[]): T[] {
@@ -61,6 +62,7 @@ export function sortById<T extends IdentifiedEntry>(entries: T[]): T[] {
 
 export function formatContentDate(date: Date): string {
   return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: contentTimeZone,
     day: 'numeric',
     month: 'short',
     year: 'numeric'

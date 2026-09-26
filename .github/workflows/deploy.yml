@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -46,12 +47,16 @@ jobs:
       - name: Verify strict release readiness
         run: bun run release:gate
 
+      - name: Verify the production artifact in Chrome
+        uses: ./.github/actions/browser-regression
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:

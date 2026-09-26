@@ -48,6 +48,8 @@ const filterEntries = browserEntries.map((entry) => ({
             data-search-filter-type='all'
             data-search-filter-value=''
             aria-selected='true'
+            id='search-filter-type-all'
+            aria-controls='search-filter-hint'
           >
             <span>All</span>
             <span class='search-filter-count'>全部</span>
@@ -61,6 +63,8 @@ const filterEntries = browserEntries.map((entry) => ({
                 data-search-filter-type={kind}
                 data-search-filter-value={definition.label}
                 aria-selected='false'
+                id={`search-filter-type-${kind}`}
+                tabindex='-1'
                 aria-controls={`search-filter-tags-${kind}`}
               >
                 <span>{definition.label}</span>
@@ -70,7 +74,7 @@ const filterEntries = browserEntries.map((entry) => ({
           }
         </div>
 
-        <p class='search-filter-hint' data-search-filter-hint>
+        <p id='search-filter-hint' class='search-filter-hint' data-search-filter-hint>
           选择内容类型后，这里会显示对应的标签。
         </p>
 
@@ -82,6 +86,8 @@ const filterEntries = browserEntries.map((entry) => ({
                 class='search-filter-tags'
                 data-search-filter-tags={kind}
                 aria-label={`${definition.label} 标签`}
+                role='tabpanel'
+                aria-labelledby={`search-filter-type-${kind}`}
                 hidden
               >
                 <h3>{definition.label} 标签</h3>
@@ -131,6 +137,8 @@ const filterEntries = browserEntries.map((entry) => ({
       }
     </aside>
   </div>
+  <p data-search-status role='status' hidden></p>
+  <button type='button' class='focus-ring' data-search-retry hidden>重新加载搜索</button>
 </site-search>
 
 <script>
@@ -139,6 +147,7 @@ const filterEntries = browserEntries.map((entry) => ({
   type PagefindInstance = {
     destroy?: () => void
     triggerFilters?: (filters: PagefindFilters) => void
+    triggerSearch?: (query: string) => void
   }
 
   type PagefindResult = {
@@ -201,6 +210,29 @@ const filterEntries = browserEntries.map((entry) => ({
       // ClientRouter. Initialize immediately and keep a page-load retry for
       // swaps where the target is not connected until the new page settles.
       document.addEventListener('astro:page-load', this.initialize, { signal })
+      this.querySelector('[data-search-retry]')?.addEventListener('click', this.initialize, {
+        signal
+      })
+      this.addEventListener(
+        'input',
+        (event) => {
+          const input = event.target
+          if (input instanceof HTMLInputElement && input.matches('.pagefind-ui__search-input'))
+            this.updateQueryURL(input.value)
+        },
+        { signal }
+      )
+      this.addEventListener(
+        'click',
+        (event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest('.pagefind-ui__search-clear')
+          )
+            this.updateQueryURL('')
+        },
+        { signal }
+      )
       this.initialize()
     }
 
@@ -273,6 +305,25 @@ const filterEntries = browserEntries.map((entry) => ({
           () => this.selectType(button.dataset.searchFilterType ?? 'all'),
           { signal }
         )
+        button.addEventListener(
+          'keydown',
+          (event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+            event.preventDefault()
+            const current = typeButtons.indexOf(button)
+            const index =
+              event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                  ? typeButtons.length - 1
+                  : (current + (event.key === 'ArrowRight' ? 1 : -1) + typeButtons.length) %
+                    typeButtons.length
+            const next = typeButtons[index]
+            next.focus()
+            this.selectType(next.dataset.searchFilterType ?? 'all')
+          },
+          { signal }
+        )
       })
       tagInputs.forEach((input) => {
         input.addEventListener('change', () => this.toggleTag(input), { signal })
@@ -280,6 +331,7 @@ const filterEntries = browserEntries.map((entry) => ({
       clearButton?.addEventListener('click', () => this.clearFilters(), { signal })
 
       this.updateFilterUI()
+      this.pendingFilters = this.buildFilters()
     }
 
     private selectType(type: string) {
@@ -314,6 +366,7 @@ const filterEntries = browserEntries.map((entry) => ({
         const active = (button.dataset.searchFilterType ?? 'all') === (this.selectedType || 'all')
         button.classList.toggle('is-active', active)
         button.setAttribute('aria-selected', String(active))
+        button.tabIndex = active ? 0 : -1
       })
 
       filterRoot.querySelectorAll<HTMLElement>('[data-search-filter-tags]').forEach((panel) => {
@@ -342,7 +395,7 @@ const filterEntries = browserEntries.map((entry) => ({
       if (clearButton) clearButton.disabled = !this.selectedType && this.selectedTags.size === 0
     }
 
-    private applyFilters() {
+    private buildFilters(): PagefindFilters {
       const filters: PagefindFilters = {}
       const filterRoot = this.querySelector<HTMLElement>('[data-search-filter-root]')
       const activeButton = filterRoot?.querySelector<HTMLButtonElement>(
@@ -353,6 +406,13 @@ const filterEntries = browserEntries.map((entry) => ({
 
       const tags = [...this.selectedTags]
       if (tags.length > 0) filters.tag = tags
+
+      return filters
+    }
+
+    private applyFilters() {
+      const filters = this.buildFilters()
+      const tags = [...this.selectedTags]
 
       this.pendingFilters = filters
       this.pagefind?.triggerFilters?.(filters)
@@ -369,11 +429,29 @@ const filterEntries = browserEntries.map((entry) => ({
       )
     }
 
+    private updateQueryURL(query: string) {
+      const url = new URL(window.location.href)
+      if (query.trim()) url.searchParams.set('q', query)
+      else url.searchParams.delete('q')
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${url.pathname}${url.search}${url.hash}`
+      )
+    }
+
     private initialize = () => {
       const root = this.querySelector<HTMLElement>('[data-pagefind-root]')
       if (!root || this.pagefind || this.initializing) return
 
       this.initializing = true
+      const status = this.querySelector<HTMLElement>('[data-search-status]')
+      const retry = this.querySelector<HTMLButtonElement>('[data-search-retry]')
+      if (retry) retry.hidden = true
+      if (status) {
+        status.hidden = false
+        status.textContent = '正在加载搜索…'
+      }
       const generation = this.generation
       const onIdle =
         window.requestIdleCallback || ((callback: () => void) => setTimeout(callback, 1))
@@ -396,9 +474,17 @@ const filterEntries = browserEntries.map((entry) => ({
             processResult: normalizeResult
           })
           this.pagefind.triggerFilters?.(this.pendingFilters)
+          const query = new URLSearchParams(window.location.search).get('q')
+          if (query) this.pagefind.triggerSearch?.(query)
+          if (status) status.hidden = true
         } catch (error) {
           if (generation === this.generation && this.isConnected) {
             console.error('Unable to initialize Pagefind search.', error)
+            if (status) {
+              status.hidden = false
+              status.textContent = '搜索暂时无法加载，请重试。'
+            }
+            if (retry) retry.hidden = false
           }
         } finally {
           if (generation === this.generation) this.initializing = false

@@ -1,28 +1,33 @@
 ---
-import { Button } from 'astro-pure/user'
-import ContentCard from '@/components/cards/ContentCard.astro'
-import PageLayout from '@/layouts/BaseLayout.astro'
 import {
   createPageData,
   createPageGroup,
   createPageItem,
   createPageSection,
-  hydratePageItems,
-  loadContentCatalog,
   getContentYear,
+  hydratePageItems,
+  isContentSurfaceEnabled,
+  loadContentCatalog,
   sortContentRecords,
   type RenderablePageItem
 } from '@/lib/content-layer'
 
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import ContentCard from '@/components/cards/ContentCard.astro'
+
 export const prerender = true
+
+if (!isContentSurfaceEnabled('blog', 'archive')) return Astro.redirect('/home')
 
 const contentCatalog = await loadContentCatalog()
 const allPosts = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
 const postsByYear = new Map<number, typeof allPosts>()
 for (const post of allPosts) {
-  const year = (post.updatedAt ?? post.publishedAt)
-    ? getContentYear(post.updatedAt ?? post.publishedAt!)
-    : undefined
+  const year =
+    (post.updatedAt ?? post.publishedAt)
+      ? getContentYear(post.updatedAt ?? post.publishedAt!)
+      : undefined
   if (year === undefined) continue
   const posts = postsByYear.get(year) ?? []
   posts.push(post)
@@ -49,10 +54,12 @@ const pageData = createPageData(
       )
     )
 )
-const allPostsByYear: { year: number; items: RenderablePageItem[] }[] = pageData.sections.map((section) => ({
-  items: hydratePageItems(section.groups[0]?.items ?? [], contentCatalog),
-  year: Number(section.key.replace(/^year-/, ''))
-}))
+const allPostsByYear: { year: number; items: RenderablePageItem[] }[] = pageData.sections.map(
+  (section) => ({
+    items: hydratePageItems(section.groups[0]?.items ?? [], contentCatalog),
+    year: Number(section.key.replace(/^year-/, ''))
+  })
+)
 
 const meta = {
   description: 'Browse posts by year.',
@@ -85,7 +92,9 @@ const meta = {
                 {items.length} post{items.length > 1 && 's'}
               </p>
               <ul class='flex flex-col text-start'>
-                {items.map((item) => <ContentCard class='py-2' item={item} />)}
+                {items.map((item) => (
+                  <ContentCard as='li' class='py-2' item={item} />
+                ))}
               </ul>
             </div>
           ))

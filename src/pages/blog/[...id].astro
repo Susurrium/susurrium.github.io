@@ -1,10 +1,12 @@
 ---
 import { render } from 'astro:content'
 import {
+  adjacentContentRecords,
   buildDetailPageData,
   getPageItems,
   hydratePageItem,
   hydratePageItems,
+  isContentSurfaceEnabled,
   loadContentCatalog,
   sortContentRecords,
   type PageData
@@ -15,18 +17,25 @@ import PostLayout from '@/layouts/BlogPost.astro'
 export const prerender = true
 
 export async function getStaticPaths() {
+  if (!isContentSurfaceEnabled('blog', 'reading')) return []
   const contentCatalog = await loadContentCatalog()
   const records = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
 
-  return records.map((record) => ({
+  return records.map((record, index) => ({
     params: { id: record.id },
     props: {
-      pageData: buildDetailPageData('blog-detail', `/blog/${record.id}`, record, records, {
-        primaryMeaning: '当前 Blog 文章',
-        relatedGroupKey: 'posts',
-        relatedMeaning: '按 Blog 编辑日期排列的推荐条目',
-        relatedSectionMeaning: 'Blog 详情页底部推荐内容'
-      })
+      pageData: buildDetailPageData(
+        'blog-detail',
+        record.href,
+        record,
+        adjacentContentRecords(records, index),
+        {
+          primaryMeaning: '当前 Blog 文章',
+          relatedGroupKey: 'posts',
+          relatedMeaning: '按 Blog 编辑日期排列的推荐条目',
+          relatedSectionMeaning: 'Blog 详情页底部推荐内容'
+        }
+      )
     }
   }))
 }

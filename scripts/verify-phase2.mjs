@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { extname, join, relative, resolve } from 'node:path'
+import { parseDocument } from 'yaml'
+
+import { contentTagsSchema } from '../src/lib/content-validation.ts'
 
 const root = resolve(process.cwd())
 const dist = resolve(root, process.env.VERIFY_DIST_DIR ?? 'dist')
@@ -46,11 +49,14 @@ function collectionEntries(directory) {
       if (entry.isDirectory()) walk(absolute)
       if (entry.isFile() && ['.md', '.mdx'].includes(extname(entry.name))) {
         const source = readFileSync(absolute, 'utf8')
-        const frontmatter = source.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
-        const rawDate = frontmatter.match(/^publishDate:\s*(.+)$/m)?.[1]?.trim() ?? ''
+        const frontmatter = source.match(/^(?:\uFEFF)?---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
+        const document = parseDocument(frontmatter)
+        if (document.errors.length > 0)
+          throw new Error(`Invalid frontmatter in ${absolute}: ${document.errors[0].message}`)
+        const rawDate = document.get('publishDate')
         entries.push({
           date: rawDate ? new Date(rawDate) : undefined,
-          draft: /^draft:\s*true\s*$/m.test(frontmatter),
+          draft: document.get('draft') === true,
           id: relative(base, absolute)
             .replace(/\\/g, '/')
             .replace(/\.(?:md|mdx)$/, '')
@@ -562,10 +568,23 @@ expect(
     sayingConfig.includes('author') &&
     sayingConfig.includes('source') &&
     sayingConfig.includes('sourceUrl') &&
-    /\btags:\s*z\./.test(sayingConfig) &&
+    /\btags:\s*contentTagsSchema\b/.test(sayingConfig) &&
     !sayingConfig.includes('publishDate') &&
     !sayingConfig.includes('originalLanguage'),
   'Saying schema keeps quote, attribution, source-link, and scoped-tag fields without dates'
+)
+const normalizedTags = contentTagsSchema.safeParse([' Astro ', 'ASTRO', 'Cafe\u0301', 'Caf\u00e9'])
+expect(
+  normalizedTags.success &&
+    JSON.stringify(normalizedTags.data) === JSON.stringify(['astro', 'caf\u00e9']),
+  'The shared scoped-tag schema trims, normalizes Unicode, lowercases, and removes duplicates'
+)
+expect(
+  JSON.stringify(contentTagsSchema.parse(undefined)) === '[]' &&
+    !contentTagsSchema.safeParse(['   ']).success &&
+    !contentTagsSchema.safeParse(['x'.repeat(81)]).success &&
+    !contentTagsSchema.safeParse('astro').success,
+  'The shared scoped-tag schema defaults to no tags and rejects blank, oversized, or non-array input'
 )
 
 verifySearchFilterEntryPoints()

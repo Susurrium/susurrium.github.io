@@ -1,14 +1,15 @@
 ---
 import { ClientRouter } from 'astro:transitions'
 import { effectProfiles, resolveEffectProfile, type EffectProfile } from '@/data/effects'
+import heroImages from '@/data/hero-images.json'
 
-import { ThemeProvider } from 'astro-pure/components/basic'
 import type { SiteMeta } from 'astro-pure/types'
-import Footer from '@/components/layout/SiteFooter.astro'
 import BaseHead from '@/components/BaseHead.astro'
 import ScrollCompanion from '@/components/effects/ScrollCompanion.astro'
 import VisualEffectsHost from '@/components/effects/VisualEffectsHost.astro'
+import Footer from '@/components/layout/SiteFooter.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
+import ThemeProvider from '@/components/layout/ThemeProvider.astro'
 import MusicPlayer from '@/components/MusicPlayer.astro'
 import ViewTransitionRejectionGuard from '@/components/ViewTransitionRejectionGuard.astro'
 import config from '@/site-config'
@@ -54,14 +55,7 @@ const hasPageBackground = Astro.slots.has('page-background')
 
 <html lang={config.locale.lang}>
   <head>
-    <BaseHead
-      {articleDate}
-      {articleModifiedDate}
-      {description}
-      {noindex}
-      {ogImage}
-      {title}
-    />
+    <BaseHead {articleDate} {articleModifiedDate} {description} {noindex} {ogImage} {title} />
     <ThemeProvider />
     <Fragment set:html={`<script src="/theme-handoff.js" data-theme-role="write"></script>`} />
     <script is:inline>
@@ -123,28 +117,12 @@ const hasPageBackground = Astro.slots.has('page-background')
           rel='preload'
           as='image'
           href='/images/home-media/thumb-1920-1381117.webp'
+          imagesrcset={heroImages['/images/home-media/thumb-1920-1381117.webp'].srcset}
+          imagesizes='(max-width: 767px) max(100vw, 110vh), 100vw'
           fetchpriority='high'
         />
       )
     }
-    <!-- APlayer/MetingJS runtime follows the reference sites' public-player
-         contract. They are loaded once in the shared layout; the native DOM
-         wrapper below persists across ClientRouter swaps. -->
-    <link
-      rel='stylesheet'
-      href='https://cdn.cbd.int/anzhiyu-theme-static@1.0.0/aplayer/APlayer.min.css'
-      data-music-runtime='aplayer'
-    />
-    <script
-      is:inline
-      defer
-      src='https://cdn.cbd.int/anzhiyu-blog-static@1.0.1/js/APlayer.min.js'
-      data-music-runtime='aplayer'></script>
-    <script
-      is:inline
-      defer
-      src='https://cdn.cbd.int/hexo-anzhiyu-music@1.0.1/assets/js/Meting2.min.js'
-      data-music-runtime='meting'></script>
   </head>
 
   <body
@@ -154,9 +132,16 @@ const hasPageBackground = Astro.slots.has('page-background')
     data-music-mode={musicMode}
     {...props}
   >
-    {pageKind === 'home' && (
-      <div class='document-handoff home-entry-handoff' data-home-entry-handoff aria-hidden='true'></div>
-    )}
+    <a class='skip-link' href='#main-content'>跳到主要内容</a>
+    {
+      pageKind === 'home' && (
+        <div
+          class='document-handoff home-entry-handoff'
+          data-home-entry-handoff
+          aria-hidden='true'
+        />
+      )
+    }
     <VisualEffectsHost profile={effectProfile} />
     {effectProfiles[effectProfile].companion && <ScrollCompanion />}
     {
@@ -193,6 +178,8 @@ const hasPageBackground = Astro.slots.has('page-background')
         class='relative flex-1 w-full'
         style='z-index:var(--z-page-content)'
         data-page-content-layer
+        id='main-content'
+        tabindex='-1'
       >
         <slot />
       </div>

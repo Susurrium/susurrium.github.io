@@ -1,8 +1,8 @@
 # 最终内容替换与 GitHub Pages 发布交接
 
-> 适用仓库：`Susurrium/susurrium.github.io`｜当前状态：生产基线 `main@7993411` 已发布到 GitHub Pages；`develop` 已同步到同一生产基线。站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)，这里只处理后续内容与功能变更。
+> 适用仓库：`Susurrium/susurrium.github.io`｜当前内容基线为 1 篇 Blog、5 篇 Saying，Trace 可为空。2026-09-26 收尾见 [发布候选记录](./RELEASE_20260926.zh-CN.md)；实际发布版本以成功的 Pages 部署记录为准。站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)。
 
-这份清单不要求重做站点结构。Blog、Traces、Sayings、三种卡片、Home 组合、入口、特效、居住地、热力图和音乐播放器都已有实现；当前生产基线的 Blog/Trace 集合为空，站长已明确 93 个历史内容全部不恢复，原始内容继续在仓库外快照/bundle 中保留。后续若新增资料或要求恢复内容，必须在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md) 之外新增逐项决定，再通过既有门禁验证。
+这份清单沿用现有站点结构。历史 93 个内容不恢复的决定仍保留；本次改进已有代码和当前内容的渲染，不恢复历史快照。具体技术变更与验证见 [项目加固记录](./PROJECT_HARDENING.zh-CN.md)。后续内容按用户明确的编辑与发布要求进入验证流程。
 
 ## 1. 必须由站长提供或确认的资料
 
@@ -28,7 +28,7 @@ Home 图库已按当前生产基线清单完成一次本地化：源目录为 `E
 | 内容   | 目录                   | 必填元数据                            | 展示规则                                                                                                                                    |
 | ------ | ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Blog   | `src/content/blog/`    | `title`、`description`、`publishDate` | 默认 `text` 无图文字卡；只有需要时再加 `heroImage`。只进入 RSS、Blog 标签与 Blog 时间线。                                                  |
-| Trace  | `src/content/traces/`  | `title`、`publishDate`                | 默认 Media 内容题图卡；添加 `cover` 时显示内容相关图片，省略时按稳定 hash 使用预先上传的回退图。设置 `cover` 时必须同时写 `coverAlt`。 |
+| Trace  | `src/content/traces/`  | `title`、`publishDate`                | 原始 `cover` 优先，设置时同时写 `coverAlt`；备用图由归档统一分配并在 Home/标签/详情复用。需要永久固定图片的条目应显式提供 cover。 |
 | Saying | `src/content/sayings/` | `text`                              | 可选 `originalText`、`author`、`source`；不记录日期、不设置 `sourceUrl`。不进主导航；Home 随机展示，About 提供完整归档入口。卡片只使用 Media 装饰图，不把图片误当作短句内容题图。 |
 
 每个 collection 的完整 schema 都在 `src/content.config.ts`。保留 `draft: true` 可在本地预览而不生成最终路由；发布前确认不再把需要公开的内容留在草稿状态。
@@ -47,7 +47,7 @@ Links 的 Friend Circle 已关闭：页面不输出标题、空占位区、状�
 
 当前音乐暂使用参考站公共网易云歌单 `12812783625`。如需切换到第二个参考站，修改 `src/data/music.ts` 中的 `id` 和 `playlistUrl` 为 `8152976493`；如公共接口失效，再统一替换同文件中的 `api` 模板。发布前应确认播放器脚本、公共接口和歌单内容仍可访问，并评估版权与第三方服务稳定性。
 
-播放器会从公共歌单动态取得曲目、音频、封面和歌词，不需要在仓库中维护 `audioSrc`。严格发布门禁会检查歌单服务配置与已登记的 APlayer/MetingJS 资源；公共服务失效时，应替换 `src/data/music.ts` 中的 API 模板或歌单 ID。
+用户点击播放后才加载 APlayer 并从公共 Meting API 取得曲目，不再加载 Meting2 runtime。加载失败显示重试和打开歌单，不会报告播放成功。严格门禁继续检查登记的资源；公共服务失效时，可更新 `src/data/music.ts` 中的 API 模板或歌单 ID。
 
 ### 居住地
 
@@ -78,7 +78,7 @@ bun run release:gate
 1. 复核 `git status`，只暂存本次已审核的文件。
 2. 通过 PR 将已验证的 `codex/<topic>` 合并到 `develop`，再通过发布 PR 合并到 `main`。
 3. 在 GitHub 仓库 Settings → Pages 中确认发布源为 **GitHub Actions**。
-4. 当前 workflow 仍是手动触发，并会在上传产物前再次执行 `release:gate`；合并到 `main` 后必须在 Actions 手动运行 `Deploy to GitHub Pages`。若以后启用自动部署，应保留 `workflow_dispatch` 并只增加 `push → branches: [main]`，不添加 PR 或 `schedule`。
+4. workflow 保持手动触发，仅允许 main；上传前必须完成 `ci`、严格 `release:gate` 和三项浏览器回归，检查后上传同一份产物。合并 main 后，由站长或其明确授权的执行者手动运行 `Deploy to GitHub Pages`。
 5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、文章详情、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
 
 发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./archive/IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](./DEVELOPMENT.md)、[准备状态](./archive/PREPARATION_STATUS.md)、[视觉基线](./VISUAL_BASELINE.md) 与 [来源台账](./SOURCE_LEDGER.md)。

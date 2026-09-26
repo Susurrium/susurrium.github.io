@@ -8,6 +8,7 @@
 import { getCardCutSide } from '@/data/home-media'
 import type { CardCutSide } from '@/data/home-media'
 import { resolveMediaImage } from '@/lib/content-layer/page-data'
+import { isContentSurfaceEnabled } from '@/lib/content-layer/policy'
 import type { RenderablePageItem, SayingRecord } from '@/lib/content-layer/types'
 
 import { Button } from 'astro-pure/user'
@@ -69,16 +70,18 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
         />
       </saying-random-card>
 
-      <div class='home-random-saying__actions' data-home-saying-actions>
-        <Button
-          title='View all'
-          href='/sayings'
-          variant='ahead'
-          aria-label='View all Sayings'
-          data-home-action='ahead'
-          class='home-random-saying__more w-fit self-end'
-        />
-      </div>
+      {isContentSurfaceEnabled('saying', 'archive') && (
+        <div class='home-random-saying__actions' data-home-saying-actions>
+          <Button
+            title='View all'
+            href='/sayings'
+            variant='ahead'
+            aria-label='View all Sayings'
+            data-home-action='ahead'
+            class='home-random-saying__more w-fit self-end'
+          />
+        </div>
+      )}
     </section>
   ) : null
 }

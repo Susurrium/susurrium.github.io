@@ -1,6 +1,7 @@
 // @ts-check
 
-import { rehypeHeadingIds } from '@astrojs/markdown-remark'
+import { rehypeHeadingIds, unified } from '@astrojs/markdown-remark'
+import mdx from '@astrojs/mdx'
 import sitemap from '@astrojs/sitemap'
 // Adapter
 // import vercel from '@astrojs/vercel'
@@ -12,6 +13,7 @@ import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
 
+import searchIndex from './src/integrations/search-index.ts'
 // Others
 // import { visualizer } from 'rollup-plugin-visualizer'
 
@@ -29,6 +31,11 @@ import {
 } from './src/plugins/shiki-transformers.ts'
 import config from './src/site.config.ts'
 
+// The upstream Pagefind hook resolves even when its subprocess fails. Keep
+// Pure's content/style integration and own indexing through the pinned API.
+const pure = AstroPureIntegration(config)
+delete pure.hooks['astro:build:done']
+
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
@@ -36,6 +43,7 @@ export default defineConfig({
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
   trailingSlash: 'never',
+  compressHTML: true,
 
   // Adapter
   // https://docs.astro.build/en/guides/deploy/
@@ -67,7 +75,9 @@ export default defineConfig({
     }),
     // astro-pure will automatically add mdx & unocss
     // mdx(),
-    AstroPureIntegration(config)
+    mdx({ optimize: true }),
+    pure,
+    searchIndex(config.integ.pagefind)
     // (await import('@playform/compress')).default({
     //   SVG: false,
     //   Exclude: ['index.*.js']
@@ -84,19 +94,21 @@ export default defineConfig({
   server: { host: true },
   // Markdown Options
   markdown: {
-    remarkPlugins: [remarkMath, remarkAlert],
-    rehypePlugins: [
-      [rehypeKatex, { strict: false }],
-      rehypeHeadingIds,
-      [
-        rehypeAutolinkHeadings,
-        {
-          behavior: 'append',
-          properties: { className: ['anchor'] },
-          content: { type: 'text', value: '#' }
-        }
+    processor: unified({
+      remarkPlugins: [remarkMath, remarkAlert],
+      rehypePlugins: [
+        [rehypeKatex, { strict: false }],
+        rehypeHeadingIds,
+        [
+          rehypeAutolinkHeadings,
+          {
+            behavior: 'append',
+            properties: { className: ['anchor'] },
+            content: { type: 'text', value: '#' }
+          }
+        ]
       ]
-    ],
+    }),
     // https://docs.astro.build/en/guides/syntax-highlighting/
     shikiConfig: {
       themes: {

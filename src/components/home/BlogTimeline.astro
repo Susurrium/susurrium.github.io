@@ -6,6 +6,7 @@
  * The timeline receives canonical PageItems, so visual code does not read
  * collection frontmatter directly.
  */
+import { contentPath } from '@/lib/content-layer/registry'
 import type { BlogRecord, RenderablePageItem } from '@/lib/content-layer/types'
 
 interface Props {
@@ -179,7 +180,7 @@ const years = [...byYear.entries()]
                         entries.length > 1 && entry.position <= 14 && 'is-near-start',
                         entries.length > 1 && entry.position >= 86 && 'is-near-end'
                       ]}
-                      href={`/blog/${entry.id}`}
+                      href={contentPath('blog', entry.id)}
                       data-astro-prefetch
                       aria-label={`${dateFormatter.format(entry.date)}, ${entry.title}`}
                       data-blog-id={entry.id}

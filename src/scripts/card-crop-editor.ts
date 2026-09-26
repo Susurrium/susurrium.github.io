@@ -674,10 +674,7 @@ export function bootCardCropEditor(): void {
         `${transform.x}% ${transform.y}%`
       )
       cardPreview.style.setProperty('--media-card-image-zoom', String(transform.zoom))
-      cardPreview.style.setProperty(
-        '--media-card-image-origin',
-        `${transform.x}% ${transform.y}%`
-      )
+      cardPreview.style.setProperty('--media-card-image-origin', `${transform.x}% ${transform.y}%`)
       cardPreview.classList.toggle('is-cut-left', cutSide === 'left')
     }
     syncMediaFrame(previewCover)
@@ -1049,6 +1046,14 @@ export function bootCardCropEditor(): void {
   }
 
   const importPayload = (value: unknown) => {
+    const version =
+      value && typeof value === 'object'
+        ? (value as Record<string, unknown>).schemaVersion
+        : undefined
+    if (version !== undefined && version !== CARD_CROP_SCHEMA_VERSION) {
+      window.alert('导入失败：不支持此卡片配置版本。')
+      return
+    }
     const profile =
       value && typeof value === 'object' ? (value as Record<string, unknown>).profile : undefined
     if (profile !== undefined && profile !== CARD_CROP_PROFILE) {
@@ -1300,7 +1305,10 @@ export function bootCardCropEditor(): void {
       const file = input.files?.[0]
       if (!file) return
       try {
-        importPayload(JSON.parse(await file.text()))
+        if (file.size > 5 * 1024 * 1024) throw new Error('File too large')
+        const content = await file.text()
+        if (!root.isConnected) return
+        importPayload(JSON.parse(content))
       } catch {
         window.alert('导入失败：文件不是有效的裁剪配置 JSON。')
       } finally {
@@ -1320,6 +1328,7 @@ export function bootCardCropEditor(): void {
     if (previewCover) ratioObserver.observe(previewCover)
   }
   const cleanup = () => {
+    if (saveMessageTimer !== undefined) window.clearTimeout(saveMessageTimer)
     ratioObserver?.disconnect()
     ratioObserver = undefined
   }

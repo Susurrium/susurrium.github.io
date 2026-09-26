@@ -8,6 +8,7 @@
 import type { MarkdownHeading } from 'astro'
 import { readingHighlightColor } from '@/lib/content'
 import {
+  isContentSurfaceEnabled,
   resolveReadingPageConfig,
   toReadingBackgroundData,
   toReadingCommentPolicy,
@@ -81,7 +82,7 @@ const resolvedSignature = signature ?? resolvedReadingConfig.body.signature !== 
   meta={frame.meta}
   highlightColor={backgroundData.color}
   back={frame.backHref}
-  pagefindBody
+  pagefindBody={isContentSurfaceEnabled(item.record.kind, 'search')}
   contentType={frame.contentTypeLabel}
   effectProfile='reading'
   imageZoom={resolvedImageZoom && integ.mediumZoom.enable}

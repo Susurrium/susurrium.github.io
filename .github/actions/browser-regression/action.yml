@@ -1,0 +1,39 @@
+name: Browser regression
+description: Verify the existing production artifact with headless Chrome
+runs:
+  using: composite
+  steps:
+    - name: Start Chrome and production preview
+      shell: bash
+      run: |
+        set -euo pipefail
+        chrome_bin="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+        test -n "$chrome_bin" || { echo 'A Chromium executable is required.'; exit 1; }
+        "$chrome_bin" --headless=new --remote-debugging-address=127.0.0.1 \
+          --remote-debugging-port=9224 --user-data-dir="${RUNNER_TEMP}/susurrium-chrome" \
+          --no-first-run --no-default-browser-check --use-gl=angle --use-angle=swiftshader about:blank \
+          >"${RUNNER_TEMP}/susurrium-chrome.log" 2>&1 &
+        echo "CHROME_PID=$!" >> "$GITHUB_ENV"
+        bun run preview -- --background --host 127.0.0.1 --port 4321 >"${RUNNER_TEMP}/susurrium-preview.log" 2>&1
+        for attempt in $(seq 1 30); do
+          if curl --fail --silent http://127.0.0.1:4321/home >/dev/null && \
+            curl --fail --silent http://127.0.0.1:9224/json/version >/dev/null; then
+            exit 0
+          fi
+          sleep 1
+        done
+        cat "${RUNNER_TEMP}/susurrium-preview.log" "${RUNNER_TEMP}/susurrium-chrome.log"
+        exit 1
+    - name: Run browser regressions
+      shell: bash
+      run: |
+        set -euo pipefail
+        bun run verify:phase6:browser
+        bun run verify:home-hero
+        bun run verify:browser:lifecycle
+    - name: Stop browser services
+      if: always()
+      shell: bash
+      run: |
+        bun run preview -- stop || true
+        kill "${CHROME_PID:-}" 2>/dev/null || true

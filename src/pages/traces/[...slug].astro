@@ -1,11 +1,13 @@
 ---
 import { render } from 'astro:content'
 import {
+  adjacentContentRecords,
   buildCollectionPageData,
   buildDetailPageData,
   getPageItems,
   hydratePageItem,
   hydratePageItems,
+  isContentSurfaceEnabled,
   loadContentCatalog,
   sortContentRecords,
   type PageData
@@ -16,6 +18,7 @@ import TracePost from '@/layouts/TracePost.astro'
 export const prerender = true
 
 export async function getStaticPaths() {
+  if (!isContentSurfaceEnabled('trace', 'reading')) return []
   const contentCatalog = await loadContentCatalog()
   const records = sortContentRecords(contentCatalog.byKind.trace, 'publish-date-desc')
   const archivePage = buildCollectionPageData('trace-archive', '/traces', records)
@@ -29,16 +32,22 @@ export async function getStaticPaths() {
     ])
   )
 
-  return records.map((record) => ({
+  return records.map((record, index) => ({
     params: { slug: record.id },
     props: {
-      pageData: buildDetailPageData('trace-detail', `/traces/${record.id}`, record, records, {
-        primaryMeaning: '当前 Trace 文章',
-        relatedGroupKey: 'traces',
-        relatedMeaning: '按发布时间排列的 Trace 条目',
-        relatedSectionMeaning: 'Trace 详情页相邻导航内容',
-        primaryCardPlacement: archivePlacementByContentKey.get(record.key)
-      })
+      pageData: buildDetailPageData(
+        'trace-detail',
+        record.href,
+        record,
+        adjacentContentRecords(records, index),
+        {
+          primaryMeaning: '当前 Trace 文章',
+          relatedGroupKey: 'traces',
+          relatedMeaning: '按发布时间排列的 Trace 条目',
+          relatedSectionMeaning: 'Trace 详情页相邻导航内容',
+          primaryCardPlacement: archivePlacementByContentKey.get(record.key)
+        }
+      )
     }
   }))
 }

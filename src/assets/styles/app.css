@@ -1,26 +1,28 @@
 /* Font */
 @font-face {
   font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-Variable.ttf') format('truetype');
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 900;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-VariableItalic.ttf') format('truetype');
+  src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2');
+  font-weight: 300 900;
   font-style: italic;
   font-display: swap;
 }
 @font-face {
   font-family: 'Abril Fatface';
-  src: url('/fonts/AbrilFatface-Regular.ttf') format('truetype');
+  src: url('/fonts/AbrilFatface-Regular.woff2') format('woff2');
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: 'Paralines';
-  src: url('/fonts/Paralines-Regular.otf') format('opentype');
+  src: url('/fonts/Paralines-Regular.woff2') format('woff2');
   font-style: normal;
   font-weight: 400;
   font-display: swap;

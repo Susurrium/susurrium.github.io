@@ -283,6 +283,10 @@
   line-height: 1;
 }
 
+.map-action[hidden] {
+  display: none;
+}
+
 .map-action:disabled {
   cursor: not-allowed;
   opacity: 0.55;

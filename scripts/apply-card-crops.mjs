@@ -1,161 +1,135 @@
 #!/usr/bin/env node
-
-/**
- * Apply an exported Card Crop Editor JSON file to the checked-in production
- * bridge. The command deliberately writes only the generated map; originals
- * and the editor's localStorage draft are never touched.
- *
- * Usage:
- *   bun scripts/apply-card-crops.mjs path/to/card-crop-editor-v2.json
- *   bun scripts/apply-card-crops.mjs path/to/file.json --dry-run
- */
-import { access, readFile, writeFile } from 'node:fs/promises'
-import { basename, dirname, resolve, sep } from 'node:path'
-import process from 'node:process'
+import { readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 
-const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const mediaRoot = resolve(projectRoot, 'public', 'images', 'home-media')
-const outputPath = resolve(projectRoot, 'src', 'data', 'card-crop-selections.generated.ts')
+import {
+  cropItems,
+  printCropSummary,
+  readGeneratedRecords,
+  validateCropRecord,
+  validateTransform
+} from './lib/crop-import.mjs'
+import { atomicWrite, isMain, recordChanges } from './lib/file-operations.mjs'
+
+const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const profile = 'archive-card'
-const frameWidth = 640
-const frameHeight = 448
-const frameRatio = frameWidth / frameHeight
 const schemaVersion = 2
+const frameRatio = 640 / 448
 
-const args = process.argv.slice(2)
-const inputPath = args.find((arg) => !arg.startsWith('-'))
-const dryRun = args.includes('--dry-run')
-const allowEmpty = args.includes('--allow-empty')
-
-if (!inputPath) {
-  console.error('Usage: bun scripts/apply-card-crops.mjs <editor-json> [--dry-run]')
-  process.exitCode = 1
-  process.exit()
-}
-
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
-const numberOr = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback)
-const normalizeTransform = (value) => ({
-  x: clamp(numberOr(value?.x, 50), 0, 100),
-  y: clamp(numberOr(value?.y, 50), 0, 100),
-  zoom: clamp(numberOr(value?.zoom, 1), 1, 4)
-})
-
-const cropRect = (width, height, transform) => {
+function cropRect(width, height, transform) {
   const sourceRatio = width / height
-  const coverWidth = sourceRatio >= frameRatio ? height * frameRatio : width
-  const coverHeight = sourceRatio >= frameRatio ? height : width / frameRatio
-  const normalized = normalizeTransform(transform)
-  const cropWidth = Math.min(width, coverWidth / normalized.zoom)
-  const cropHeight = Math.min(height, coverHeight / normalized.zoom)
+  const cropWidth = Math.min(
+    width,
+    (sourceRatio >= frameRatio ? height * frameRatio : width) / transform.zoom
+  )
+  const cropHeight = Math.min(
+    height,
+    (sourceRatio >= frameRatio ? height : width / frameRatio) / transform.zoom
+  )
   return {
     height: cropHeight / height,
     width: cropWidth / width,
-    x: ((width - cropWidth) * (normalized.x / 100)) / width,
-    y: ((height - cropHeight) * (normalized.y / 100)) / height
+    x: ((width - cropWidth) * transform.x) / 100 / width,
+    y: ((height - cropHeight) * transform.y) / 100 / height
   }
 }
 
-const readInput = async () => {
-  const absolute = resolve(process.cwd(), inputPath)
-  const raw = await readFile(absolute, 'utf8')
-  const parsed = JSON.parse(raw)
-  if (parsed?.profile !== undefined && parsed.profile !== profile) {
-    throw new Error(`输入配置 profile 为“${String(parsed.profile)}”，期望 ${profile}。`)
-  }
-  const items = parsed?.items ?? parsed?.decisions ?? parsed
-  if (!items || typeof items !== 'object' || Array.isArray(items)) {
-    throw new Error('输入文件没有找到 items/decisions 对象。')
-  }
-  return items
-}
-
-const safeFilename = (value) => {
-  const raw = String(value)
-  const file = basename(raw)
-  if (!file || /[\\/]/.test(raw) || file !== raw) return undefined
-  return file
-}
-
-const makeRecord = async (filename, value) => {
-  if (!value || typeof value !== 'object') return { reason: '不是对象' }
-  const selection = value.selection
-  if (!['diagonal-left', 'diagonal-right', 'both'].includes(selection)) {
-    return {
-      reason: selection === 'neither' ? '标记为两个框都不合适，保留在编辑器中处理' : '尚未确认'
+export async function applyCardCrops(
+  input,
+  { projectRoot = defaultRoot, dryRun = false, replace = false, allowEmpty = false } = {}
+) {
+  const items = cropItems(input, profile, schemaVersion)
+  const candidates = Object.entries(items).map(([filename, candidate]) => {
+    validateCropRecord(candidate, filename, schemaVersion)
+    if (
+      candidate.selection !== undefined &&
+      candidate.selection !== null &&
+      !['diagonal-left', 'diagonal-right', 'both', 'neither', 'pending'].includes(
+        candidate.selection
+      )
+    )
+      throw new Error(`${filename} 的 selection 无效。`)
+    const left = validateTransform(
+      candidate.transforms?.['diagonal-left'],
+      `${filename}.diagonal-left`
+    )
+    const right = validateTransform(
+      candidate.transforms?.['diagonal-right'],
+      `${filename}.diagonal-right`
+    )
+    if (candidate.fit !== undefined && !['cover', 'contain'].includes(candidate.fit))
+      throw new Error(`${filename} 的 fit 无效。`)
+    return { filename, candidate, left, right }
+  })
+  const outputPath = resolve(projectRoot, 'src/data/card-crop-selections.generated.ts')
+  const previous = await readGeneratedRecords(outputPath, 'cardCropSelectionsGenerated')
+  const records = replace ? {} : { ...previous }
+  const skipped = []
+  for (const { filename, candidate, left, right } of candidates) {
+    if (!['diagonal-left', 'diagonal-right', 'both'].includes(candidate.selection)) {
+      skipped.push(`${filename}: 未确认，未应用`)
+      continue
     }
-  }
-
-  const sourcePath = resolve(mediaRoot, filename)
-  if (!sourcePath.startsWith(`${mediaRoot}${sep}`)) return { reason: '文件名越界' }
-  try {
-    await access(sourcePath)
-  } catch {
-    return { reason: '找不到对应 WebP 素材' }
-  }
-
-  const metadata = await sharp(sourcePath).metadata()
-  const width = metadata.width ?? 0
-  const height = metadata.height ?? 0
-  if (!width || !height) return { reason: '无法读取图片尺寸' }
-
-  const left = normalizeTransform(value.transforms?.['diagonal-left'])
-  const right = normalizeTransform(value.transforms?.['diagonal-right'])
-  const preferredFrame =
-    value.preferredFrame === 'diagonal-left' || value.preferredFrame === 'diagonal-right'
-      ? value.preferredFrame
-      : selection === 'diagonal-left'
+    let metadata
+    try {
+      metadata = await sharp(
+        await readFile(resolve(projectRoot, 'public/images/home-media', filename))
+      ).metadata()
+    } catch (error) {
+      throw new Error(`${filename}: 无法读取 WebP 素材：${error.message}`)
+    }
+    if (!metadata.width || !metadata.height) throw new Error(`${filename}: 无法读取图片尺寸。`)
+    const preferredFrame = ['diagonal-left', 'diagonal-right'].includes(candidate.preferredFrame)
+      ? candidate.preferredFrame
+      : candidate.selection === 'diagonal-left'
         ? 'diagonal-left'
         : 'diagonal-right'
-
-  return {
-    record: {
+    records[filename] = {
       filename,
-      fit: value.fit === 'contain' ? 'contain' : 'cover',
+      fit: candidate.fit ?? 'cover',
       preferredFrame,
       schemaVersion,
-      selection,
-      transforms: {
-        'diagonal-left': left,
-        'diagonal-right': right
-      },
+      selection: candidate.selection,
+      transforms: { 'diagonal-left': left, 'diagonal-right': right },
       cropRects: {
-        'diagonal-left': cropRect(width, height, left),
-        'diagonal-right': cropRect(width, height, right)
+        'diagonal-left': cropRect(metadata.width, metadata.height, left),
+        'diagonal-right': cropRect(metadata.width, metadata.height, right)
       },
-      ...(typeof value.updatedAt === 'string' ? { updatedAt: value.updatedAt } : {})
+      ...(typeof candidate.updatedAt === 'string' ? { updatedAt: candidate.updatedAt } : {})
     }
   }
+  if (!Object.keys(records).length && !allowEmpty)
+    throw new Error('没有可应用的已确认记录；未写入文件。清空需显式 --replace --allow-empty。')
+  const summary = recordChanges(previous, records)
+  const source = `/** Generated by scripts/apply-card-crops.mjs (${profile}). Do not edit by hand. */\nimport type { CardCropRecord } from '@/lib/card-crop/types'\n\nexport const cardCropSelectionsGenerated: Readonly<Record<string, CardCropRecord>> = ${JSON.stringify(records, null, 2)}\n`
+  if (!dryRun) await atomicWrite(outputPath, source)
+  return { records, summary, skipped, outputPath }
 }
 
-const items = await readInput()
-const records = {}
-const skipped = []
-for (const [rawFilename, value] of Object.entries(items)) {
-  const filename = safeFilename(rawFilename)
-  if (!filename) {
-    skipped.push(`${rawFilename}: 文件名不安全`)
-    continue
+if (isMain(import.meta.url)) {
+  try {
+    const args = process.argv.slice(2).filter((arg) => arg !== '--')
+    const path = args.find((arg) => !arg.startsWith('-'))
+    if (
+      !path ||
+      args.some(
+        (arg) => arg.startsWith('-') && !['--dry-run', '--replace', '--allow-empty'].includes(arg)
+      )
+    )
+      throw new Error(
+        'Usage: node scripts/apply-card-crops.mjs <editor-json> [--dry-run] [--replace] [--allow-empty]'
+      )
+    const dryRun = args.includes('--dry-run')
+    const result = await applyCardCrops(JSON.parse(await readFile(resolve(path), 'utf8')), {
+      dryRun,
+      replace: args.includes('--replace'),
+      allowEmpty: args.includes('--allow-empty')
+    })
+    printCropSummary(result.summary, result.skipped, dryRun)
+  } catch (error) {
+    console.error(error.message)
+    process.exitCode = 1
   }
-  const result = await makeRecord(filename, value)
-  if (result.record) records[filename] = result.record
-  else skipped.push(`${filename}: ${result.reason}`)
-}
-
-const source = `/** Generated by scripts/apply-card-crops.mjs (${profile}). Do not edit by hand. */\nimport type { CardCropRecord } from '@/lib/card-crop/types'\n\nexport const cardCropSelectionsGenerated: Readonly<Record<string, CardCropRecord>> = ${JSON.stringify(records, null, 2)}\n`
-
-console.log(`可应用 ${Object.keys(records).length} 张；跳过 ${skipped.length} 张。`)
-if (skipped.length > 0) skipped.forEach((message) => console.log(`- ${message}`))
-if (Object.keys(records).length === 0 && !allowEmpty) {
-  console.error('没有可应用的已确认记录；为避免误清空现有生产配置，未写入文件。')
-  process.exitCode = 1
-  process.exit()
-}
-if (!dryRun) {
-  await writeFile(outputPath, source, 'utf8')
-  console.log(`已写入 ${outputPath}`)
-} else {
-  console.log('dry-run：未写入生产配置。')
 }

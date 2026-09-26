@@ -1,19 +1,10 @@
 import type { Page, PaginateFunction } from 'astro'
 
-import {
-  buildCollectionPageData,
-  getPageItems,
-  type PageItemOptions
-} from './page-data'
+import { buildCollectionPageData, getPageItems, type PageItemOptions } from './page-data'
+import { isContentSurfaceEnabled } from './policy'
 import { sortContentRecords } from './queries'
 import { getContentTypeDefinition } from './registry'
-import type {
-  ContentCatalog,
-  ContentKind,
-  ContentRecord,
-  PageItem,
-  PageKind
-} from './types'
+import type { ContentCatalog, ContentKind, ContentRecord, PageItem, PageKind } from './types'
 
 /** Per-content-type pagination settings owned by the site, not the theme. */
 export interface ContentPaginationConfig {
@@ -58,7 +49,9 @@ export function resolveContentPageSize(input: ContentPaginationInput): number {
     typeof input === 'number' ? { enabled: true, pageSize: input } : input
 
   if (!Number.isInteger(config.pageSize) || config.pageSize < 1) {
-    throw new Error(`Content pagination pageSize must be a positive integer, got ${config.pageSize}`)
+    throw new Error(
+      `Content pagination pageSize must be a positive integer, got ${config.pageSize}`
+    )
   }
 
   return config.enabled ? config.pageSize : Number.POSITIVE_INFINITY
@@ -84,6 +77,7 @@ export function buildCollectionStaticPaths(
   paginate: PaginateFunction,
   options: CollectionPaginationOptions
 ) {
+  if (!isContentSurfaceEnabled(kind, 'archive')) return []
   const definition = getContentTypeDefinition(kind)
   const records = sortContentRecords(
     catalog.byKind[kind] as readonly ContentRecord[],
@@ -116,10 +110,7 @@ export function buildCollectionStaticPaths(
 }
 
 /** Convert Astro's page metadata into the small prop contract of Paginator. */
-export function toPaginatorProps<T>(
-  page: Page<T>,
-  copy: PaginationCopy = {}
-): PaginatorProps {
+export function toPaginatorProps<T>(page: Page<T>, copy: PaginationCopy = {}): PaginatorProps {
   const previousSrLabel = copy.previousSrLabel ?? 'Previous page'
   const nextSrLabel = copy.nextSrLabel ?? 'Next page'
 
@@ -127,8 +118,8 @@ export function toPaginatorProps<T>(
     ...(page.url.prev
       ? {
           prevUrl: {
-          srLabel: previousSrLabel,
-          text: '← Previous',
+            srLabel: previousSrLabel,
+            text: '← Previous',
             url: page.url.prev
           }
         }
@@ -136,8 +127,8 @@ export function toPaginatorProps<T>(
     ...(page.url.next
       ? {
           nextUrl: {
-          srLabel: nextSrLabel,
-          text: 'Next →',
+            srLabel: nextSrLabel,
+            text: 'Next →',
             url: page.url.next
           }
         }

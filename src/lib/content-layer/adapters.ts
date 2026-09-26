@@ -39,7 +39,7 @@ export function adaptBlogEntry(entry: CollectionEntry<'blog'>): BlogRecord {
     draft: entry.data.draft,
     href: contentPath('blog', entry.id),
     id: entry.id,
-    image: toImageInput(entry.data.heroImage, entry.data.heroImage?.alt, entry.id),
+    image: toImageInput(entry.data.heroImage?.src, entry.data.heroImage?.alt, entry.id),
     key: contentKey('blog', entry.id),
     kind: 'blog',
     language: entry.data.language,
