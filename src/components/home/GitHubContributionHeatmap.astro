@@ -8,6 +8,7 @@ import {
   createGitHubContributionHeatmapSkeleton,
   getGitHubContributionHeatmap
 } from '@/data/github-contributions'
+
 import '@/assets/styles/github-contribution-heatmap.css'
 
 interface Props {
@@ -17,17 +18,21 @@ interface Props {
 
 const { class: className, username = 'Susurrium' } = Astro.props
 const normalizedUsername = username.trim()
-const fetchedHeatmap = normalizedUsername ? await getGitHubContributionHeatmap(normalizedUsername) : null
+const fetchedHeatmap = normalizedUsername
+  ? await getGitHubContributionHeatmap(normalizedUsername)
+  : null
 const heatmap = fetchedHeatmap ?? createGitHubContributionHeatmapSkeleton()
 const profileHref = `https://github.com/${encodeURIComponent(normalizedUsername)}`
-const contributionSummary = fetchedHeatmap && heatmap.total > 0
-  ? `${heatmap.total.toLocaleString('en-US')} contributions in the last year`
-  : 'GitHub contribution heatmap'
-const compactContributionCount = fetchedHeatmap && heatmap.total > 0
+const contributionSummary = fetchedHeatmap
+  ? heatmap.missingDays > 0
+    ? `${heatmap.total.toLocaleString('en-US')} contributions in available data · ${heatmap.missingDays} days unavailable`
+    : `${heatmap.total.toLocaleString('en-US')} contributions in the year ending ${heatmap.rangeEnd}`
+  : 'GitHub contribution data temporarily unavailable'
+const compactContributionCount = fetchedHeatmap
   ? `${Intl.NumberFormat('en-US', { maximumFractionDigits: 1, notation: 'compact' })
       .format(heatmap.total)
       .toLowerCase()} contributions`
-  : 'contributions'
+  : 'data unavailable'
 const heatmapStyle = `--contribution-heatmap-week-count: ${heatmap.weekCount};`
 const legendLevels = [0, 1, 2, 3, 4]
 const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, (_, weekIndex) => ({
@@ -41,7 +46,10 @@ const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, 
     <a
       class:list={['contribution-heatmap-link', className]}
       data-card-surface='standard'
-      data-contribution-heatmap-state={fetchedHeatmap ? 'ready' : 'fallback'}
+      data-contribution-heatmap-state={
+        fetchedHeatmap ? (heatmap.missingDays > 0 ? 'partial' : 'ready') : 'fallback'
+      }
+      data-contribution-snapshot={heatmap.snapshotAt}
       href={profileHref}
       target='_blank'
       rel='noopener noreferrer'
@@ -59,12 +67,16 @@ const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, 
         </div>
         <div class='contribution-heatmap-grid'>
           {heatmapWeeks.map((week) => (
-            <span class='contribution-heatmap-week' style={`--contribution-heatmap-hover-delay: ${week.hoverDelay};`}>
+            <span
+              class='contribution-heatmap-week'
+              style={`--contribution-heatmap-hover-delay: ${week.hoverDelay};`}
+            >
               {week.days.map((day) => (
                 <span
                   class='contribution-heatmap-cell'
                   data-level={day.level}
                   data-blank={day.isBlank ? 'true' : undefined}
+                  data-unknown={day.isUnknown ? 'true' : undefined}
                   title={day.label || undefined}
                 />
               ))}
@@ -84,6 +96,22 @@ const heatmapWeeks = Array.from({ length: Math.ceil(heatmap.days.length / 7) }, 
           <span class='contribution-heatmap-legend-label'>More</span>
         </span>
       </div>
+      <span class='contribution-heatmap-snapshot'>
+        数据截至 <time datetime={heatmap.snapshotAt}>{heatmap.rangeEnd}</time>（UTC）
+        {heatmap.missingDays > 0 && fetchedHeatmap ? ' · 部分数据缺失' : ''}
+      </span>
     </a>
   )
 }
+<style>
+  .contribution-heatmap-snapshot {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.7rem;
+    color: hsl(var(--muted-foreground));
+  }
+  .contribution-heatmap-cell[data-unknown='true'] {
+    background: transparent;
+    border: 1px dashed hsl(var(--muted-foreground) / 0.4);
+  }
+</style>

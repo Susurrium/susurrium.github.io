@@ -23,7 +23,9 @@
   function readStoredTheme() {
     try {
       var storedTheme = window.localStorage.getItem('theme')
-      return storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : ''
+      return storedTheme === 'dark' || storedTheme === 'light' || storedTheme === 'system'
+        ? storedTheme
+        : ''
     } catch (_error) {
       return ''
     }
@@ -52,7 +54,9 @@
       savedTheme = ''
     }
 
-    var preferredTheme = savedTheme || readStoredTheme()
+    // An explicit system preference follows the current OS appearance even
+    // when the handoff cookie describes a previous browser session.
+    var preferredTheme = readStoredTheme() || savedTheme
     var dark =
       preferredTheme === 'dark' ||
       (preferredTheme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)

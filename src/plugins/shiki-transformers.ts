@@ -101,14 +101,14 @@ export const addCopyButton = (timeout?: number): ShikiTransformer => {
         {
           class: 'copy text-muted-foreground p-1 box-content border rounded bg-primary-foreground',
           'data-code': this.source,
-          onclick: `
-          navigator.clipboard.writeText(this.dataset.code);
-          this.classList.add('copied');
-          setTimeout(() => this.classList.remove('copied'), ${toggleMs})
-        `
+          type: 'button',
+          'aria-label': '复制代码',
+          title: '复制代码',
+          'data-copy-code': '',
+          'data-copy-reset-ms': Math.max(1000, Math.min(10000, toggleMs))
         },
         [
-          h('div', { class: 'ready' }, [
+          h('div', { class: 'ready', 'aria-hidden': 'true' }, [
             h(
               'svg',
               {
@@ -121,7 +121,7 @@ export const addCopyButton = (timeout?: number): ShikiTransformer => {
               ]
             )
           ]),
-          h('div', { class: 'success hidden' }, [
+          h('div', { class: 'success hidden', 'aria-hidden': 'true' }, [
             h(
               'svg',
               {

@@ -1,8 +1,17 @@
 ---
+import { isContentSurfaceEnabled } from '@/lib/content-layer/policy'
+
 import { Icon } from 'astro-pure/user'
 import config from '@/site-config'
 
-const menu = config.header.menu ?? []
+const menu = (config.header.menu ?? []).filter((item) => {
+  const path = item.link.replace(/\/$/, '')
+  if (path === '/blog') return isContentSurfaceEnabled('blog', 'main-nav')
+  if (path === '/traces') return isContentSurfaceEnabled('trace', 'main-nav')
+  if (path === '/sayings') return isContentSurfaceEnabled('saying', 'main-nav')
+  if (path === '/archives') return isContentSurfaceEnabled('blog', 'archive')
+  return true
+})
 ---
 
 <!--
@@ -11,6 +20,7 @@ const menu = config.header.menu ?? []
   destination: /home is the actual home while / is the replayable entrance.
 -->
 <header-component
+  role='banner'
   class='group sticky top-4 z-50 mb-12 flex items-center justify-between rounded-xl border border-transparent max-sm:py-1 max-md:z-30 sm:rounded-2xl'
 >
   <a
@@ -22,8 +32,9 @@ const menu = config.header.menu ?? []
   >
 
   <div class='flex items-center gap-x-2'>
-    <div
+    <nav
       id='headerExpandContent'
+      aria-label='主导航'
       class='end-0 start-0 top-12 grid border border-transparent group-[.not-top]:rounded-xl dark:group-[.expanded.not-top]:bg-muted max-sm:group-[.not-top]:border-border max-sm:group-[.not-top]:px-4 max-sm:group-[.not-top]:py-2 max-sm:group-[.expanded.not-top]:bg-background sm:grid-rows-1'
     >
       <div class='flex flex-col items-center justify-center overflow-hidden sm:flex-row'>
@@ -52,7 +63,7 @@ const menu = config.header.menu ?? []
           </a>
         </div>
       </div>
-    </div>
+    </nav>
 
     <div class='z-30 flex gap-x-4 group-[.not-top]:gap-x-2' style='transition:gap 0.3s'>
       <button
@@ -84,45 +95,20 @@ const menu = config.header.menu ?? []
 <script is:inline>
   const toggleDarkModeElement = document.getElementById('toggleDarkMode')
   if (toggleDarkModeElement) {
-    toggleDarkModeElement.dataset.theme = localStorage.getItem('theme') || 'system'
+    try {
+      toggleDarkModeElement.dataset.theme = localStorage.getItem('theme') || 'system'
+    } catch {
+      toggleDarkModeElement.dataset.theme = 'system'
+    }
   }
 </script>
 <script>
+  import { readThemePreference, setThemePreference } from '@/lib/client/theme'
+
   declare global {
     interface Window {
       __susurriumSetThemeHandoff?: (theme: 'dark' | 'light') => void
     }
-  }
-
-  // The two tiny browser helpers are copied from astro-pure@1.4.6 instead of
-  // importing its barrel. The barrel also exports date.ts, which imports the
-  // Astro-only `virtual:config` module and makes Vite dev prebundling fail.
-  function setTheme(theme?: string, save = false) {
-    const themes = ['system', 'dark', 'light']
-    if (theme) {
-      if (!themes.includes(theme)) return
-      if (save) localStorage.setItem('theme', theme)
-    } else {
-      theme = localStorage.getItem('theme') ?? undefined
-      if (save) {
-        const currentIndex = themes.indexOf(theme ?? 'system')
-        theme = themes[(currentIndex + 1) % themes.length]
-        localStorage.setItem('theme', theme)
-      }
-    }
-
-    let targetTheme = theme
-    if (theme === 'system') {
-      targetTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-
-    document.documentElement.classList.toggle('dark', targetTheme === 'dark')
-    document.documentElement.dataset.theme = targetTheme === 'dark' ? 'dark' : 'light'
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', targetTheme === 'dark' ? '#0B0B10' : '#FCFCFD')
-    window.__susurriumSetThemeHandoff?.(targetTheme === 'dark' ? 'dark' : 'light')
-    return theme
   }
 
   function showToast(message: string) {
@@ -155,11 +141,17 @@ const menu = config.header.menu ?? []
 
       const darkModeButton = this.querySelector('#toggleDarkMode') as HTMLElement | null
       if (darkModeButton) {
-        darkModeButton.dataset.theme ||= localStorage.getItem('theme') || 'system'
+        darkModeButton.dataset.theme ||= readThemePreference()
         darkModeButton.addEventListener(
           'click',
           () => {
-            const newTheme = setTheme(undefined, true)
+            const themes = ['system', 'dark', 'light'] as const
+            const current =
+              document.documentElement.dataset.themePreference ?? readThemePreference()
+            const newTheme = setThemePreference(
+              themes[(themes.indexOf(current as (typeof themes)[number]) + 1) % themes.length],
+              true
+            )
             darkModeButton.dataset.theme = newTheme
             showToast(`Set theme to ${newTheme}`)
           },

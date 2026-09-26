@@ -1,36 +1,32 @@
 ---
-// https://waline.js.org/en/guide/features/pageview.html#use-alone
+import { normalizeWalinePath } from '@/lib/waline-path'
+
 import config from '@/site-config'
 ---
 
-<script
-  is:inline
-  type='module'
-  data-astro-rerun
-  define:vars={{ npmCDN: config.npmCDN, walineServer: config.integ.waline.server }}
->
-  async function loadPageview() {
-    try {
-      const pageview = await import(`${npmCDN}/@waline/client@v3/dist/pageview.js`)
-      const el = document.querySelector('.waline-pageview-count')
-      if (el) {
-        // PageInfo exposes the canonical path used by comments and counts.
-        // Keep a defensive fallback for standalone use of this component.
-        const rawPath = el.getAttribute('data-path') || window.location.pathname
-        const path = rawPath === '/' ? '/' : rawPath.replace(/\/+$/, '') || '/'
-        pageview.pageviewCount({
-          serverURL: walineServer,
-          path
-        })
-      }
-    } catch (e) {
-      console.error('Failed to load Waline pageview:', e)
+<waline-pageview
+  data-server={config.integ.waline.server}
+  data-path={normalizeWalinePath(Astro.url.pathname)}></waline-pageview>
+<script>
+  import { pageviewCount } from '@waline/client/pageview'
+
+  class WalinePageview extends HTMLElement {
+    private abort?: () => void
+
+    connectedCallback() {
+      this.abort?.()
+      const serverURL = this.dataset.server
+      if (!serverURL) return
+      // Capture the canonical path synchronously. Waline cancels counter
+      // reads; its increment POST does not accept a cancellation signal.
+      this.abort = pageviewCount({ serverURL, path: this.dataset.path || '/' })
+    }
+
+    disconnectedCallback() {
+      this.abort?.()
+      this.abort = undefined
     }
   }
-
-  // Waline's `pageviewCount` does not return a cancellation function.  Start
-  // the optional request without manufacturing an `abort()` call; PageInfo
-  // only renders this component when the integration has explicitly been
-  // enabled with a reviewed server configuration.
-  void loadPageview()
+  if (!customElements.get('waline-pageview'))
+    customElements.define('waline-pageview', WalinePageview)
 </script>

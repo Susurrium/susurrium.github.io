@@ -1,0 +1,119 @@
+---
+// First paint and the routed document share the same storage policy.
+---
+
+<script is:inline>
+  ;(() => {
+    let preference = 'system'
+    try {
+      const saved = localStorage.getItem('theme')
+      if (saved === 'dark' || saved === 'light') preference = saved
+    } catch {
+      /* Use the system preference if browser storage is blocked. */
+    }
+    const dark =
+      preference === 'dark' ||
+      (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+    document.documentElement.classList.toggle('dark', dark)
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    document.documentElement.dataset.themePreference = preference
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', dark ? '#0B0B10' : '#FCFCFD')
+  })()
+</script>
+<script>
+  import { readThemePreference, setThemePreference, type ThemePreference } from '@/lib/client/theme'
+
+  const sync = () => setThemePreference(readThemePreference())
+  sync()
+  document.addEventListener('astro:page-load', sync)
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'theme' || event.key === null) sync()
+  })
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const preference = (document.documentElement.dataset.themePreference ??
+      readThemePreference()) as ThemePreference
+    if (preference === 'system') setThemePreference(preference)
+  })
+  let toast: HTMLElement | undefined
+  let toastTimer: ReturnType<typeof setTimeout> | undefined
+  document.addEventListener('toast', (event) => {
+    const detail = (event as CustomEvent<{ message?: unknown; time?: number }>).detail
+    if (typeof detail?.message !== 'string') return
+    toast?.remove()
+    clearTimeout(toastTimer)
+    toast = document.createElement('div')
+    toast.className =
+      'site-toast fixed bottom-8 rounded-lg border bg-muted px-4 py-2 text-foreground shadow-lg'
+    toast.setAttribute('role', 'status')
+    toast.textContent = detail.message
+    document.body.append(toast)
+    toastTimer = setTimeout(
+      () => toast?.remove(),
+      Math.min(10_000, Math.max(1500, detail.time ?? 3000))
+    )
+  })
+  const copyTimers = new WeakMap<HTMLButtonElement, ReturnType<typeof setTimeout>>()
+  document.addEventListener('click', async (event) => {
+    const target = event.target
+    if (!(target instanceof Element)) return
+    const button = target.closest<HTMLButtonElement>('button[data-copy-code]')
+    if (!button || button.disabled) return
+    button.disabled = true
+    clearTimeout(copyTimers.get(button))
+    try {
+      await navigator.clipboard.writeText(button.dataset.code ?? '')
+      if (!button.isConnected) return
+      button.classList.add('copied')
+      button.setAttribute('aria-label', '代码已复制')
+      button.title = '代码已复制'
+      document.dispatchEvent(new CustomEvent('toast', { detail: { message: '代码已复制。' } }))
+    } catch {
+      if (!button.isConnected) return
+      button.classList.remove('copied')
+      button.setAttribute('aria-label', '复制失败，点击重试')
+      button.title = '复制失败，点击重试'
+      document.dispatchEvent(
+        new CustomEvent('toast', { detail: { message: '复制失败，请重试或手动选择代码。' } })
+      )
+    } finally {
+      button.disabled = false
+      if (button.isConnected)
+        copyTimers.set(
+          button,
+          setTimeout(
+            () => {
+              button.classList.remove('copied')
+              button.setAttribute('aria-label', '复制代码')
+              button.title = '复制代码'
+            },
+            Number(button.dataset.copyResetMs) || 3000
+          )
+        )
+    }
+  })
+</script>
+<style is:global>
+  .site-toast {
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    max-width: min(90vw, 32rem);
+  }
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10001;
+    padding: 0.6rem 1rem;
+    border-radius: 0.5rem;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transform: translateY(-200%);
+  }
+  .skip-link:focus {
+    transform: translateY(0);
+    outline: 3px solid hsl(var(--ring));
+  }
+</style>

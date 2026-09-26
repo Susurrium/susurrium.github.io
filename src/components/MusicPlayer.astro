@@ -14,7 +14,7 @@ import { musicConfig } from '@/data/music'
   id='global-music-player'
   data-global-music-player
   data-music-player
-  data-playback-state='loading'
+  data-playback-state='idle'
   data-provider={musicConfig.server}
   data-playlist-id={musicConfig.id}
 >
@@ -41,146 +41,267 @@ import { musicConfig } from '@/data/music'
       volume={String(musicConfig.volume)}
       data-music-meting></meting-js>
   </div>
-  <p class='sr-only' data-music-status aria-live='polite'>正在加载网易云歌单。</p>
+  <p class='sr-only' data-music-status aria-live='polite'>点击播放音乐。</p>
+  <div class='music-player__error' data-music-error hidden>
+    <span>音乐暂时不可用。</span>
+    <button type='button' class='focus-ring' data-music-retry>重试</button>
+    <a href={musicConfig.playlistUrl} target='_blank' rel='noopener noreferrer'>打开歌单</a>
+  </div>
 </music-player>
 
 <script>
+  import { musicConfig } from '@/data/music'
+  import { normalizeMusicTracks } from '@/lib/client/music'
+  import { loadBrowserResource } from '@/lib/client/resources'
+
   type APlayerLike = {
     audio?: HTMLAudioElement
     paused?: boolean
-    on?: (event: string, callback: (payload?: unknown) => void) => void
-    toggle?: () => void
-    play?: () => void
+    on?: (event: string, callback: () => void) => void
+    play?: () => void | Promise<void>
+    pause?: () => void
+    destroy?: () => void
   }
-
   type MetingElement = HTMLElement & { aplayer?: APlayerLike; lock?: boolean }
+  declare global {
+    interface Window {
+      APlayer?: new (options: Record<string, unknown>) => APlayerLike
+    }
+  }
 
   class MusicPlayerElement extends HTMLElement {
     private controller: AbortController | null = null
-    private playerObserver: MutationObserver | null = null
+    private loadingController: AbortController | null = null
     private modeObserver: MutationObserver | null = null
     private meting: MetingElement | null = null
     private nav: HTMLElement | null = null
     private toggle: HTMLButtonElement | null = null
     private player: APlayerLike | null = null
     private playerContainer: HTMLElement | null = null
+    private loading: Promise<void> | null = null
+    private boundPlayers = new WeakSet<APlayerLike>()
+    private failed = false
 
     connectedCallback() {
       this.disconnect()
-
       this.meting = this.querySelector<MetingElement>('[data-music-meting]')
       this.nav = this.querySelector<HTMLElement>('[data-music-nav]')
       this.toggle = this.querySelector<HTMLButtonElement>('[data-music-toggle]')
       if (!this.meting || !this.nav || !this.toggle) return
-
-      // MetingJS 2.0.1 calls `this.aplayer.destroy()` from its native
-      // disconnectedCallback without checking whether APlayer finished
-      // initialization. Astro may temporarily detach persistent DOM during a
-      // ClientRouter swap, so keep this deliberately persistent instance alive
-      // instead of letting the third-party callback tear it down.
       this.meting.lock = true
-
       this.controller = new AbortController()
       const { signal } = this.controller
-
       this.toggle.addEventListener('click', this.togglePlayback, { signal })
+      this.querySelector('[data-music-retry]')?.addEventListener('click', this.retry, { signal })
       document.addEventListener('astro:after-swap', this.handleNavigationUpdate, { signal })
       document.addEventListener('astro:page-load', this.handleNavigationUpdate, { signal })
-
-      this.playerObserver = new MutationObserver(this.attachPlayer)
-      this.playerObserver.observe(this.meting, { childList: true, subtree: true })
       this.observePresentationMode()
       this.attachPlayer()
       this.syncPresentationMode()
-      this.setStatus('正在加载网易云歌单。')
     }
 
     disconnectedCallback() {
       this.disconnect()
+      // Astro moves the persistent shell synchronously. Only a genuine
+      // removal owns teardown of the audio and pending provider request.
+      queueMicrotask(() => {
+        if (this.isConnected) return
+        this.loadingController?.abort()
+        this.player?.destroy?.()
+        this.player = null
+        if (this.meting) this.meting.aplayer = undefined
+      })
     }
 
     private disconnect() {
       this.controller?.abort()
       this.controller = null
-      this.playerObserver?.disconnect()
-      this.playerObserver = null
       this.modeObserver?.disconnect()
       this.modeObserver = null
-      this.player = null
-      this.playerContainer = null
     }
 
     private attachPlayer = () => {
       const candidate = this.meting?.aplayer
       if (!candidate) {
-        this.dataset.playbackState = 'loading'
+        this.syncPlayback()
         return
       }
-
-      if (candidate !== this.player) {
-        this.player = candidate
-        this.playerContainer = this.meting?.querySelector<HTMLElement>('.aplayer') ?? null
-
+      this.player = candidate
+      this.playerContainer = this.meting?.querySelector<HTMLElement>('.aplayer') ?? null
+      if (!this.boundPlayers.has(candidate)) {
+        this.boundPlayers.add(candidate)
         if (candidate.audio) {
           candidate.audio.autoplay = false
           candidate.audio.dataset.musicAudio = 'true'
         }
-
-        candidate.on?.('play', this.syncPlayback)
+        candidate.on?.('play', this.handlePlay)
         candidate.on?.('pause', this.syncPlayback)
         candidate.on?.('ended', this.syncPlayback)
-        candidate.on?.('listswitch', this.syncMetadata)
+        candidate.on?.('listswitch', this.syncPlayback)
         candidate.on?.('error', this.handlePlaybackError)
       }
-
-      this.syncMetadata()
       this.syncPlayback()
+    }
+
+    private loadPlayer = (playWhenReady = false) => {
+      if (this.loading) return this.loading
+      this.failed = false
+      this.loadingController = new AbortController()
+      const { signal } = this.loadingController
+      this.dataset.playbackState = 'loading'
+      this.setStatus('正在加载网易云歌单…')
+      this.syncError()
+      const task = (async () => {
+        await Promise.all([
+          loadBrowserResource(
+            'https://cdn.cbd.int/anzhiyu-theme-static@1.0.0/aplayer/APlayer.min.css',
+            'stylesheet',
+            'music-aplayer-style'
+          ),
+          window.APlayer
+            ? Promise.resolve()
+            : loadBrowserResource(
+                'https://cdn.cbd.int/anzhiyu-blog-static@1.0.1/js/APlayer.min.js',
+                'script',
+                'music-aplayer-runtime'
+              )
+        ])
+        if (signal.aborted || !this.isConnected) return
+        const url = musicConfig.api
+          .replace(':server', musicConfig.server)
+          .replace(':type', musicConfig.type)
+          .replace(':id', encodeURIComponent(musicConfig.id))
+          .replace(':r', String(Math.random()))
+        const timeout = window.setTimeout(() => this.loadingController?.abort(), 12_000)
+        let tracks
+        try {
+          const response = await fetch(url, { signal })
+          if (!response.ok) throw new Error(`Music provider HTTP ${response.status}`)
+          tracks = normalizeMusicTracks(await response.json())
+          if (!tracks.length) throw new Error('No playable music in provider response')
+        } finally {
+          window.clearTimeout(timeout)
+        }
+        if (signal.aborted || !this.isConnected || !this.meting) return
+        if (!window.APlayer) throw new Error('Music runtime did not initialize')
+        const container = document.createElement('div')
+        this.meting.replaceChildren(container)
+        this.meting.aplayer = new window.APlayer({
+          container,
+          audio: tracks,
+          autoplay: false,
+          mutex: musicConfig.mutex,
+          preload: musicConfig.preload,
+          order: musicConfig.order,
+          volume: musicConfig.volume,
+          lrcType: musicConfig.lrcType,
+          theme: 'hsl(var(--primary))'
+        })
+        this.attachPlayer()
+        this.setStatus('歌单已加载，点击播放。')
+        if (playWhenReady) await this.play()
+      })()
+        .catch((error) => {
+          if (!this.isConnected) return
+          console.warn('[music] Unable to load playlist.', error)
+          this.handlePlaybackError()
+        })
+        .finally(() => {
+          if (this.loading === task) {
+            this.loading = null
+            this.loadingController = null
+            this.syncPlayback()
+          }
+        })
+      this.loading = task
+      return task
+    }
+
+    private play = async () => {
+      try {
+        await this.player?.play?.()
+      } catch {
+        this.setStatus('歌单已加载，请再点击播放。')
+        this.syncPlayback()
+      }
+    }
+
+    private retry = () => {
+      if (this.loading) return
+      this.player?.destroy?.()
+      this.player = null
+      this.playerContainer = null
+      if (this.meting) {
+        this.meting.aplayer = undefined
+        this.meting.replaceChildren()
+      }
+      void this.loadPlayer(true)
     }
 
     private togglePlayback = () => {
-      const player = this.player ?? this.meting?.aplayer
-      if (!player) {
-        this.setStatus('网易云歌单仍在加载，稍后再试。')
+      if (this.failed) {
+        this.retry()
         return
       }
-
-      if (typeof player.toggle === 'function') player.toggle()
-      else this.playerContainer?.querySelector<HTMLElement>('.aplayer-button')?.click()
+      if (!this.player) {
+        void this.loadPlayer(true)
+        return
+      }
+      if (this.player.paused === false) this.player.pause?.()
+      else void this.play()
     }
 
-    private syncPlayback = () => {
-      const player = this.player
-      const audio = player?.audio
-      const playing = Boolean(player && player.paused === false && audio?.currentSrc)
-      this.classList.toggle('is-playing', playing)
-      this.nav?.classList.toggle('playing', playing)
-      this.dataset.playbackState = playing ? 'playing' : 'paused'
-
-      const title = this.currentTitle()
-      const label = playing ? '暂停音乐' : '播放音乐'
-      this.toggle?.setAttribute('aria-label', title ? `${label}：${title}` : label)
-      this.toggle?.setAttribute('title', title ? `${label}：${title}` : label)
-      if (playing) this.setStatus(`正在播放：${title || '网易云音乐'}`)
-    }
-
-    private syncMetadata = () => {
-      const title = this.currentTitle()
-      if (title) this.dataset.currentTitle = title
+    private handlePlay = () => {
+      this.failed = false
       this.syncPlayback()
     }
 
-    private currentTitle() {
-      return this.playerContainer?.querySelector('.aplayer-title')?.textContent?.trim() ?? ''
+    private syncPlayback = () => {
+      const playing = Boolean(this.player?.paused === false && this.player.audio?.currentSrc)
+      this.classList.toggle('is-playing', playing)
+      this.nav?.classList.toggle('playing', playing)
+      this.dataset.playbackState = this.failed
+        ? 'error'
+        : this.player
+          ? playing
+            ? 'playing'
+            : 'paused'
+          : this.loading
+            ? 'loading'
+            : 'idle'
+      const title = this.playerContainer?.querySelector('.aplayer-title')?.textContent?.trim() ?? ''
+      this.dataset.currentTitle = title
+      const label = this.failed
+        ? '重试音乐'
+        : this.loading && !this.player
+          ? '加载中…'
+          : playing
+            ? '暂停音乐'
+            : '播放音乐'
+      if (this.toggle) {
+        this.toggle.textContent = label
+        this.toggle.setAttribute('aria-label', title ? `${label}：${title}` : label)
+        this.toggle.setAttribute('title', title ? `${label}：${title}` : label)
+        this.toggle.disabled = Boolean(this.loading && !this.player)
+      }
+      if (playing) this.setStatus(`正在播放：${title || '网易云音乐'}`)
+      this.syncError()
+    }
+
+    private syncError() {
+      const panel = this.querySelector<HTMLElement>('[data-music-error]')
+      if (panel) panel.hidden = !this.failed
     }
 
     private handlePlaybackError = () => {
-      this.dataset.playbackState = 'error'
-      this.setStatus('公共音乐接口暂时不可用，请稍后重试。')
+      this.failed = true
+      this.setStatus('音乐暂时不可用，可以重试或打开网易云歌单。')
       this.syncPlayback()
     }
 
     private handleNavigationUpdate = () => {
       queueMicrotask(() => {
+        if (!this.isConnected) return
         this.observePresentationMode()
         this.attachPlayer()
         this.syncPresentationMode()
@@ -189,7 +310,6 @@ import { musicConfig } from '@/data/music'
 
     private observePresentationMode() {
       this.modeObserver?.disconnect()
-      if (!document.body) return
       this.modeObserver = new MutationObserver(this.syncPresentationMode)
       this.modeObserver.observe(document.body, {
         attributes: true,
@@ -211,9 +331,7 @@ import { musicConfig } from '@/data/music'
     }
   }
 
-  if (!customElements.get('music-player')) {
-    customElements.define('music-player', MusicPlayerElement)
-  }
+  if (!customElements.get('music-player')) customElements.define('music-player', MusicPlayerElement)
 </script>
 
 <style>
@@ -429,9 +547,45 @@ import { musicConfig } from '@/data/music'
   }
 
   #nav-music.playing #nav-music-hoverTips {
-    width: 0;
-    pointer-events: none;
     opacity: 0;
+  }
+  #nav-music-hoverTips:focus-visible {
+    opacity: 1 !important;
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  music-player:is(
+      [data-playback-state='idle'],
+      [data-playback-state='loading'],
+      [data-playback-state='error']
+    )
+    #nav-music {
+    min-width: 5rem;
+  }
+  music-player:is(
+      [data-playback-state='idle'],
+      [data-playback-state='loading'],
+      [data-playback-state='error']
+    )
+    #nav-music-hoverTips {
+    opacity: 1;
+  }
+  .music-player__error {
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    left: 0;
+    width: max-content;
+    max-width: min(90vw, 22rem);
+    padding: 0.7rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.6rem;
+    background: hsl(var(--background));
+    font-size: 0.8rem;
+  }
+  .music-player__error button,
+  .music-player__error a {
+    margin-left: 0.6rem;
+    text-decoration: underline;
   }
 
   music-player.is-compact #nav-music {
