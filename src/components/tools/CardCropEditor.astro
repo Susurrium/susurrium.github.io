@@ -361,7 +361,7 @@ const serializedInitialSelections = JSON.stringify(cardCropSelections).replace(/
         diagonalSide={previewFrame === 'diagonal-left' ? 'left' : 'right'}
         presentation='media-content'
         title={firstEditorAsset?.filename ?? '素材预览'}
-        dataAttributes={{ 'data-editor-card-preview': 'true' }}
+        dataAttributes={{ 'data-editor-card-preview': 'true', id: 'card-crop-preview' }}
       />
     </div>
 

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import siteConfig from '../src/site.config'
+import { downloadAvatar } from './lib/avatar-download.mjs'
 
 type Friend = {
   name: string
@@ -92,20 +93,6 @@ async function ensureFileExists(filePath: string) {
   }
 }
 
-async function fetchWithTimeout(url: string, ms: number) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), ms)
-  try {
-    const response = await fetch(url, { redirect: 'follow', signal: controller.signal })
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`)
-    }
-    return response
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
 async function cacheFriendAvatar(friend: Friend) {
   if (!friend.avatar.trim().startsWith('http')) {
     // Local avatars are already bundled under public/
@@ -133,13 +120,12 @@ async function cacheFriendAvatar(friend: Friend) {
   }
 
   try {
-    const response = await fetchWithTimeout(friend.avatar, 10_000)
-    const extension = resolveExtension(friend.avatar, response.headers.get('content-type'))
+    const { buffer, contentType } = await downloadAvatar(friend.avatar)
+    const extension = resolveExtension(friend.avatar, contentType)
     const fileName = `${hash}.${extension}`
     const targetPath = path.join(avatarOutputDir, fileName)
 
     try {
-      const buffer = Buffer.from(await response.arrayBuffer())
       await writeFile(targetPath, buffer)
       friend.avatar_cache = {
         hash,
