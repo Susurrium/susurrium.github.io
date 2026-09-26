@@ -75,6 +75,7 @@
     "maplibre-gl": "6.4.1",
     "medium-zoom": "1.1.0",
     "qrcodejs": "1.0.0",
+    "rehype": "13.0.2",
     "rehype-katex": "^7.0.1",
     "rehype-parse": "9.0.1",
     "rehype-sanitize": "6.0.0",

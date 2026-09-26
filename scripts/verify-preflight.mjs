@@ -59,7 +59,7 @@ expect(
   `Bun is exactly 1.4.0 (actual: ${process.versions.bun ?? 'not Bun'})`
 )
 expect(pkg.packageManager === 'bun@1.4.0', 'packageManager is bun@1.4.0')
-for (const dependency of ['astro', 'astro-pure', '@astrojs/mdx', 'pagefind', 'sharp']) {
+for (const dependency of ['astro', 'astro-pure', '@astrojs/mdx', 'pagefind', 'sharp', 'rehype']) {
   const version = pkg.dependencies?.[dependency] ?? pkg.devDependencies?.[dependency]
   expect(/^\d+\.\d+\.\d+$/.test(version ?? ''), `${dependency} has an exact reviewed version`)
   const installed = JSON.parse(read(`node_modules/${dependency}/package.json`))

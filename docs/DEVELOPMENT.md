@@ -170,6 +170,10 @@ bun run ci
 
 ## 3. 分支
 
+这是 Fork 仓库。GitHub CLI 可能默认选择上游仓库；首次使用先执行
+`gh repo set-default Susurrium/susurrium.github.io`。创建 PR、查询 CI、合并和触发部署时仍建议显式传入
+`--repo Susurrium/susurrium.github.io`，避免把发布操作发给上游。
+
 - `main`：生产分支，只接收经过验证的发布合并。
 - `develop`：集成分支，必须包含当前生产基线；所有日常功能和文章分支都从这里创建。
 - `codex/*`：短生命周期的功能、文章、修复、同步或文档分支，完成后通过 PR 合并并清理。
