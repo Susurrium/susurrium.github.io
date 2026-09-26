@@ -1,4 +1,5 @@
 ---
+import { contentLicense } from '@/data/content-license'
 import config from 'virtual:config'
 
 import { Icon } from 'astro-pure/user'
@@ -22,11 +23,7 @@ interface Props {
   class?: string
 }
 
-const {
-  data,
-  title: displayTitle,
-  class: className
-} = Astro.props
+const { data, title: displayTitle, class: className } = Astro.props
 const heroImage = data.heroImage
 const title = displayTitle ?? data.title ?? data.text ?? 'Untitled'
 const publishDate = data.publishDate
@@ -94,11 +91,11 @@ const shareLabels: Record<string, string> = {
         <span>Copyright</span>
         <a
           class='text-sm text-foreground max-sm:place-self-center'
-          href='https://creativecommons.org/licenses/by/4.0/'
+          href={contentLicense.url}
           target='_blank'
           rel='noopener noreferrer'
         >
-          CC BY-NC-SA 4.0
+          {contentLicense.label}
         </a>
       </div>
     </div>
@@ -172,6 +169,7 @@ const shareLabels: Record<string, string> = {
 </style>
 
 <script>
+  import { loadBrowserResource } from '@/lib/client/resources'
   import qrcodeScriptUrl from 'qrcodejs/qrcode.min.js?url'
 
   type QRCodeOptions = {
@@ -198,40 +196,15 @@ const shareLabels: Record<string, string> = {
   function loadQRCode(): Promise<QRCodeConstructor> {
     if (window.QRCode) return Promise.resolve(window.QRCode)
     if (loader) return loader
-
-    loader = new Promise((resolve, reject) => {
-      const existingScript = document.querySelector<HTMLScriptElement>(
-        'script[data-susurrium-qrcodejs]'
-      )
-
-      const finish = () => {
-        if (window.QRCode) resolve(window.QRCode)
-        else reject(new Error('The local qrcodejs renderer did not initialize.'))
-      }
-
-      if (existingScript) {
-        existingScript.addEventListener('load', finish, { once: true })
-        existingScript.addEventListener(
-          'error',
-          () => reject(new Error('Unable to load the local qrcodejs renderer.')),
-          { once: true }
-        )
-        return
-      }
-
-      const script = document.createElement('script')
-      script.src = qrcodeScriptUrl
-      script.async = true
-      script.dataset.susurriumQrcodejs = 'true'
-      script.addEventListener('load', finish, { once: true })
-      script.addEventListener(
-        'error',
-        () => reject(new Error('Unable to load the local qrcodejs renderer.')),
-        { once: true }
-      )
-      document.head.append(script)
-    })
-
+    loader = loadBrowserResource(qrcodeScriptUrl, 'script', 'copyright-qrcode-runtime')
+      .then(() => {
+        if (!window.QRCode) throw new Error('QR code renderer did not initialize')
+        return window.QRCode
+      })
+      .catch((error) => {
+        loader = undefined
+        throw error
+      })
     return loader
   }
 
@@ -249,11 +222,6 @@ const shareLabels: Record<string, string> = {
       // children are available, so querying individual buttons here would
       // occasionally miss their listeners.
       this.addEventListener('click', this.#handleAction, { signal })
-      queueMicrotask(() => {
-        if (!signal.aborted && this.isConnected) {
-          this.#renderQRCode(this.querySelector<HTMLElement>('[data-qrcode-container]'))
-        }
-      })
     }
 
     disconnectedCallback() {
@@ -284,10 +252,12 @@ const shareLabels: Record<string, string> = {
       container?.classList.toggle('expanded', expanded)
       container?.setAttribute('aria-hidden', String(!expanded))
       action.setAttribute('aria-expanded', String(expanded))
+      if (expanded) void this.#renderQRCode(container)
     }
 
     async #renderQRCode(container: HTMLElement | null) {
-      if (!container || container.childElementCount > 0) return
+      if (!container || container.dataset.qrReady === 'true') return
+      container.textContent = '正在生成二维码…'
 
       const renderVersion = ++this.#renderVersion
 
@@ -296,12 +266,18 @@ const shareLabels: Record<string, string> = {
         if (
           !this.isConnected ||
           renderVersion !== this.#renderVersion ||
-          container.childElementCount > 0
+          container.dataset.qrReady === 'true'
         ) {
           return
         }
+        container.replaceChildren()
         new QRCode(container, window.location.href)
+        container.dataset.qrReady = 'true'
+        container.setAttribute('role', 'img')
+        container.setAttribute('aria-label', '本页链接二维码')
       } catch (error) {
+        if (this.isConnected && renderVersion === this.#renderVersion)
+          container.textContent = '二维码加载失败，请关闭后重新打开。'
         console.warn('[copyright] QR code could not be generated.', error)
       }
     }

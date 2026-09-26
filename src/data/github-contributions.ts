@@ -12,6 +12,7 @@ export interface GitHubContributionCell {
   date: string
   dayIndex: number
   isBlank: boolean
+  isUnknown: boolean
   label: string
   level: number
   weekIndex: number
@@ -24,6 +25,8 @@ export interface GitHubContributionHeatmap {
   rangeStart: string
   total: number
   weekCount: number
+  missingDays: number
+  snapshotAt: string
 }
 
 export interface GitHubContributionMonth {
@@ -67,9 +70,15 @@ function clampContributionLevel(level: number) {
 }
 
 function decodeHtmlEntities(value: string) {
+  const decodeCodePoint = (value: number) =>
+    Number.isInteger(value) && value >= 0 && value <= 0x10ffff
+      ? String.fromCodePoint(value)
+      : '\uFFFD'
   return value
-    .replace(/&#(\d+);/g, (_, codePoint: string) => String.fromCodePoint(Number(codePoint)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, codePoint: string) => String.fromCodePoint(Number.parseInt(codePoint, 16)))
+    .replace(/&#(\d+);/g, (_, codePoint: string) => decodeCodePoint(Number(codePoint)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, codePoint: string) =>
+      decodeCodePoint(Number.parseInt(codePoint, 16))
+    )
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
@@ -142,9 +151,15 @@ export function parseGitHubContributionHtml(html: string) {
 
     const date = getHtmlAttribute(attributes, 'data-date')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+    const parsedDate = new Date(`${date}T00:00:00.000Z`)
+    if (!Number.isFinite(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date)
+      continue
 
-    const level = clampContributionLevel(Number.parseInt(getHtmlAttribute(attributes, 'data-level'), 10))
-    const label = normalizeText(match[2] ?? '') || getContributionLabel(0, new Date(`${date}T00:00:00.000Z`))
+    const level = clampContributionLevel(
+      Number.parseInt(getHtmlAttribute(attributes, 'data-level'), 10)
+    )
+    const label =
+      normalizeText(match[2] ?? '') || getContributionLabel(0, new Date(`${date}T00:00:00.000Z`))
 
     days.push({ count: parseContributionCount(label), date, label, level })
   }
@@ -152,12 +167,19 @@ export function parseGitHubContributionHtml(html: string) {
   return days
 }
 
-async function fetchWithTimeout(url: string, init?: RequestInit) {
+export async function fetchContributionHtml(
+  url: string,
+  init?: RequestInit,
+  timeoutMs = GITHUB_FETCH_TIMEOUT
+) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), GITHUB_FETCH_TIMEOUT)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    return await fetch(url, { ...init, signal: controller.signal })
+    const response = await fetch(url, { ...init, signal: controller.signal })
+    if (!response.ok) throw new Error(`GitHub contributions request failed: ${response.status}`)
+    // The response body can stall after headers have arrived.
+    return await response.text()
   } finally {
     clearTimeout(timeout)
   }
@@ -165,21 +187,23 @@ async function fetchWithTimeout(url: string, init?: RequestInit) {
 
 async function fetchContributionYear(username: string, year: number) {
   const params = new URLSearchParams({ from: `${year}-01-01`, to: `${year}-12-31` })
-  const response = await fetchWithTimeout(
+  const html = await fetchContributionHtml(
     `https://github.com/users/${encodeURIComponent(username)}/contributions?${params.toString()}`,
     { headers: { accept: 'text/html', 'user-agent': 'Susurrium static blog build' } }
   )
 
-  if (!response.ok) throw new Error(`GitHub contributions request failed: ${response.status}`)
-
-  const days = parseGitHubContributionHtml(await response.text())
+  const days = parseGitHubContributionHtml(html)
   if (days.length === 0) throw new Error('GitHub contributions response contained no days.')
   return days
 }
 
 function getContributionYears(rangeStartDate: Date, rangeEndDate: Date) {
   const years: number[] = []
-  for (let year = rangeStartDate.getUTCFullYear(); year <= rangeEndDate.getUTCFullYear(); year += 1) {
+  for (
+    let year = rangeStartDate.getUTCFullYear();
+    year <= rangeEndDate.getUTCFullYear();
+    year += 1
+  ) {
     years.push(year)
   }
   return years
@@ -199,6 +223,7 @@ export function createGitHubContributionHeatmap(
   const months: GitHubContributionMonth[] = []
   const labeledMonths = new Set<string>()
   let total = 0
+  let missingDays = 0
 
   for (let index = 0; index < weekCount * 7; index += 1) {
     const date = addUtcDays(calendarStartDate, index)
@@ -206,6 +231,7 @@ export function createGitHubContributionHeatmap(
     const dateKey = formatUtcDateKey(date)
     const isBlank = dateTime < rangeStartTime || dateTime > rangeEndTime
     const contribution = contributionsByDate.get(dateKey)
+    const isUnknown = !isBlank && !contribution
     const count = isBlank ? 0 : (contribution?.count ?? 0)
     const weekIndex = Math.floor(index / 7)
     const monthKey = dateKey.slice(0, 7)
@@ -215,13 +241,19 @@ export function createGitHubContributionHeatmap(
       months.push({ label: monthFormatter.format(date), weekIndex })
     }
     if (!isBlank) total += count
+    if (isUnknown) missingDays += 1
 
     days.push({
       count,
       date: dateKey,
       dayIndex: date.getUTCDay(),
       isBlank,
-      label: isBlank ? '' : (contribution?.label || getContributionLabel(count, date)),
+      isUnknown,
+      label: isBlank
+        ? ''
+        : isUnknown
+          ? `Contribution data unavailable for ${dateFormatter.format(date)}.`
+          : contribution?.label || getContributionLabel(count, date),
       level: isBlank ? 0 : (contribution?.level ?? 0),
       weekIndex
     })
@@ -235,7 +267,9 @@ export function createGitHubContributionHeatmap(
     rangeEnd: formatUtcDateKey(rangeEndDate),
     rangeStart: formatUtcDateKey(rangeStartDate),
     total,
-    weekCount
+    weekCount,
+    missingDays,
+    snapshotAt: now.toISOString()
   }
 }
 
@@ -256,12 +290,17 @@ export async function getGitHubContributionHeatmap(username: string, now = new D
     const rangeStartDate = new Date(`${skeleton.rangeStart}T00:00:00.000Z`)
     const rangeEndDate = new Date(`${skeleton.rangeEnd}T00:00:00.000Z`)
     const yearResults = await Promise.allSettled(
-      getContributionYears(rangeStartDate, rangeEndDate).map((year) => fetchContributionYear(normalizedUsername, year))
+      getContributionYears(rangeStartDate, rangeEndDate).map((year) =>
+        fetchContributionYear(normalizedUsername, year)
+      )
     )
-    const fetchedDays = yearResults.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-    const heatmap = fetchedDays.length > 0
-      ? createGitHubContributionHeatmap(new Map(fetchedDays.map((day) => [day.date, day])), now)
-      : null
+    const fetchedDays = yearResults.flatMap((result) =>
+      result.status === 'fulfilled' ? result.value : []
+    )
+    const heatmap =
+      fetchedDays.length > 0
+        ? createGitHubContributionHeatmap(new Map(fetchedDays.map((day) => [day.date, day])), now)
+        : null
 
     contributionCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL, heatmap })
     return heatmap

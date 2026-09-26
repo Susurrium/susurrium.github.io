@@ -1,6 +1,6 @@
 import { getCollection } from 'astro:content'
 
-import { adaptBlogEntry, adaptSayingEntry, adaptTraceEntry } from './adapters'
+import { adaptBlogEntry, adaptSayingEntry, adaptTraceEntry, contentKey } from './adapters'
 import { contentTypeRegistry } from './registry'
 import type {
   BlogEntry,
@@ -75,7 +75,17 @@ async function readContentCatalog(mode: ContentCatalog['mode']): Promise<LoadedC
     ...sources.byKind.saying.map(adaptSayingEntry)
   ]
 
-  return { ...createContentCatalog(records, mode), sources }
+  return {
+    ...createContentCatalog(records, mode),
+    recordsByKey: new Map(records.map((record) => [record.key, record])),
+    sourcesByKey: new Map(
+      [...sources.byKind.blog, ...sources.byKind.trace, ...sources.byKind.saying].map((entry) => [
+        contentKey(entry.collection, entry.id),
+        entry
+      ])
+    ),
+    sources
+  }
 }
 
 export function loadContentCatalog(
@@ -115,7 +125,7 @@ export function getSourceEntry(
   kind: ContentKind,
   id: string
 ): BlogEntry | TraceEntry | SayingEntry | undefined {
-  return catalog.sources.byKind[kind].find((entry) => entry.id === id)
+  return catalog.sourcesByKey.get(contentKey(kind, id))
 }
 
 /** Registry-oriented access used by page builders and future content types. */

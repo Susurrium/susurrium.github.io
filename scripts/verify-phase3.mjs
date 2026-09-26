@@ -254,7 +254,7 @@ expect(
   'article image zoom imports Medium Zoom from the local pure package entry'
 )
 expect(
-  !/src=\{?['\"]https?:\/\//.test(articleImageZoom),
+  !/src=\{?['"]https?:\/\//.test(articleImageZoom),
   'article image zoom has no remote runtime script source'
 )
 expect(

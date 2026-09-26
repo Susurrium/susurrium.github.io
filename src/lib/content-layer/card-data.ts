@@ -18,7 +18,7 @@ export interface TextCardMeta {
 }
 
 export interface TextCardTag {
-  readonly href: string
+  readonly href?: string
   readonly label: string
 }
 
@@ -60,6 +60,7 @@ export function toTextCardViewData(
 ): TextCardViewData {
   const { record } = item
   const metadata: TextCardMeta[] = []
+  const tagMode = resolveContentPolicy(record.kind).tags
 
   const readingMinutes =
     options.readingMinutes ?? ('readingMinutes' in item ? item.readingMinutes : undefined)
@@ -78,8 +79,11 @@ export function toTextCardViewData(
     metadata,
     skin: options.skin ?? (record.kind === 'blog' ? 'blog' : 'plain'),
     tags:
-      resolveContentPolicy(record.kind).tags === 'links'
-        ? record.tags.map((tag) => ({ href: contentTagHref(record.kind, tag), label: tag }))
+      tagMode !== 'hidden'
+        ? record.tags.map((tag) => ({
+            ...(tagMode === 'links' ? { href: contentTagHref(record.kind, tag) } : {}),
+            label: tag
+          }))
         : []
   }
 }

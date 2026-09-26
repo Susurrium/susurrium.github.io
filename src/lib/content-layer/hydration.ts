@@ -9,7 +9,7 @@ import type {
 } from './types'
 
 function resolveRecord(item: PageItem, catalog: LoadedContentCatalog): ContentRecord {
-  const record = catalog.all.find((candidate) => candidate.key === item.contentKey)
+  const record = catalog.recordsByKey.get(item.contentKey)
   if (!record) throw new Error(`Missing content record for ${item.contentKey}`)
   return record
 }

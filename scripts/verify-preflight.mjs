@@ -21,7 +21,8 @@ function warn(message) {
 }
 
 function expect(condition, message) {
-  condition ? pass(message) : fail(message)
+  if (condition) pass(message)
+  else fail(message)
 }
 
 function read(path) {
@@ -58,8 +59,12 @@ expect(
   `Bun is exactly 1.4.0 (actual: ${process.versions.bun ?? 'not Bun'})`
 )
 expect(pkg.packageManager === 'bun@1.4.0', 'packageManager is bun@1.4.0')
-expect(pkg.dependencies?.astro === '6.1.8', 'Astro is pinned to 6.1.8')
-expect(pkg.dependencies?.['astro-pure'] === '1.4.6', 'astro-pure is pinned to 1.4.6')
+for (const dependency of ['astro', 'astro-pure', '@astrojs/mdx', 'pagefind', 'sharp', 'rehype']) {
+  const version = pkg.dependencies?.[dependency] ?? pkg.devDependencies?.[dependency]
+  expect(/^\d+\.\d+\.\d+$/.test(version ?? ''), `${dependency} has an exact reviewed version`)
+  const installed = JSON.parse(read(`node_modules/${dependency}/package.json`))
+  expect(installed.version === version, `${dependency} installed version matches ${version}`)
+}
 expect(pkg.overrides?.['@types/hast'] === '3.0.5', '@types/hast override is pinned to 3.0.5')
 expect(
   pkg.scripts?.['capture:visual-baseline'] === 'node scripts/capture-visual-baseline.mjs',
@@ -93,6 +98,7 @@ for (const path of ['.github/workflows/ci.yml', '.github/workflows/deploy.yml'])
 }
 
 const ciWorkflow = read('.github/workflows/ci.yml')
+const browserAction = read('.github/actions/browser-regression/action.yml')
 expect(/^\s*- main\s*$/m.test(ciWorkflow), 'CI validates pushes to main')
 expect(/^\s*- develop\s*$/m.test(ciWorkflow), 'CI validates pushes to develop')
 expect(
@@ -100,9 +106,10 @@ expect(
   'CI defines a separate production-preview browser regression job'
 )
 expect(
-  ciWorkflow.includes('bun run verify:phase6:browser') &&
-    ciWorkflow.includes('bun run verify:home-hero') &&
-    ciWorkflow.includes('bun run verify:browser:lifecycle'),
+  ciWorkflow.includes('uses: ./.github/actions/browser-regression') &&
+    browserAction.includes('bun run verify:phase6:browser') &&
+    browserAction.includes('bun run verify:home-hero') &&
+    browserAction.includes('bun run verify:browser:lifecycle'),
   'CI runs mobile accessibility, Home Hero boundary, and ClientRouter lifecycle browser regressions'
 )
 
@@ -113,6 +120,16 @@ expect(
 )
 
 const deployWorkflow = read('.github/workflows/deploy.yml')
+expect(
+  ciWorkflow.includes('actions/upload-artifact@') &&
+    ciWorkflow.includes('actions/download-artifact@'),
+  'CI browser regression reuses the validated build artifact'
+)
+expect(
+  deployWorkflow.includes("if: github.ref == 'refs/heads/main'") &&
+    deployWorkflow.includes('uses: ./.github/actions/browser-regression'),
+  'Pages is restricted to main and verifies its artifact in Chrome'
+)
 const hasManualPagesTrigger = /^[ \t]*workflow_dispatch:[ \t]*$/m.test(deployWorkflow)
 const hasPushTrigger = /^[ \t]*push:[ \t]*$/m.test(deployWorkflow)
 const hasMainOnlyPushTrigger =

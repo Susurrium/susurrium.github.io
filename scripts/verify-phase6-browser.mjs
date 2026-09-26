@@ -1,3 +1,5 @@
+import { discoverPublishedContent } from './lib/browser-content.mjs'
+
 const cdpEndpoint = (process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224').replace(/\/$/, '')
 const siteUrl = (process.env.PHASE6_SITE_URL ?? 'http://127.0.0.1:4321').replace(/\/$/, '')
 
@@ -12,25 +14,6 @@ function assert(condition, message) {
 
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
-}
-
-async function discoverDetailPath(archivePath) {
-  try {
-    const response = await fetch(`${siteUrl}${archivePath}`)
-    if (!response.ok) return null
-    const html = await response.text()
-    const detailPattern = new RegExp(`href=["']${archivePath}/([^"'#?]+)["']`, 'gi')
-    for (const match of html.matchAll(detailPattern)) {
-      const segment = decodeURIComponent(match[1])
-      // The archive always links to its scoped taxonomy index. It is not a
-      // reading detail and must not enter the mobile TOC branch below.
-      if (!segment || segment.includes('/') || segment.toLowerCase() === 'tags') continue
-      return `${archivePath}/${segment}`
-    }
-    return null
-  } catch {
-    return null
-  }
 }
 
 class CdpConnection {
@@ -241,7 +224,12 @@ async function assertSayingImageConsistency(cdp) {
   )
 }
 
-const detailPath = await discoverDetailPath('/blog')
+const publishedContent = await discoverPublishedContent(siteUrl)
+const detailPath = publishedContent.find((entry) => entry.hasToc)?.path
+const withoutToc = publishedContent.find((entry) => !entry.hasToc)
+const searchSample =
+  publishedContent.find((entry) => entry.kind === 'saying' && entry.indexed && entry.query) ??
+  publishedContent.find((entry) => entry.indexed && entry.query)
 
 const targetResponse = await fetch(`${cdpEndpoint}/json/new?${encodeURIComponent('about:blank')}`, {
   method: 'PUT'
@@ -270,7 +258,19 @@ try {
     features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }]
   })
 
-  if (!detailPath) {
+  if (withoutToc) {
+    await navigate(cdp, `${siteUrl}${withoutToc.path}`)
+    const plainArticle = await evaluate(
+      cdp,
+      `(() => ({ article: Boolean(document.querySelector('article #content')), toc: Boolean(document.querySelector('#sidebar, #sidebar-btn')), headings: document.querySelectorAll('h1').length }))()`
+    )
+    assert(
+      plainArticle.article && !plainArticle.toc && plainArticle.headings === 1,
+      'published article without headings renders one title and no TOC controls'
+    )
+  }
+
+  if (!publishedContent.some((entry) => entry.kind === 'blog')) {
     await navigate(cdp, `${siteUrl}/blog`)
     const emptyArchive = await evaluate(
       cdp,
@@ -285,7 +285,8 @@ try {
       'empty Blog archive renders an explicit no-posts state'
     )
     assert(!emptyArchive.detailControls, 'empty Blog archive does not render detail-only controls')
-  } else {
+  }
+  if (detailPath) {
     await navigate(cdp, `${siteUrl}${detailPath}`)
     const opened = await evaluate(
       cdp,
@@ -532,31 +533,72 @@ try {
     `(() => {
       const input = document.querySelector('.pagefind-ui__search-input')
       if (!(input instanceof HTMLInputElement)) return false
-      input.value = 'Sisyphus'
-      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'Sisyphus' }))
+      input.value = ${JSON.stringify(searchSample?.query ?? '__empty_content_catalog__')}
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ${JSON.stringify(searchSample?.query ?? '')} }))
       return true
     })()`
   )
-  await delay(1000)
-  await evaluate(cdp, `document.querySelector('[data-search-filter-type="saying"]')?.click()`)
-  await delay(800)
+  const searchedKind = searchSample?.kind ?? 'saying'
+  const searchedRoute = { saying: '/sayings/', trace: '/traces/', blog: '/blog/' }[searchedKind]
+  await evaluate(
+    cdp,
+    `document.querySelector('[data-search-filter-type="${searchedKind}"]')?.click()`
+  )
+  if (searchSample) {
+    await evaluate(
+      cdp,
+      `new Promise((resolve, reject) => {
+      const deadline = performance.now() + 10000
+      const inspect = () => {
+        const matched = [...document.querySelectorAll('.pagefind-ui__result-link')].some((link) => new URL(link.href).pathname.replace(/\\/+$/, '') === ${JSON.stringify(searchSample.path)})
+        if (matched) return resolve(true)
+        if (performance.now() >= deadline) return reject(new Error('Search did not return the discovered content detail'))
+        setTimeout(inspect, 80)
+      }
+      inspect()
+    })`
+    )
+  } else await delay(500)
   const sayingSearch = await evaluate(
     cdp,
     `(() => ({
       url: location.href,
-      selected: document.querySelector('[data-search-filter-type="saying"]')?.getAttribute('aria-selected'),
+      selected: document.querySelector('[data-search-filter-type="${searchedKind}"]')?.getAttribute('aria-selected'),
       links: [...document.querySelectorAll('.pagefind-ui__result-link')].map((link) => link.getAttribute('href'))
     }))()`
   )
   assert(
-    sayingSearch.selected === 'true' && sayingSearch.url.includes('type=saying'),
-    'Selecting Saying applies the content-type Pagefind filter'
+    sayingSearch.selected === 'true' && sayingSearch.url.includes(`type=${searchedKind}`),
+    'Selecting the discovered content type applies its Pagefind filter'
   )
   assert(
-    sayingSearch.links.length > 0 &&
-      sayingSearch.links.every((href) => href?.startsWith('/sayings/')),
-    'Saying filter limits matching search results to Saying routes'
+    (!searchSample || sayingSearch.links.length > 0) &&
+      sayingSearch.links.every((href) => new URL(href, siteUrl).pathname.startsWith(searchedRoute)),
+    'The selected type limits matching search results to its own routes'
   )
+
+  if (searchSample) {
+    const restoredUrl = sayingSearch.url
+    await navigate(cdp, restoredUrl)
+    const restored = await evaluate(
+      cdp,
+      `new Promise((resolve) => {
+      const deadline = performance.now() + 10000
+      const inspect = () => {
+        const input = document.querySelector('.pagefind-ui__search-input')
+        const selected = document.querySelector('[data-search-filter-type="${searchedKind}"]')?.getAttribute('aria-selected')
+        const matched = [...document.querySelectorAll('.pagefind-ui__result-link')].some((link) => new URL(link.href).pathname.replace(/\\/+$/, '') === ${JSON.stringify(searchSample.path)})
+        if ((matched && input?.value) || performance.now() >= deadline) return resolve({ query: input?.value, selected, matched })
+        setTimeout(inspect, 80)
+      }
+      inspect()
+    })`
+    )
+    assert(
+      restored.query === searchSample.query && restored.selected === 'true' && restored.matched,
+      'A direct search URL restores query, type and matching results after reload'
+    )
+  }
 
   await evaluate(cdp, `document.querySelector('[data-search-filter-type="trace"]')?.click()`)
   await delay(500)
@@ -615,7 +657,7 @@ try {
   }
 
   console.log(
-    `Phase 6 browser smoke complete: 0 failure(s).${detailPath ? '' : ' Detail route was absent; archive empty-state path verified.'}`
+    `Phase 6 browser smoke complete: 0 failure(s). TOC=${Boolean(detailPath)}, no-TOC=${Boolean(withoutToc)}, indexed details=${publishedContent.filter((entry) => entry.indexed).length}.`
   )
 } finally {
   cdp.close()

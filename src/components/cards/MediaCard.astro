@@ -32,6 +32,7 @@ import CardMediaFrame from '@/components/cards/CardMediaFrame.astro'
 type HeadingLevel = 2 | 3 | 4 | 5 | 6
 
 interface Props {
+  as?: 'article' | 'li'
   actionLabel?: string
   class?: string
   contentId?: string
@@ -65,6 +66,7 @@ interface Props {
 }
 
 const {
+  as: Root = 'article',
   actionLabel = 'Read',
   class: className,
   contentId,
@@ -116,7 +118,7 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
 ---
 
 <div class='media-card-container'>
-  <article
+  <Root
     class:list={[
       'media-card',
       'site-card-surface',
@@ -196,7 +198,7 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
         </div>
       </div>
     </a>
-  </article>
+  </Root>
 </div>
 
 <style>
@@ -514,8 +516,7 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
     overflow: visible;
   }
 
-  .media-card:is(.home-recent-card, .home-saying-card):not(.is-cut-left)
-    .media-card__bottom {
+  .media-card:is(.home-recent-card, .home-saying-card):not(.is-cut-left) .media-card__bottom {
     margin-right: calc(-1 * var(--media-card-bottom-bleed));
   }
 

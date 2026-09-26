@@ -2,24 +2,16 @@ import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
 
 const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
-// On Windows, `bun run astro` resolves the `.bin/astro.exe` shim, which
-// launches Astro through Node and can stall after "Building static
-// entrypoints". Invoke Astro's ESM CLI directly through Bun so the package
-// build/check scripts use the same runtime that has been verified locally.
+// Use the pinned Node runtime for Astro 7's native compiler/Vite 8. Keep Bun
+// for package management and tests; execute the CLI directly without shims.
 const astroCli = resolve(process.cwd(), 'node_modules', 'astro', 'bin', 'astro.mjs')
-// The project is pinned to Bun and astro-pure currently exposes TypeScript
-// entrypoints. The package script is the same stable boundary developers and
-// CI use from the command line, so keep the wrapper on that path as well. Use
-// the async child-process API below: on Windows, spawnSync can leave Bun's
-// Astro child waiting after "Building static entrypoints" even though the
-// same command completes normally when launched asynchronously.
 const node = process.execPath
 const buildSequence = [
   // `astro build` owns the required content sync. Checking its resulting
   // generated types avoids a second content sync while keeping a full
   // type/diagnostic gate in every build.
-  [bun, [astroCli, 'build']],
-  [bun, [astroCli, 'check', '--noSync']]
+  [node, [astroCli, 'build']],
+  [node, [astroCli, 'check', '--noSync']]
 ]
 
 const sequences = {
@@ -33,17 +25,10 @@ const sequences = {
     // concrete build contract as the standalone command instead.
     ...buildSequence,
     [bun, ['run', 'verify:phase1']],
-    [bun, ['run', 'test:phase2']],
-    [bun, ['run', 'test:content-layer']],
     [bun, ['run', 'verify:phase2']],
     [bun, ['run', 'verify:phase3']],
-    [bun, ['run', 'test:phase4']],
     [bun, ['run', 'verify:phase4']],
-    [bun, ['run', 'test:phase5']],
-    // Keep the phase-specific checks above readable while also making every
-    // repository test part of the authoritative CI contract. This catches
-    // editor, content-layer and release-policy regressions that are not tied
-    // to one numbered phase.
+    // Run each test once; the full suite includes every numbered phase.
     [bun, ['run', 'test:all']],
     [bun, ['run', 'verify:phase5']],
     [bun, ['run', 'verify:phase6']],

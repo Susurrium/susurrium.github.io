@@ -1,5 +1,3 @@
-/* global AbortController, URL, clearTimeout, console, fetch, process, setTimeout */
-
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 

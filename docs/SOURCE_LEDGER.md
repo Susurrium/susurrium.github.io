@@ -1,6 +1,6 @@
 # 来源与复用台账
 
-> 台账版本：1.8｜冻结日期：2026-08-27｜最近更新：2026-09-03｜适用方案：[IMPLEMENTATION_PLAN.zh-CN.md](./archive/IMPLEMENTATION_PLAN.zh-CN.md)｜状态：Phase 0 来源已锁定；Phase 1–6 已按本台账落地，生产基线为 `main@7993411`，历史发布准备记录见 [归档审计材料](./archive/)。
+> 台账版本：1.10｜来源冻结日期：2026-08-27｜最近更新：2026-09-12｜当前加固实施见 [PROJECT_HARDENING.zh-CN.md](./PROJECT_HARDENING.zh-CN.md)。历史生产基线和来源证据保留于本台账及 [归档审计材料](./archive/)，本次工作树尚未发布。
 
 ## 1. 作用与边界
 
@@ -23,6 +23,15 @@
 “直接复用”不等于可以扩大远程白名单；除上述明确例外外，资源仍需本地化或取得单项确认。
 
 ## 3. 基础仓库与工具链真源
+
+2026-09-08 当前运行基线为 `astro@7.3.1`、`astro-pure@1.4.7`、`@astrojs/mdx@8.0.0`、`sharp@0.35.4`，实际包完整性由 `bun.lock` 固定。下表 1.4.6 / 6.1.8 的记录是初始复用来源；本地复制组件仍保留其历史来源，不应改写成来自新版本。当前新增调整如下：
+
+- 根 overrides 统一主题内部的 Astro/MDX 版本；主题兼容差异完整保存在 `patches/astro-pure@1.4.7.patch`，安装自动重放。
+- Pagefind 构建改由 `src/integrations/search-index.ts` 接管；失败会阻止构建输出成为可发布产物。
+- 主题控制器、播放器订阅/加载、评论和地图生命周期由站点维护，视觉来源不变。Meting2 runtime 不再加载，歌单数据仍来自原登记公共 API。
+- npm `@waline/client@3.15.2` 的实际入口 `dist/slim.js` 使用 `patches/@waline%2Fclient@3.15.2.patch` 修正 ArticleReaction watcher 的取消处理；仅处理自身请求的 AbortError，其他错误继续传播。发布包完整性和补丁由 `bun.lock` 固定。
+- Hero 的响应式 WebP 是既有原图的派生文件；`src/data/hero-images.json` 记录候选，不改变 crop 身份。字体 WOFF2 由既有字体转换，未更换字库；生成脚本见 `scripts/generate-fonts.py`。
+- CI 浏览器任务复用已有产物，Pages 手动部署限制 main 并校验同一产物；本次未执行线上部署。
 
 | ID                 | 对象                | 精确来源                                                                                                       | 锁定证据                                                                                                                                                                        | 实施方式                                                                 |
 | ------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
@@ -161,10 +170,20 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | 可维护代码真源 | `HIST-RESIDENCE` 固定快照                                                                      |
 | 实施           | 历史实现几乎直接复用；仅校准飞机、原点、云影、脉冲延迟、Globe 裁切、标题、控件、城市级坐标和测试 |
 | 本地实现       | `src/components/home/ResidenceCard.astro`、`FlightOverlay.astro`、`src/scripts/residence-map.ts`、`residence-map-geometry.ts`、`src/assets/styles/residence-map.css` |
-| 本地运行时     | `public/vendor/maplibre-gl@5.24.0/maplibre-gl.js`（1,056,837 bytes；SHA-256 `45a9b07a9189ce56054c620a947ccf41e291e58c95e9b61533b740aaa65ee5cb`）与 `maplibre-gl.css`（70,024 bytes；SHA-256 `ab1e70d59ec40465bae7e7030da2f3ccf28133fd502e62bd598eefbadfd7a732`） |
+| 本地运行时 | `public/vendor/maplibre-gl@6.4.1/`：原始 ESM 主模块、shared/worker 与 CSS；`maplibre-gl.js` 是站点 module 桥接。完整字节与哈希见下表及 `verify:phase5`。 |
 | 外部运行时     | 只允许 CARTO/OSM 地图请求；Geolocation 仅在用户打开 Globe 后由浏览器授权流程使用              |
 
-飞机、云影、地图回退图和访客头像已经从 `HIST-RESIDENCE` 固定快照复制到 `public/media/residence/` 并由 `verify:phase5` 核验哈希。访客头像仍为 597 bytes，SHA-256 `415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351`。当前候选只公开 `39.9, 116.4` 的城市级坐标（`publicPrecision: 'city'`），该粒度已由 owner 确认；不记录或输出历史的精确居住地。MapLibre 固定为 `5.24.0`（BSD-3-Clause）：npm 依赖保留精确 TypeScript 类型，已经构建好的 UMD JS/CSS 本地惰性加载。此调整避免 Vite 在每个静态入口构建时重复处理约 1 MiB 的第三方运行时，不改变地图算法或加载时机，并兼容 GitHub Pages 的纯静态输出。
+2026-09-12 因安全公告 GHSA-jrc7-96c5-q579 将 MapLibre 升级到 6.4.1。npm 模块原样复制，旧 5.24.0 不再进入发布目录。
+
+| 文件 | bytes | SHA-256 |
+| --- | ---: | --- |
+| `maplibre-gl-shared.mjs` | 482,036 | `fcf4d81450df235da0aea74897cc23926774b5228d38ae1de6a7d701c5905785` |
+| `maplibre-gl-worker.mjs` | 18,592 | `ce4957017fe705ac2f9ebef206cca966d08d8621756c39326a78cf09757e7d75` |
+| `maplibre-gl.css` | 83,195 | `8e2dbbab312dc57656fbb76e9fa5308c75c9d7c7ba5808a7d55bcdb64cc813fa` |
+| `maplibre-gl.js` | 156 | `b444622ac66e84a2306bfbe4f0e9e03a5a4a3538b79cd6d4c5a561d0d5ed846b` |
+| `maplibre-gl.mjs` | 567,005 | `97e8b9a39ab8b823d6a0caf9c312237262bc9138a6162d9e29606f5f8d24127d` |
+
+飞机、云影、地图回退图和访客头像已经从 `HIST-RESIDENCE` 固定快照复制到 `public/media/residence/` 并由 `verify:phase5` 核验哈希。访客头像仍为 597 bytes，SHA-256 `415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351`。当前候选只公开 `39.9, 116.4` 的城市级坐标（`publicPrecision: 'city'`），该粒度已由 owner 确认；不记录或输出历史的精确居住地。MapLibre 固定为 `6.4.1`（BSD-3-Clause）：npm 依赖保留精确 TypeScript 类型，已经构建好的 ESM 主模块、shared/worker 模块与 CSS 本地惰性加载。此调整避免 Vite 在每个静态入口构建时重复处理约 1 MiB 的第三方运行时，不改变地图算法或加载时机，并兼容 GitHub Pages 的纯静态输出。
 
 当前公开仓库中未找到与 SkyWT 当前居住地动图一一对应的可维护源码，因此不能把同作者的其他 Daydreamer/Map 组件误记为真源，也不重写为 React/Framer。
 

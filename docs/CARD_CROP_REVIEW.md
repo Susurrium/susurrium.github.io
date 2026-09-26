@@ -98,6 +98,8 @@ bun scripts/apply-hero-crops.mjs path/to/hero-crop-editor-v1.json
 
 脚本只写入 `src/data/hero-crop-selections.generated.ts`，不会改写原图，也不会改变 Saying/Trace 卡片。新格式会严格只应用明确确认的桌面/手机尺寸；未确认尺寸会保留已有生产值。没有 `confirmed` 字段的旧版导出按历史兼容规则视为已确认。
 
+新 Hero 导出带 `profile: "home-hero"` 和 `schemaVersion: 1`。没有 profile 的旧格式必须通过完整形状验证；Card 数据、错误版本或不合法的批次会拒写，不能用于恢复默认配置。应用前会列出差异，最终配置以原子替换写入。
+
 ## 将确认结果接入正式卡片
 
 浏览器导出的文件不会自动修改仓库，这是为了避免一次误操作直接改变线上页面。确认并检查 JSON 后，在项目根目录执行：
@@ -115,6 +117,8 @@ bun run card-crops:apply -- path/to/card-crop-editor-v2.json
 
 脚本只会写入 `src/data/card-crop-selections.generated.ts`。它会检查文件名是否属于 `public/images/home-media`、读取源图尺寸，并为两个框计算 0–1 的标准化 crop rectangle。未确认、标记为“两个框都不合适”或找不到源文件的条目会被跳过并列出原因。
 带有 `profile` 字段的输入必须是 `archive-card`；这样误把 Hero 配置交给卡片脚本时会直接停止，不会写入生产桥接文件。旧版没有 `profile` 的卡片导出仍可兼容导入。
+
+Card 默认合并局部导出，保留未包含的生产记录。只有明确传 `--replace` 才按导出替换整表；有意清空还必须加 `--allow-empty`。先使用 `--dry-run` 检查新增、变更与删除。任何损坏的生产表或不合法的输入均终止整批写入。
 
 `MediaCard` 通过 `ResolvedCardImage.crop` 读取已应用记录；没有应用记录时继续使用现有的 asset-specific 斜边和居中 cover 回退。因此编辑器可以先完整审阅 54 张图，再一次性接入生产。
 

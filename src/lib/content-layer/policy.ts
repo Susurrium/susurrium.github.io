@@ -1,8 +1,9 @@
-import { contentTagPath, contentTypeRegistry } from './registry'
 import {
   isKnownContentPresentation,
   normalizeContentPresentation
 } from '@/lib/compatibility/content-presentation'
+
+import { contentTagPath, contentTypeRegistry } from './registry'
 import type {
   ContentKind,
   ContentPresentation,
@@ -106,6 +107,16 @@ export function resolveContentPolicy(
     ...surfaceDefaults(kind),
     ...typeOverride.surfaces
   }
+  // Public discovery must never point at a detail route that is not generated.
+  if (!surfaces.reading) {
+    for (const surface of ['archive', 'home', 'main-nav', 'rss', 'search', 'tags'] as const) {
+      surfaces[surface] = false
+    }
+  }
+  if (!surfaces.archive) {
+    surfaces['main-nav'] = false
+    surfaces.tags = false
+  }
   const configuredPresentation = uniform?.cardPresentation ?? typeOverride.cardPresentation
 
   return {
@@ -119,7 +130,11 @@ export function resolveContentPolicy(
       uniform?.readingHeader ?? typeOverride.readingHeader ?? definition.defaults.readingHeader,
     related: uniform?.related ?? typeOverride.related ?? definition.defaults.related,
     surfaces,
-    tags: typeOverride.tags ?? (surfaces.tags ? 'links' : 'hidden')
+    tags: surfaces.tags
+      ? (typeOverride.tags ?? 'links')
+      : typeOverride.tags === 'plain'
+        ? 'plain'
+        : 'hidden'
   }
 }
 

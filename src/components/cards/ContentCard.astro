@@ -9,14 +9,17 @@
  * never encoded as three source-specific card implementations.
  */
 import type { CollectionEntry } from 'astro:content'
-
-import { adaptContentEntry } from '@/lib/content-layer/adapters'
 import {
   createResolvedPageItem,
   toContentCardViewData,
   type ContentCardViewData
 } from '@/lib/content-layer'
-import type { ContentKind, ContentPresentation, RenderablePageItem } from '@/lib/content-layer/types'
+import { adaptContentEntry } from '@/lib/content-layer/adapters'
+import type {
+  ContentKind,
+  ContentPresentation,
+  RenderablePageItem
+} from '@/lib/content-layer/types'
 
 import BlogTextCardAdapter from '@/components/cards/BlogTextCardAdapter.astro'
 import MediaCard from '@/components/cards/MediaCard.astro'
@@ -27,6 +30,7 @@ type ContentEntry = CollectionEntry<'blog'> | CollectionEntry<'trace'> | Collect
 type HeadingLevel = 2 | 3 | 4 | 5 | 6
 
 interface LegacyProps {
+  as?: 'article' | 'li'
   actionLabel?: string
   class?: string
   contentKind: ContentKind
@@ -38,6 +42,7 @@ interface LegacyProps {
 }
 
 interface ModelProps {
+  as?: 'article' | 'li'
   class?: string
   item: RenderablePageItem
 }
@@ -52,7 +57,9 @@ const item: RenderablePageItem = isLegacy
       const legacy = props as LegacyProps
       const record = adaptContentEntry(legacy.entry)
       if (record.kind !== legacy.contentKind) {
-        throw new Error(`ContentCard kind mismatch: expected ${legacy.contentKind}, got ${record.kind}`)
+        throw new Error(
+          `ContentCard kind mismatch: expected ${legacy.contentKind}, got ${record.kind}`
+        )
       }
       return {
         ...createResolvedPageItem(record, {
@@ -72,29 +79,39 @@ const cardView: ContentCardViewData = toContentCardViewData(item)
 const classNameValue = className
 ---
 
-{cardView.family === 'text' ? (
-  item.record.kind === 'blog' ? (
-    <BlogTextCardAdapter
-      class={classNameValue}
-      item={item as Extract<RenderablePageItem, { record: { kind: 'blog' } }>}
-    />
+{
+  cardView.family === 'text' ? (
+    item.record.kind === 'blog' ? (
+      <BlogTextCardAdapter
+        as={props.as}
+        class={classNameValue}
+        item={item as Extract<RenderablePageItem, { record: { kind: 'blog' } }>}
+      />
+    ) : (
+      <TextCard
+        as={props.as ?? 'article'}
+        headingLevel={item.placement.headingLevel}
+        class={classNameValue}
+        data={cardView}
+        {detailed}
+      />
+    )
   ) : (
-    <TextCard as='article' class={classNameValue} data={cardView} {detailed} />
+    <MediaCard
+      as={props.as}
+      actionLabel={item.placement.actionLabel ?? 'Read'}
+      class={classNameValue}
+      contentId={cardView.data.contentId}
+      contentType={cardView.data.contentType}
+      date={cardView.data.date}
+      description={cardView.data.description}
+      footerText={cardView.data.footerText}
+      headingLevel={item.placement.headingLevel}
+      href={cardView.data.href}
+      image={cardView.data.image}
+      index={item.placement.index}
+      presentation={item.placement.presentation}
+      title={cardView.data.title}
+    />
   )
-) : (
-  <MediaCard
-    actionLabel={item.placement.actionLabel ?? 'Read'}
-    class={classNameValue}
-    contentId={cardView.data.contentId}
-    contentType={cardView.data.contentType}
-    date={cardView.data.date}
-    description={cardView.data.description}
-    footerText={cardView.data.footerText}
-    headingLevel={item.placement.headingLevel}
-    href={cardView.data.href}
-    image={cardView.data.image}
-    index={item.placement.index}
-    presentation={item.placement.presentation}
-    title={cardView.data.title}
-  />
-)}
+}

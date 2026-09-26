@@ -1,6 +1,7 @@
 ---
-import config from '@/site-config'
 import { normalizeWalinePath } from '@/lib/waline-path'
+
+import config from '@/site-config'
 
 import '@waline/client/style'
 
@@ -21,17 +22,18 @@ const { class: className } = Astro.props
 
 <script>
   import { init as walineInit } from '@waline/client'
-  import type { WalineEmojiPresets } from '@waline/client'
+  import type { WalineEmojiPresets, WalineInstance } from '@waline/client'
   import config from 'virtual:config'
 
   const walineConfig = config.integ.waline
 
   class Comment extends HTMLElement {
-    constructor() {
-      super()
-    }
+    private instance: WalineInstance | null = null
 
     connectedCallback() {
+      this.instance?.destroy()
+      const container = this.querySelector<HTMLElement>('#waline')
+      if (!container) return
       // Prevent Vue log errors
       ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
       ;(globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false
@@ -44,8 +46,8 @@ const { class: className } = Astro.props
       )
       const path = this.dataset.walinePath || window.location.pathname.replace(/\/+$/, '') || '/'
 
-      walineInit({
-        el: '#waline',
+      this.instance = walineInit({
+        el: container,
         serverURL: walineConfig.server || '',
         emoji,
         reaction: ['/icons/heart-item.svg'],
@@ -53,9 +55,15 @@ const { class: className } = Astro.props
         path
       })
     }
+
+    disconnectedCallback() {
+      this.instance?.destroy()
+      this.instance = null
+    }
   }
 
-  if (walineConfig.enable) customElements.define('comment-component', Comment)
+  if (walineConfig.enable && !customElements.get('comment-component'))
+    customElements.define('comment-component', Comment)
 </script>
 
 <style>

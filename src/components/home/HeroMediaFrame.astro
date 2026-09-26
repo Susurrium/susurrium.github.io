@@ -5,6 +5,7 @@
  * points are independent.  Both the runtime Hero and the Hero editor use this
  * exact component, so a saved focal transform is rendered identically.
  */
+import heroImages from '@/data/hero-images.json'
 import {
   DEFAULT_HERO_CROP_TRANSFORM,
   normalizeHeroCropTransform,
@@ -17,6 +18,7 @@ interface Props {
   class?: string
   imageClass?: string
   loading?: 'eager' | 'lazy'
+  responsive?: boolean
   mobileTransform?: HeroCropTransform
   src: string
   style?: string
@@ -32,6 +34,7 @@ const {
   class: className,
   imageClass,
   loading = 'lazy',
+  responsive: useResponsiveImages = true,
   mobileTransform,
   src,
   style: customStyle,
@@ -42,6 +45,11 @@ const {
 } = Astro.props as Props
 
 const normalized = normalizeHeroCropTransform(transform)
+// Editor image selection is driven by its client script. Keep its original
+// source so a previous slide's srcset cannot override the selected image.
+const responsive = useResponsiveImages
+  ? (heroImages as Record<string, { srcset: string; width: number; height: number }>)[src]
+  : undefined
 const normalizedMobile = normalizeHeroCropTransform(mobileTransform ?? normalized)
 const position = `${normalized.x}% ${normalized.y}%`
 const mobilePosition = `${normalizedMobile.x}% ${normalizedMobile.y}%`
@@ -80,10 +88,14 @@ const style = [
     alt={alt}
     class:list={['hero-media-frame__image', imageClass]}
     data-hero-image
-    height={height}
+    height={responsive?.height ?? height}
     loading={loading}
     src={src}
-    width={width}
+    srcset={responsive?.srcset}
+    sizes={responsive ? '(max-width: 767px) max(100vw, 110vh), 100vw' : undefined}
+    fetchpriority={loading === 'eager' ? 'high' : 'low'}
+    decoding='async'
+    width={responsive?.width ?? width}
   />
 </div>
 

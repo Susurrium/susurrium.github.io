@@ -1,14 +1,15 @@
 ---
-import { Button } from 'astro-pure/user'
-import { cn } from 'astro-pure/utils'
-
-import PageLayout from '@/layouts/BaseLayout.astro'
 import {
   getContentTagCounts,
   getContentTypeDefinition,
+  isContentSurfaceEnabled,
   loadContentCatalog,
   type ContentKind
 } from '@/lib/content-layer'
+
+import { Button } from 'astro-pure/user'
+import { cn } from 'astro-pure/utils'
+import PageLayout from '@/layouts/BaseLayout.astro'
 
 interface Props {
   kind: ContentKind
@@ -16,6 +17,9 @@ interface Props {
 
 const { kind } = Astro.props as Props
 const definition = getContentTypeDefinition(kind)
+if (!isContentSurfaceEnabled(kind, 'tags')) {
+  return Astro.redirect(isContentSurfaceEnabled(kind, 'archive') ? definition.basePath : '/home')
+}
 const catalog = await loadContentCatalog()
 const tags = getContentTagCounts(catalog, kind)
 

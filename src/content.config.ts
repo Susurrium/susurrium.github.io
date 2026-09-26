@@ -2,12 +2,12 @@ import { defineCollection } from 'astro:content'
 import { glob } from 'astro/loaders'
 import { z } from 'astro/zod'
 
-function removeDupsAndLowerCase(array: string[]) {
-  if (!array.length) return array
-  const lowercaseItems = array.map((str) => str.toLowerCase())
-  const distinctItems = new Set(lowercaseItems)
-  return Array.from(distinctItems)
-}
+import {
+  contentTagsSchema,
+  contentText,
+  hasValidEditorialDates,
+  sourceUrlSchema
+} from './lib/content-validation'
 
 // Define blog collection
 const blog = defineCollection({
@@ -15,46 +15,56 @@ const blog = defineCollection({
   loader: glob({ base: './src/content/blog', pattern: '**/*.{md,mdx}' }),
   // Required
   schema: ({ image }) =>
-    z.object({
-      // Required
-      title: z.string().max(60),
-      description: z.string().max(160),
-      publishDate: z.coerce.date(),
-      // Optional
-      updatedDate: z.coerce.date().optional(),
-      heroImage: z
-        .object({
-          src: image(),
-          alt: z.string().optional(),
-          inferSize: z.boolean().optional(),
-          width: z.number().optional(),
-          height: z.number().optional(),
+    z
+      .object({
+        // Required
+        title: contentText(60),
+        description: contentText(160),
+        publishDate: z.coerce.date(),
+        // Optional
+        updatedDate: z.coerce.date().optional(),
+        heroImage: z
+          .object({
+            src: image(),
+            alt: contentText(160).optional(),
+            inferSize: z.boolean().optional(),
+            width: z.number().int().positive().optional(),
+            height: z.number().int().positive().optional(),
 
-          color: z.string().optional()
-        })
-        .optional(),
-      tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
-      language: z.string().optional(),
-      draft: z.boolean().default(false),
-      // Special fields
-      comment: z.boolean().default(true)
-    })
+            color: z.string().optional()
+          })
+          .optional(),
+        tags: contentTagsSchema,
+        language: contentText(80).optional(),
+        draft: z.boolean().default(false),
+        // Special fields
+        comment: z.boolean().default(true)
+      })
+      .refine(hasValidEditorialDates, {
+        message: 'updatedDate cannot be earlier than publishDate',
+        path: ['updatedDate']
+      })
 })
 
 // Define docs collection
 const docs = defineCollection({
   loader: glob({ base: './src/content/docs', pattern: '**/*.{md,mdx}' }),
   schema: () =>
-    z.object({
-      title: z.string().max(60),
-      description: z.string().max(160),
-      publishDate: z.coerce.date().optional(),
-      updatedDate: z.coerce.date().optional(),
-      tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
-      draft: z.boolean().default(false),
-      // Special fields
-      order: z.number().default(999)
-    })
+    z
+      .object({
+        title: contentText(60),
+        description: contentText(160),
+        publishDate: z.coerce.date().optional(),
+        updatedDate: z.coerce.date().optional(),
+        tags: contentTagsSchema,
+        draft: z.boolean().default(false),
+        // Special fields
+        order: z.number().default(999)
+      })
+      .refine(hasValidEditorialDates, {
+        message: 'updatedDate cannot be earlier than publishDate',
+        path: ['updatedDate']
+      })
 })
 
 // Trace is deliberately separate from Blog: it is a short-to-medium record
@@ -66,16 +76,16 @@ const trace = defineCollection({
   schema: ({ image }) =>
     z
       .object({
-        title: z.string().min(1).max(80),
-        description: z.string().min(1).max(180).optional(),
+        title: contentText(80),
+        description: contentText(180).optional(),
         publishDate: z.coerce.date(),
         updatedDate: z.coerce.date().optional(),
-        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
+        tags: contentTagsSchema,
         cover: image().optional(),
-        coverAlt: z.string().min(1).max(160).optional(),
+        coverAlt: contentText(160).optional(),
         draft: z.boolean().default(false)
       })
-      .refine((entry) => !entry.updatedDate || entry.updatedDate >= entry.publishDate, {
+      .refine(hasValidEditorialDates, {
         message: 'updatedDate cannot be earlier than publishDate',
         path: ['updatedDate']
       })
@@ -92,16 +102,15 @@ const trace = defineCollection({
 const saying = defineCollection({
   loader: glob({ base: './src/content/sayings', pattern: '**/*.{md,mdx}' }),
   schema: () =>
-    z
-      .object({
-        text: z.string().min(1).max(500),
-        originalText: z.string().min(1).max(500).optional(),
-        author: z.string().min(1).max(80).optional(),
-        source: z.string().min(1).max(160).optional(),
-        sourceUrl: z.url().optional(),
-        tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
-        draft: z.boolean().default(false)
-      })
+    z.object({
+      text: contentText(500),
+      originalText: contentText(500).optional(),
+      author: contentText(80).optional(),
+      source: contentText(160).optional(),
+      sourceUrl: sourceUrlSchema.optional(),
+      tags: contentTagsSchema,
+      draft: z.boolean().default(false)
+    })
 })
 
 export const collections = { blog, docs, trace, saying }

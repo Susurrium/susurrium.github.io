@@ -19,8 +19,9 @@ bun run links:check
 失败计数保存在 `scripts/link-health.json`，因此不会因一次短暂网络抖动立即移动。
 
 候选仓库不启用定时链接 workflow，也不会在部署时自动写回状态。发布审计期间只运行
-`links:check:dry`；如果未来要启用写模式，必须由人工审阅 diff 后单独提交
-`public/links.json` 和 `scripts/link-health.json`，并重新评估 workflow 的权限与触发器。
+`links:check:dry`；写模式的 `public/links.json` 改动应审阅后单独提交。
+`scripts/link-health.json` 是被 Git 忽略的本地连续失败计数，不随发布提交；
+只有另行决定自动化检查时，才重新评估状态存储、workflow 的权限与触发器。
 
 ## 其他会写文件的开发脚本
 

@@ -1,12 +1,7 @@
 ---
 import type { Page } from 'astro'
-
-import { Paginator } from 'astro-pure/components/pages'
-import { Button } from 'astro-pure/user'
-
-import ContentCard from '@/components/cards/ContentCard.astro'
-import PageLayout from '@/layouts/BaseLayout.astro'
 import {
+  contentTagLabel,
   getContentTypeDefinition,
   hydratePageItems,
   loadContentCatalog,
@@ -15,13 +10,18 @@ import {
   type PageItem
 } from '@/lib/content-layer'
 
+import { Paginator } from 'astro-pure/components/pages'
+import { Button } from 'astro-pure/user'
+import PageLayout from '@/layouts/BaseLayout.astro'
+import ContentCard from '@/components/cards/ContentCard.astro'
+
 interface Props {
   kind: ContentKind
   page: Page<PageItem>
 }
 
 const { kind, page } = Astro.props as Props
-const tag = Astro.params.tag ?? ''
+const tag = contentTagLabel(Astro.params.tag ?? '')
 const definition = getContentTypeDefinition(kind)
 const catalog = await loadContentCatalog()
 const renderItems = hydratePageItems(page.data, catalog)
@@ -56,12 +56,16 @@ const paginationProps = toPaginatorProps(page)
         renderItems.length > 0 ? (
           <>
             <ul class='flex flex-col gap-y-3 text-start'>
-              {renderItems.map((item) => <ContentCard item={item} />)}
+              {renderItems.map((item) => (
+                <ContentCard as='li' item={item} />
+              ))}
             </ul>
             <Paginator {...paginationProps} />
           </>
         ) : (
-          <p class='site-empty-state'>No {definition.label.toLowerCase()} entries with this tag yet.</p>
+          <p class='site-empty-state'>
+            No {definition.label.toLowerCase()} entries with this tag yet.
+          </p>
         )
       }
     </section>
