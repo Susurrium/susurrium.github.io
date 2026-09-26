@@ -3,6 +3,7 @@ import {
   buildHomePageData,
   getPageItems,
   hydratePageItems,
+  isContentSurfaceEnabled,
   loadContentCatalog
 } from '@/lib/content-layer'
 
@@ -63,59 +64,71 @@ const meta = {
         <ProfileIntro />
       </div>
 
-      <section class='home-writing' aria-labelledby='home-recent-heading' data-home-writing-grid>
-        <div class='home-writing__title home-section-heading'>
-          <h2 id='home-recent-heading'>Recent</h2>
-        </div>
+      {
+        (isContentSurfaceEnabled('blog', 'home') || isContentSurfaceEnabled('trace', 'home')) && (
+          <section
+            class='home-writing'
+            aria-labelledby='home-recent-heading'
+            data-home-writing-grid
+          >
+            <div class='home-writing__title home-section-heading'>
+              <h2 id='home-recent-heading'>Recent</h2>
+            </div>
 
-        <section class='home-writing__column' data-home-blog-column>
-          <div class='home-writing__heading'>
-            <h3>Blog</h3>
-            <Button
-              title='View all'
-              href='/blog'
-              variant='ahead'
-              aria-label='View all Blog posts'
-              data-home-action='ahead'
-            />
-          </div>
-          {
-            recentBlogItems.length > 0 ? (
-              <ul class='home-writing__blog-list' data-home-recent-blog-list>
-                {recentBlogItems.map((item) => (
-                  <ContentCard class='home-recent-card' item={item} />
-                ))}
-              </ul>
-            ) : (
-              <p class='site-empty-state home-writing__empty'>No posts yet.</p>
-            )
-          }
-        </section>
+            {isContentSurfaceEnabled('blog', 'home') && (
+              <section class='home-writing__column' data-home-blog-column>
+                <div class='home-writing__heading'>
+                  <h3>Blog</h3>
+                  {isContentSurfaceEnabled('blog', 'archive') && (
+                    <Button
+                      title='View all'
+                      href='/blog'
+                      variant='ahead'
+                      aria-label='View all Blog posts'
+                      data-home-action='ahead'
+                    />
+                  )}
+                </div>
+                {recentBlogItems.length > 0 ? (
+                  <ul class='home-writing__blog-list' data-home-recent-blog-list>
+                    {recentBlogItems.map((item) => (
+                      <ContentCard as='li' class='home-recent-card' item={item} />
+                    ))}
+                  </ul>
+                ) : (
+                  <p class='site-empty-state home-writing__empty'>No posts yet.</p>
+                )}
+              </section>
+            )}
 
-        <section class='home-writing__column' data-home-traces-column>
-          <div class='home-writing__heading'>
-            <h3>Traces</h3>
-            <Button
-              title='View all'
-              href='/traces'
-              variant='ahead'
-              aria-label='View all Traces'
-              data-home-action='ahead'
-            />
-          </div>
-          {
-            recentTraceItems.length > 0 ? (
-              <div class='home-writing__trace-list' data-home-recent-trace-list>
-                {recentTraceItems.map((item) => (
-                  <ContentCard class='home-recent-card' item={item} />
-                ))}
-              </div>
-            ) : (
-              <p class='site-empty-state home-writing__empty'>No traces yet.</p>
-            )
-          }
-        </section>
-      </section>
+            {isContentSurfaceEnabled('trace', 'home') && (
+              <section class='home-writing__column' data-home-traces-column>
+                <div class='home-writing__heading'>
+                  <h3>Traces</h3>
+                  {isContentSurfaceEnabled('trace', 'archive') && (
+                    <Button
+                      title='View all'
+                      href='/traces'
+                      variant='ahead'
+                      aria-label='View all Traces'
+                      data-home-action='ahead'
+                    />
+                  )}
+                </div>
+                {recentTraceItems.length > 0 ? (
+                  <div class='home-writing__trace-list' data-home-recent-trace-list>
+                    {recentTraceItems.map((item) => (
+                      <ContentCard class='home-recent-card' item={item} />
+                    ))}
+                  </div>
+                ) : (
+                  <p class='site-empty-state home-writing__empty'>No traces yet.</p>
+                )}
+              </section>
+            )}
+          </section>
+        )
+      }
 
       {timelineItems.length > 0 && <BlogTimeline items={timelineItems} year={timelineYear} />}
 

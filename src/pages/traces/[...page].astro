@@ -1,12 +1,5 @@
 ---
 import type { GetStaticPaths, Page } from 'astro'
-
-import { Paginator } from 'astro-pure/components/pages'
-import { Button } from 'astro-pure/user'
-
-import ContentCard from '@/components/cards/ContentCard.astro'
-import ContentArchiveTaxonomy from '@/components/content/ContentArchiveTaxonomy.astro'
-import { contentPagination } from '@/site-config'
 import {
   buildCollectionStaticPaths,
   getContentTagCounts,
@@ -15,7 +8,13 @@ import {
   toPaginatorProps,
   type PageItem
 } from '@/lib/content-layer'
+
+import { Paginator } from 'astro-pure/components/pages'
+import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/BaseLayout.astro'
+import ContentCard from '@/components/cards/ContentCard.astro'
+import ContentArchiveTaxonomy from '@/components/content/ContentArchiveTaxonomy.astro'
+import { contentPagination } from '@/site-config'
 
 export const prerender = true
 
@@ -70,7 +69,9 @@ const paginationProps = toPaginatorProps(page, {
           <p class='mb-2 px-4 text-sm text-muted-foreground'>
             Page {page.currentPage} · Showing {page.data.length} of {page.total} traces
           </p>
-          {traceItems.map((item) => <ContentCard item={item} />)}
+          {traceItems.map((item) => (
+            <ContentCard item={item} />
+          ))}
           <Paginator {...paginationProps} />
         </section>
       )

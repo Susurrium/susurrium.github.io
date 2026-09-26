@@ -1,9 +1,14 @@
 import type { PaginateFunction } from 'astro'
 
-import { buildSayingImageAssignmentMap, createPageItem } from './page-data'
+import {
+  buildSayingImageAssignmentMap,
+  buildTraceImageAssignmentMap,
+  createPageItem
+} from './page-data'
 import { resolveContentPageSize, type ContentPaginationInput } from './pagination'
 import { contentTagHref, isContentSurfaceEnabled } from './policy'
-import { contentKinds, contentTagPath, getContentTypeDefinition } from './registry'
+import { sortContentRecords } from './queries'
+import { contentKinds, contentTagPath, contentTagSlug, getContentTypeDefinition } from './registry'
 import type { ContentCatalog, ContentKind, ContentRecordOf, PageItem } from './types'
 
 export interface ContentTagCount {
@@ -83,16 +88,21 @@ export function getContentTagIndexEntries(catalog: ContentCatalog): ContentTagIn
  * complete type-specific index link.
  */
 export function getContentTagBrowserEntries(catalog: ContentCatalog): ContentTagBrowserEntry[] {
-  return getContentTagIndexEntries(catalog).map((entry) => ({
-    ...entry,
-    tags: getContentTagCounts(catalog, entry.kind)
-  }))
+  return getContentTagIndexEntries(catalog)
+    .filter((entry) => isContentSurfaceEnabled(entry.kind, 'search'))
+    .map((entry) => ({
+      ...entry,
+      tags: getContentTagCounts(catalog, entry.kind)
+    }))
 }
 
 export function getTagRecords(catalog: ContentCatalog, kind: ContentKind, tag: string) {
   const normalizedTag = tag.toLowerCase()
-  return recordsForKind(catalog, kind).filter((record) =>
-    record.tags.some((candidate) => candidate.toLowerCase() === normalizedTag)
+  return sortContentRecords(
+    recordsForKind(catalog, kind).filter((record) =>
+      record.tags.some((candidate) => candidate.toLowerCase() === normalizedTag)
+    ),
+    getContentTypeDefinition(kind).defaultSort
   )
 }
 
@@ -111,19 +121,23 @@ export function buildTagStaticPaths(
   // page-local index and gives an existing Saying a different image/frame.
   const sayingImageAssignments =
     kind === 'saying' ? buildSayingImageAssignmentMap(catalog.byKind.saying) : undefined
+  const traceImageAssignments =
+    kind === 'trace' ? buildTraceImageAssignmentMap(catalog.byKind.trace) : undefined
 
   return tags.flatMap(({ tag }) => {
     const items: PageItem[] = getTagRecords(catalog, kind, tag).map((record, index) => {
-      const imageAssignment = sayingImageAssignments?.get(record.key)
+      const imageAssignment =
+        sayingImageAssignments?.get(record.key) ?? traceImageAssignments?.get(record.key)
       return createPageItem(record, {
         detailed: true,
+        headingLevel: 2,
         ...(imageAssignment ? { imageAssignment } : {}),
         index
       })
     })
     return paginate(items, {
       pageSize: resolveContentPageSize(pageSize),
-      params: { tag }
+      params: { tag: contentTagSlug(tag) }
     })
   })
 }

@@ -106,12 +106,34 @@ export function getContentTypeDefinition(kind: ContentKind): ContentTypeDefiniti
 
 export function contentPath(kind: ContentKind, id?: string): string {
   const basePath = getContentTypeDefinition(kind).basePath
-  return id === undefined ? basePath : `${basePath}/${encodeURIComponent(id)}`
+  if (
+    id !== undefined &&
+    (id.split('/').some((segment) => !segment || segment === '.' || segment === '..') ||
+      id.split('/')[0] === 'tags')
+  ) {
+    throw new Error(
+      `Invalid ${kind} content id "${id}": use nonempty path segments and avoid the reserved tags route.`
+    )
+  }
+  return id === undefined
+    ? basePath
+    : `${basePath}/${id.split('/').map(encodeURIComponent).join('/')}`
+}
+
+/** Keep ordinary tag URLs; reserve a reversible single-segment slug for URL delimiters. */
+export function contentTagSlug(tag: string): string {
+  return /[/\\?#%]|^~/.test(tag)
+    ? `~${encodeURIComponent(tag).replace(/_/g, '%5F').replace(/%/g, '_')}`
+    : tag
+}
+
+export function contentTagLabel(slug: string): string {
+  return slug.startsWith('~') ? decodeURIComponent(slug.slice(1).replace(/_/g, '%')) : slug
 }
 
 export function contentTagPath(kind: ContentKind, tag?: string): string {
   const tagPath = getContentTypeDefinition(kind).tagPath
-  return tag === undefined ? tagPath : `${tagPath}/${encodeURIComponent(tag)}`
+  return tag === undefined ? tagPath : `${tagPath}/${encodeURIComponent(contentTagSlug(tag))}`
 }
 
 export function contentLabel(kind: ContentKind): string {

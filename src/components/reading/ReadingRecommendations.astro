@@ -31,7 +31,7 @@ const candidates = items.filter((item) => item.contentKey !== currentKey)
       </h2>
       <ul class='flex flex-col gap-y-3 text-start'>
         {candidates.map((item) => (
-          <ContentCard item={item} />
+          <ContentCard as='li' item={item} />
         ))}
       </ul>
     </section>

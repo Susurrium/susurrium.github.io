@@ -12,14 +12,22 @@ import { Button, FormattedDate, Icon } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
 
 interface Props {
+  headingLevel?: 2 | 3 | 4 | 5 | 6
   as?: 'article' | 'li'
   class?: string
   data: TextCardViewData
   detailed?: boolean
 }
 
-const { as = 'article', class: className, data, detailed = false } = Astro.props as Props
+const {
+  as = 'article',
+  class: className,
+  data,
+  detailed = false,
+  headingLevel = 3
+} = Astro.props as Props
 const Root = as
+const Heading = `h${headingLevel}` as const
 const isBlog = data.skin === 'blog'
 const rootClass = isBlog ? 'blog-text-card' : 'text-card'
 const surfaceClass = isBlog
@@ -44,10 +52,10 @@ const redirectClass = isBlog ? 'blog-text-card__redirect' : 'text-card__redirect
         {data.date && <FormattedDate class='min-w-[95px] text-xs' date={data.date} />}
 
         <div class='flex flex-grow justify-between gap-x-3'>
-          <div class={detailed ? 'font-medium' : undefined}>
+          <Heading class={cn('m-0 text-inherit', detailed ? 'font-medium' : 'font-normal')}>
             {data.draft && <span class='text-red-500'>(Draft) </span>}
             {data.title}
-          </div>
+          </Heading>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             width='16'
@@ -99,18 +107,24 @@ const redirectClass = isBlog ? 'blog-text-card__redirect' : 'text-card__redirect
           <ul class='tag-list flex flex-wrap gap-2'>
             {data.tags.map((tag: TextCardTag) => (
               <li>
-                <Button
-                  as='a'
-                  title={tag.label}
-                  href={tag.href}
-                  variant='pill'
-                  aria-label={
-                    isBlog
-                      ? `View more blogs with the tag ${tag.label}`
-                      : `View posts tagged #${tag.label}`
-                  }
-                  data-pagefind-filter='tag'
-                />
+                {tag.href ? (
+                  <Button
+                    as='a'
+                    title={tag.label}
+                    href={tag.href}
+                    variant='pill'
+                    aria-label={
+                      isBlog
+                        ? `View more blogs with the tag ${tag.label}`
+                        : `View posts tagged #${tag.label}`
+                    }
+                    data-pagefind-filter='tag'
+                  />
+                ) : (
+                  <span class='inline-block rounded-full bg-muted px-3 py-1 text-xs'>
+                    {tag.label}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

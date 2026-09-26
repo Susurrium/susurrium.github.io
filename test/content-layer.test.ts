@@ -74,7 +74,7 @@ function makeBlogEntry(id = 'canonical-blog'): BlogEntry {
       heroImage: {
         alt: 'A meaningful cover',
         color: '#659EB9',
-        src: '/images/blog-cover.webp'
+        src: { src: '/images/blog-cover.webp', width: 800, height: 600, format: 'webp' }
       },
       language: 'zh-CN',
       publishDate: blogDate,
@@ -870,8 +870,8 @@ describe('catalog query policies', () => {
       'zeta'
     ])
     expect(sortContentRecords(input, 'editorial-date-desc').map((record) => record.id)).toEqual([
-      'zeta',
-      'alpha'
+      'alpha',
+      'zeta'
     ])
     expect(sortContentRecords(input, 'id-asc').map((record) => record.id)).toEqual([
       'alpha',

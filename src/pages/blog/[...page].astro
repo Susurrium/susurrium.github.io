@@ -4,6 +4,7 @@ import {
   buildCollectionStaticPaths,
   contentTagHref,
   hydratePageItems,
+  isContentSurfaceEnabled,
   loadContentCatalog,
   sortContentRecords,
   toPaginatorProps,
@@ -24,7 +25,7 @@ export const getStaticPaths = (async ({ paginate }) => {
   const uniqueTags = [...new Set(collections.flatMap((record) => record.tags))]
   const collectionsCount = collections.length
   return buildCollectionStaticPaths(contentCatalog, 'blog', paginate, {
-    itemOptions: { detailed: true },
+    itemOptions: { detailed: true, headingLevel: 2 },
     pagination: contentPagination.blog,
     props: { collectionsCount, uniqueTags }
   })
@@ -54,7 +55,12 @@ const paginationProps = toPaginatorProps(page)
     <div id='content-header' class='animate'>
       <h1 id='blog-heading' class='mb-6 mt-6 text-3xl font-medium sm:mt-10'>Blog</h1>
     </div>
-    <div class='grid gap-y-16 sm:grid-cols-[3fr_1fr] sm:gap-x-8'>
+    <div
+      class:list={[
+        'grid gap-y-16',
+        isContentSurfaceEnabled('blog', 'tags') && 'sm:grid-cols-[3fr_1fr] sm:gap-x-8'
+      ]}
+    >
       <section aria-labelledby='blog-heading' class='animate' id='content'>
         {
           page.data.length === 0 ? (
@@ -73,7 +79,7 @@ const paginationProps = toPaginatorProps(page)
               {/* posts */}
               <ul class='flex flex-col gap-y-4 text-start'>
                 {renderItems.map((item) => (
-                  <ContentCard item={item} />
+                  <ContentCard as='li' item={item} />
                 ))}
               </ul>
               <Paginator {...paginationProps} />
@@ -83,40 +89,46 @@ const paginationProps = toPaginatorProps(page)
       </section>
 
       {/* Keep the Blog taxonomy discoverable even while the collection is empty. */}
-      <aside
-        class='animate'
-        id='sidebar'
-        aria-label='Blog taxonomy'
-        data-taxonomy-navigation
-        data-taxonomy-scope='blog'
-        data-taxonomy-count={uniqueTags.length}
-      >
-        <h2 class='mb-4 flex items-center text-lg font-semibold'>
-          <Icon name='tag-2' class='me-2' />
-          Tags
-        </h2>
-        {uniqueTags.length > 0 ? (
-          <ul class='text-bgColor flex flex-wrap gap-2'>
-            {uniqueTags.map((tag) => (
-              <li>
-                <Button title={tag} href={contentTagHref('blog', tag)} variant='pill' />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p class='text-muted-foreground' data-taxonomy-empty>No blog tags yet.</p>
-        )}
-        <span class='mt-4 block sm:text-end'>
-          <Button
-            title='View all'
-            aria-label='View all tags'
-            href='/blog/tags'
-            variant='ahead'
-            class='not-prose'
-            data-taxonomy-action='ahead'
-          />
-        </span>
-      </aside>
+      {
+        isContentSurfaceEnabled('blog', 'tags') && (
+          <aside
+            class='animate'
+            id='sidebar'
+            aria-label='Blog taxonomy'
+            data-taxonomy-navigation
+            data-taxonomy-scope='blog'
+            data-taxonomy-count={uniqueTags.length}
+          >
+            <h2 class='mb-4 flex items-center text-lg font-semibold'>
+              <Icon name='tag-2' class='me-2' />
+              Tags
+            </h2>
+            {uniqueTags.length > 0 ? (
+              <ul class='text-bgColor flex flex-wrap gap-2'>
+                {uniqueTags.map((tag) => (
+                  <li>
+                    <Button title={tag} href={contentTagHref('blog', tag)} variant='pill' />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class='text-muted-foreground' data-taxonomy-empty>
+                No blog tags yet.
+              </p>
+            )}
+            <span class='mt-4 block sm:text-end'>
+              <Button
+                title='View all'
+                aria-label='View all tags'
+                href='/blog/tags'
+                variant='ahead'
+                class='not-prose'
+                data-taxonomy-action='ahead'
+              />
+            </span>
+          </aside>
+        )
+      }
     </div>
   </main>
 </PageLayout>

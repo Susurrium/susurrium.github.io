@@ -1,4 +1,5 @@
 import type { Config, IntegrationUserConfig, ThemeUserConfig } from 'astro-pure/types'
+
 import { connectLinks } from './data/connect'
 import type { ContentPaginationConfig } from './lib/content-layer/pagination'
 
@@ -21,7 +22,8 @@ export const theme: ThemeUserConfig = {
     dateOptions: {
       day: 'numeric',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'Asia/Shanghai'
     }
   },
   /** Set a logo image to show in the homepage. */
@@ -134,7 +136,7 @@ export const integ: IntegrationUserConfig = {
   },
   // Enable page search function
   pagefind: true,
-  // Pure 1.4.6 requires a quote provider even though this site renders the
+  // Pure requires a quote provider even though this site renders the
   // Saying collection through its own content layer. Keep this local
   // compatibility fallback to satisfy the integration contract.
   quote: {

@@ -75,6 +75,7 @@ const hasPageBackground = Astro.slots.has('page-background')
     <article
       class='min-w-0 grow'
       data-pagefind-body={pagefindBody ? '' : undefined}
+      data-pagefind-ignore={contentType && !pagefindBody ? 'all' : undefined}
       data-pagefind-meta={contentType ? `content-type:${contentType}` : undefined}
       data-pagefind-filter={contentType ? `content-type:${contentType}` : undefined}
     >

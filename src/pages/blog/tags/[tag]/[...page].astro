@@ -1,13 +1,9 @@
 ---
 import type { GetStaticPaths, Page } from 'astro'
+import { buildTagStaticPaths, loadContentCatalog, type PageItem } from '@/lib/content-layer'
 
 import TagDetailPage from '@/components/content/TagDetailPage.astro'
 import { contentPagination } from '@/site-config'
-import {
-  buildTagStaticPaths,
-  loadContentCatalog,
-  type PageItem
-} from '@/lib/content-layer'
 
 export const prerender = true
 

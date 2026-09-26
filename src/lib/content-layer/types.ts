@@ -19,14 +19,7 @@ export type ReadingRelatedProfile = 'adjacent' | 'recommendations' | 'none'
 
 /** Surfaces on which a content type may participate. */
 export type ContentSurface =
-  | 'archive'
-  | 'copyright'
-  | 'home'
-  | 'main-nav'
-  | 'reading'
-  | 'rss'
-  | 'search'
-  | 'tags'
+  'archive' | 'copyright' | 'home' | 'main-nav' | 'reading' | 'rss' | 'search' | 'tags'
 
 export interface ContentCapabilities {
   readonly comments: boolean
@@ -195,12 +188,7 @@ export type RenderablePageItem =
     })
 
 export type PageSectionRole =
-  | 'article'
-  | 'collection'
-  | 'featured'
-  | 'related'
-  | 'timeline'
-  | 'taxonomy'
+  'article' | 'collection' | 'featured' | 'related' | 'timeline' | 'taxonomy'
 export type PageGroupRole = 'candidates' | 'items' | 'primary' | 'related' | 'year'
 
 export interface PageGroup {
@@ -257,6 +245,8 @@ export interface ContentCatalogSources {
 }
 
 export interface LoadedContentCatalog extends ContentCatalog {
+  readonly recordsByKey: ReadonlyMap<string, ContentRecord>
+  readonly sourcesByKey: ReadonlyMap<string, AnyContentEntry>
   /** Build-time source entries; never embedded in PageData or serialized props. */
   readonly sources: ContentCatalogSources
 }

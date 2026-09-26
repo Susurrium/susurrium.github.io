@@ -8,7 +8,7 @@ import { buildAlternatingCardImageAssignments } from '@/lib/card-layout/alternat
 import type { CardImageAssignment } from '@/lib/card-layout/types'
 import { normalizeContentPresentation } from '@/lib/compatibility/content-presentation'
 
-import { contentTagHref, resolveContentPolicy } from './policy'
+import { contentTagHref, isContentSurfaceEnabled, resolveContentPolicy } from './policy'
 import { getContentYear, sortContentRecords } from './queries'
 import { getContentTypeDefinition } from './registry'
 import type {
@@ -76,8 +76,39 @@ export function buildSayingImageAssignmentMap(
   )
 }
 
+/** One canonical fallback assignment per Trace, shared by every page surface. */
+export function buildTraceImageAssignmentMap(
+  records: readonly ContentRecord[]
+): ReadonlyMap<string, CardImageAssignment> {
+  const traces = sortContentRecords(
+    records.filter((record) => record.kind === 'trace'),
+    'publish-date-desc'
+  )
+  const assignments = buildAlternatingCardImageAssignments(traceFallbackImages, traces.length, {
+    source: 'fallback'
+  })
+  return new Map(
+    traces.flatMap((record, index) => {
+      // A real editorial cover always wins; it is resolved from the record itself.
+      const assignment = assignments[index]
+      return record.kind === 'trace' && !record.image && assignment
+        ? [[record.key, assignment] as const]
+        : []
+    })
+  )
+}
+
+/** Detail footers display adjacent entries; keep path props bounded as the archive grows. */
+export function adjacentContentRecords<T extends ContentRecord>(
+  records: readonly T[],
+  index: number
+): T[] {
+  return records.slice(Math.max(0, index - 1), index + 2)
+}
+
 function footerFor(record: ContentRecord): string {
-  if (record.tags.length > 0) return record.tags.map((tag) => `#${tag}`).join(' ')
+  if (resolveContentPolicy(record.kind).tags !== 'hidden' && record.tags.length > 0)
+    return record.tags.map((tag) => `#${tag}`).join(' ')
   return record.kind === 'blog' ? 'Blog' : record.kind === 'trace' ? 'Trace' : 'Saying'
 }
 
@@ -239,6 +270,7 @@ export function getPageItems(page: PageData, sectionKey: string, groupKey?: stri
 /** Resolve the Media image policy after the item has crossed the page boundary. */
 export function resolveMediaImage(item: ResolvedPageItem) {
   const { record } = item
+  if (record.kind === 'trace' && record.image) return getTraceCardImage(record.id, record.image)
   const assignment = item.placement.imageAssignment
   if (assignment) {
     return {
@@ -272,14 +304,11 @@ export function buildCollectionPageData(
 ): PageData {
   const sayingImageAssignments =
     kind === 'saying-archive' ? buildSayingImageAssignmentMap(records) : undefined
-  const imageAssignments =
-    kind === 'trace-archive'
-      ? buildAlternatingCardImageAssignments(traceFallbackImages, records.length, {
-          source: 'fallback'
-        })
-      : []
+  const traceImageAssignments =
+    kind === 'trace-archive' ? buildTraceImageAssignmentMap(records) : undefined
   const items = records.map((record, index) => {
-    const imageAssignment = sayingImageAssignments?.get(record.key) ?? imageAssignments[index]
+    const imageAssignment =
+      sayingImageAssignments?.get(record.key) ?? traceImageAssignments?.get(record.key)
     return createPageItem(record, {
       ...options,
       ...(imageAssignment ? { imageAssignment } : {}),
@@ -306,15 +335,16 @@ export function buildHomePageData(
   // builder free of the Astro `getCollection()` module makes it usable in
   // unit tests and in any non-Astro render analysis without pulling the
   // build-only catalog boundary into the runtime graph.
-  const blogs = catalog.byKind.blog
-  const traces = catalog.byKind.trace
-  const sayings = catalog.byKind.saying
+  const blogs = isContentSurfaceEnabled('blog', 'home') ? catalog.byKind.blog : []
+  const traces = isContentSurfaceEnabled('trace', 'home') ? catalog.byKind.trace : []
+  const sayings = isContentSurfaceEnabled('saying', 'home') ? catalog.byKind.saying : []
   const blogsByPublishDate = sortContentRecords(blogs, 'publish-date-desc')
   const tracesByPublishDate = sortContentRecords(traces, 'publish-date-desc')
   const sayingsById = sortContentRecords(sayings, 'id-asc')
   const recentBlogs = blogsByPublishDate.slice(0, recentLimit)
   const recentTraces = tracesByPublishDate.slice(0, recentLimit)
   const sayingImageAssignments = buildSayingImageAssignmentMap(sayingsById)
+  const traceImageAssignments = buildTraceImageAssignmentMap(catalog.byKind.trace)
 
   const yearInChina = (date: Date) => getContentYear(date)
   const currentYear = yearInChina(options.now ?? new Date())
@@ -345,10 +375,15 @@ export function buildHomePageData(
     })
   })
   const recentBlogItems = recentBlogs.map((record, index) =>
-    createPageItem(record, { detailed: true, index })
+    createPageItem(record, { detailed: true, headingLevel: 4, index })
   )
   const recentTraceItems = recentTraces.map((record, index) =>
-    createPageItem(record, { actionLabel: 'Read', index })
+    createPageItem(record, {
+      actionLabel: 'Read',
+      index,
+      headingLevel: 4,
+      imageAssignment: traceImageAssignments.get(record.key)
+    })
   )
   const timelineItems = timelineBlogs.map((record, index) => createPageItem(record, { index }))
 

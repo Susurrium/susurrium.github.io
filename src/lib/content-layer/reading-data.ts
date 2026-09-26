@@ -337,7 +337,9 @@ export function toReadingFrameData(record: ContentRecord): ReadingFrameData {
   const articleModifiedDate = record.updatedAt?.toISOString()
 
   return {
-    backHref: contentPath(record.kind),
+    backHref: resolveContentPolicy(record.kind).surfaces.archive
+      ? contentPath(record.kind)
+      : '/home',
     contentTypeLabel: contentLabel(record.kind),
     meta: {
       ...(articleDate && { articleDate }),
