@@ -338,10 +338,11 @@ export function buildHomePageData(
   const blogs = isContentSurfaceEnabled('blog', 'home') ? catalog.byKind.blog : []
   const traces = isContentSurfaceEnabled('trace', 'home') ? catalog.byKind.trace : []
   const sayings = isContentSurfaceEnabled('saying', 'home') ? catalog.byKind.saying : []
+  const blogsByEditorialDate = sortContentRecords(blogs, 'editorial-date-desc')
   const blogsByPublishDate = sortContentRecords(blogs, 'publish-date-desc')
   const tracesByPublishDate = sortContentRecords(traces, 'publish-date-desc')
   const sayingsById = sortContentRecords(sayings, 'id-asc')
-  const recentBlogs = blogsByPublishDate.slice(0, recentLimit)
+  const recentBlogs = blogsByEditorialDate.slice(0, recentLimit)
   const recentTraces = tracesByPublishDate.slice(0, recentLimit)
   const sayingImageAssignments = buildSayingImageAssignmentMap(sayingsById)
   const traceImageAssignments = buildTraceImageAssignmentMap(catalog.byKind.trace)
