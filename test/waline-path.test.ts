@@ -19,4 +19,12 @@ describe('Waline article path normalization', () => {
     expect(normalizeWalinePath('sayings/example/')).toBe('/sayings/example')
     expect(normalizeWalinePath('')).toBe('/')
   })
+
+  test('decodes Unicode routes while preserving encoded reserved characters', () => {
+    expect(normalizeWalinePath('/traces/%E5%8F%AF%E6%98%AF-%E7%94%9F%E6%B4%BB')).toBe(
+      '/traces/可是-生活'
+    )
+    expect(normalizeWalinePath('/traces/a%2Fb')).toBe('/traces/a%2Fb')
+    expect(normalizeWalinePath('/traces/%E0%A4%A')).toBe('/traces/%E0%A4%A')
+  })
 })
