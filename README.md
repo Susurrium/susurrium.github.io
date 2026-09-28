@@ -39,10 +39,12 @@ Windows 本地完整检查建议使用 `node scripts/run-sequential.mjs ci`，�
 
 ## 分支
 
-- `main`：生产分支，只接收经过验证的发布合并。
-- `develop`：集成分支，必须保持包含当前生产基线。
-- `codex/*`：短生命周期的功能、文章、修复或文档分支，完成后通过 PR 合并并清理。
+- `main`：生产分支，只接收经过验证的 PR；包括 `develop → main` 的网站版本发布，以及从 `main` 创建、只修改内容和随文素材的独立内容发布。
+- `develop`：网站集成分支，必须包含当前生产基线；网站功能从这里开发。
+- `codex/*`：短生命周期分支。网站功能从 `develop` 创建并 PR 回 `develop`；独立文章从 `main` 创建并 PR 回 `main`。完成后同步生产基线并清理分支。
 - `upstream`：Arthals-Ink 只读参考源，不直接合并未经审阅的代码。
+
+独立内容发布只能修改已支持的 Blog、Trace 或 Saying 正文及其专属媒体；不能依赖 `develop` 中尚未发布的 schema、模板或组件。内容 PR 合并到 `main` 并部署后，必须通过 PR 将 `main` 同步回 `develop`。网站功能仍使用 `codex/* → develop → main` 的发布路线。
 
 GitHub Pages 保留手动 `workflow_dispatch`，且只允许选择 `main` 分支。部署工作流对同一份产物完成 `bun run ci`、严格 `release:gate` 和三项浏览器回归后才上传；普通 CI 的浏览器任务复用已验证的构建产物。链接健康检查仅使用人工 `links:check:dry`，不会自动 commit/push。
 

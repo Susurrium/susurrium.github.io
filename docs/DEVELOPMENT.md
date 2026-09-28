@@ -175,19 +175,27 @@ bun run ci
 `--repo Susurrium/susurrium.github.io`，避免把发布操作发给上游。
 
 - `main`：生产分支，只接收经过验证的发布合并。
-- `develop`：集成分支，必须包含当前生产基线；所有日常功能和文章分支都从这里创建。
-- `codex/*`：短生命周期的功能、文章、修复、同步或文档分支，完成后通过 PR 合并并清理。
+- `develop`：网站集成分支，必须包含当前生产基线；网站功能和需要新代码支持的内容从这里开发。
+- `codex/*`：短生命周期工作分支。网站功能从 `develop` 创建并 PR 到 `develop`；独立内容从 `main` 创建并 PR 到 `main`。
 - `upstream`：Arthals-Ink 的只读参考源，不直接合并未经审阅的代码。
 
-分支关系固定为：
+网站功能与独立内容使用不同的发布路线：
 
 ```text
-main（生产）
-  ↑ 经过验证的发布 PR
-develop（集成，始终不落后于生产）
-  ↑ 功能/文章 PR
-codex/<topic>（短生命周期工作分支）
+网站功能：
+develop → codex/<feature>（从 develop 创建）
+        → PR 合并到 develop
+        → develop → main 发布 PR
+        → 手动部署 Pages
+
+独立内容：
+main → codex/content-<topic>（从 main 创建，只含内容与随文媒体）
+     → PR 合并到 main
+     → 手动部署 Pages
+     → main → develop 同步 PR
 ```
+
+独立内容发布用于在网站开发尚未完成时发布兼容当前线上版本的 Blog、Trace 或 Saying。它只能修改内容文件及该内容专属的本地媒体，不得依赖 `develop` 中尚未进入 `main` 的 schema、模板、组件、站点配置或样式。若必须修改这些代码，应先走网站功能路线发布代码，再发布内容。内容 PR 合并并部署后，要通过 `main → develop` PR 同步生产基线，保证 `develop` 始终包含线上版本。
 
 ### 3.1 基线收敛
 
@@ -240,7 +248,7 @@ git commit -m "feat: describe change"
 git push -u origin codex/<topic>
 ```
 
-功能分支通过 PR 合并到 `develop`。当前 CI 对 `develop`/`main` 的 push 和针对这两个分支的 PR 执行；功能分支单独 push 不等于已经完成 CI，因此应始终创建 PR。
+网站功能分支通过 PR 合并到 `develop`。独立内容分支的流程见第 8.1 节。当前 CI 对 `develop`/`main` 的 push 和针对这两个分支的 PR 执行；分支单独 push 不等于已经完成 CI，因此应始终创建 PR。
 
 ## 4. 提交边界
 
@@ -302,13 +310,42 @@ codex/<topic>
 
 ### 8.1 发布文章或功能
 
-1. 从最新 `develop` 创建 `codex/<topic>` 分支。
-2. Blog 文件放在 `src/content/blog/`；Trace 放在 `src/content/traces/`；Saying 放在 `src/content/sayings/`。schema 和字段约束以 `src/content.config.ts` 为准。
-3. 正式内容使用 `draft: false`；Blog 必须有 `title`、`description`、`publishDate`；Trace 设置 `cover` 时必须同时设置 `coverAlt`。
-4. 图片、音频、视频优先使用仓库内资源，并检查正文没有未登记的远程媒体。
-5. 本地运行 `bun run ci`、`bun run release:gate --strict` 和 `bun run links:check:dry`。
-6. 提交并推送分支，创建 `codex/<topic> → develop` PR；CI 和人工预览通过后合并。
-7. 创建 `develop → main` 发布 PR；合并前再次核对 `git status`、内容、素材权利和个人公开信息。
+先判断内容是否完全兼容当前 `main`：
+
+- 若只新增或修改正文、frontmatter 和该内容专属媒体，且使用的 schema、模板和组件都已存在于 `main`，可走“独立内容发布”。
+- 若需要新增或修改 schema、路由、组件、样式、站点配置或构建脚本，必须先走“网站功能发布”。不能让文章分支依赖 `develop` 中尚未发布的代码。
+
+#### 独立内容发布
+
+先确认工作区干净，或将其他未提交改动妥善隔离；不要把开发分支上的工作带入内容发布分支。然后从最新 `main` 创建分支：
+
+```powershell
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git switch -c codex/content-<topic>
+```
+
+1. Blog 文件放在 `src/content/blog/`；Trace 放在 `src/content/traces/`；Saying 放在 `src/content/sayings/`。字段约束以 `src/content.config.ts` 在当前 `main` 中的版本为准。
+2. 正式内容使用 `draft: false`；Blog 必须有 `title`、`description`、`publishDate`；Trace 设置 `cover` 时必须同时设置 `coverAlt`。
+3. 图片、音频、视频优先使用仓库内、仅供该内容使用的资源；检查来源权利和未登记的远程媒体。PR 不得夹带网站代码或配置改动。
+4. 运行 `bun run dev` 预览；在新构建后运行 `bun run ci`、`bun run release:gate --strict` 和 `bun run links:check:dry`。严格门禁失败时不得合并或部署。
+5. 检查暂存范围后提交、推送，创建 `codex/content-<topic> → main` PR。等待 `CI` 的 `validate` 和 `browser-regression` 成功，并人工审阅预览、内容、媒体权利和公开信息后合并。
+6. 按第 8.2 节手动部署并检查线上文章。
+7. 创建 `main → develop` 同步 PR；CI 通过后合并。若在此期间 `develop` 已有自己的提交，应通过 PR 完成合并，不得对共享分支 rebase、force-push 或 reset。
+
+#### 网站功能发布
+
+网站功能仍从最新 `develop` 创建工作分支：
+
+```powershell
+git fetch origin
+git switch develop
+git pull --ff-only origin develop
+git switch -c codex/<topic>
+```
+
+完成后运行 `bun run ci`、`bun run release:gate --strict` 和 `bun run links:check:dry`，创建 `codex/<topic> → develop` PR。经过 CI 和人工预览后合并；确认准备上线后，再创建 `develop → main` 发布 PR。
 
 ### 8.2 GitHub Pages 发布
 
