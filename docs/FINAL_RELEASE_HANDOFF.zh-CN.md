@@ -55,7 +55,7 @@ Links 的 Friend Circle 已关闭：页面不输出标题、空占位区、状�
 
 ## 4. 逐项替换顺序
 
-1. 从最新 `develop` 创建 `codex/<topic>` 分支替换站点身份、静态页面或内容；当前发布基线不纳入历史 Blog/Trace/Saying 内容与旧聚合路由，93 个真实历史内容已按 owner 决定全部不恢复，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料、居住地和二维码若发生新增或精度变化，必须先建立新的逐项 owner 记录。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
+1. 网站身份、静态页面、schema、路由和其他运行时代码从最新 `develop` 创建 `codex/<topic>` 分支，按网站功能流程发布。与当前 `main` 完全兼容的独立 Blog、Trace、Saying 内容可从最新 `main` 创建 `codex/content-<topic>` 分支，并直接 PR 到 `main`；分支只包含正文、frontmatter 和该内容专属的媒体，不能依赖 `develop` 中尚未发布的代码。当前发布基线不纳入历史 Blog/Trace/Saying 内容与旧聚合路由，93 个真实历史内容已按 owner 决定全部不恢复，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料、居住地和二维码若发生新增或精度变化，必须先建立新的逐项 owner 记录。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
 2. 本次图库已完成本地化；若后续继续替换，请在 `public/images/home-media/` 生成同源 WebP，并同步更新 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使复用同一批图，也要保持独立，避免一次替换误伤另一种卡片策略。Media 的装饰斜边参考由 `src/data/home-media.ts` 的 `cardCutSideByFilename` 按文件名固定，不要恢复按索引奇偶交替。图片源内容的保留侧不能再从斜边方向推断；请使用本地 `/tools/card-crop-review` 统一裁剪工作台逐张拖动/缩放与正式卡片同步的两个斜边框，确认后导出 JSON，并用 `scripts/apply-card-crops.mjs` 应用到 `src/data/card-crop-selections.generated.ts`。未确认的图继续使用安全回退。
 3. 填写居住地并确认公共音乐配置；居住地默认只公开城市级精度，任何区域/街道级展示都必须先取得新的明确确认。确认音频不自动播放，只在用户点击后播放。
 4. 运行下方的完整验证。候选验证必须在干净 worktree 中执行 `bun run ci`、`bun run links:check:dry` 和 `bun run release:gate --strict`；不要把最终资料写入白名单，也不要删除检查来“通过”。
@@ -76,7 +76,7 @@ bun run release:gate
 只有这三项完成且站长明确授权上线后，才执行发布动作：
 
 1. 复核 `git status`，只暂存本次已审核的文件。
-2. 通过 PR 将已验证的 `codex/<topic>` 合并到 `develop`，再通过发布 PR 合并到 `main`。
+2. 网站功能通过 PR 合并到 `develop`，确认发布后再通过 `develop → main` 发布 PR。独立内容按前述规则通过 PR 合并到 `main`；上线后再创建 `main → develop` 同步 PR，确保开发分支包含生产内容。
 3. 在 GitHub 仓库 Settings → Pages 中确认发布源为 **GitHub Actions**。
 4. workflow 保持手动触发，仅允许 main；上传前必须完成 `ci`、严格 `release:gate` 和三项浏览器回归，检查后上传同一份产物。合并 main 后，由站长或其明确授权的执行者手动运行 `Deploy to GitHub Pages`。
 5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、文章详情、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。

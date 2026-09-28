@@ -689,34 +689,27 @@ GitHub Pages
 
 ### 3.2 整个项目的开发架构
 
-项目目前采用比较简单的 Git 分支结构：
+项目有两条互相衔接的发布路线：网站代码沿 `develop` 开发和发布；不依赖新代码的文章可以从当前线上版本 `main` 单独发布。
 
 ```
-upstream
-  Arthals-Ink 的只读参考源
-       │
-       ▼
-develop
-  集成分支
-       │
-       ▼
-codex/<topic>
-  文章、功能、修复或文档分支
-       │
-       ▼
-main
-  生产分支
-       │
-       ▼
-GitHub Actions
-  CI、严格发布门禁和 Pages 部署
+网站功能：
+develop → 从 develop 创建 codex/<feature>
+         → PR 合并回 develop
+         → develop → main 发布 PR
+         → GitHub Actions 手动部署 Pages
+
+独立文章：
+main → 从 main 创建 codex/content-<topic>（只放文章和随文媒体）
+     → PR 合并回 main
+     → GitHub Actions 手动部署 Pages
+     → main → develop 同步 PR
 ```
 
 `main` 只保存已经确认可以发布的版本。
 
-`develop` 用于日常集成，必须始终包含当前生产基线。
+`develop` 用于日常集成，必须始终包含当前生产基线。独立文章发布到 `main` 后，要及时通过 PR 同步回 `develop`。
 
-`codex/*` 是短生命周期分支，用来完成一篇文章、一个功能、一次修复或一项文档整理。
+`codex/*` 是短生命周期分支。网站功能从 `develop` 创建并 PR 回 `develop`；独立文章从 `main` 创建并 PR 回 `main`。独立文章只能使用当前 `main` 已支持的 schema、模板和组件，不能依赖 `develop` 中尚未发布的功能。若文章需要新代码，应先发布对应的网站功能。
 
 `upstream` 只用于读取和参考，不直接合并未经审查的内容。
 
@@ -817,6 +810,17 @@ bun run links:check:dry
 ### 4.2 使用自己的博客
 
 这个项目没有后台编辑器，文章和图片都通过 Git 仓库管理。
+
+如果文章可以使用当前线上版本已有的内容类型、模板和组件，就可以在网站功能仍于 `develop` 开发时单独发布。先确认没有其他未提交改动混入，再从最新的 `main` 创建文章分支：
+
+```powershell
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git switch -c codex/content-my-first-post
+```
+
+文章分支只提交文章和它专属的媒体，不混入组件、样式、schema、站点配置或其他尚未发布的网站改动。如果文章依赖这些代码，先走 4.3 节的网站功能流程。
 
 新增一篇 Blog，建议为它建立独立目录：
 
@@ -946,19 +950,22 @@ public/media/blog/my-first-post/
 - 移动端是否可用；
 - 是否被发布门禁识别为未登记外部资源。
 
-文章和图片添加后，使用 Git 提交：
+文章和图片添加后，运行 `bun run dev` 预览；确认字段、正文、媒体和移动端显示正确后，运行以下检查：
 
 ```
-git add src/content/blog/my-first-post
-git commit -m "docs: add my first blog post"
-git push
+bun run ci
+bun run release:gate --strict
+bun run links:check:dry
 ```
 
+严格发布门禁必须在新构建后通过；失败时不能绕过。然后只暂存本篇文章和专属媒体，提交并推送文章分支，创建 `codex/content-my-first-post → main` 的 Pull Request。CI 和人工预览通过后合并到 `main`，再在 GitHub Actions 手动运行 `Deploy to GitHub Pages` 并检查线上文章。
+
+文章上线后，创建 `main → develop` 同步 PR。这样 `develop` 会包含已经发布的文章，下一次网站版本发布也不会漏掉它。
 
 
 ### 4.3 继续功能开发
 
-功能开发从最新的 `develop` 开始：
+网站功能开发仍从最新的 `develop` 开始：
 
 ```
 git fetch origin
@@ -994,7 +1001,7 @@ git commit -m "feat: describe the change"
 git push -u origin codex/<topic>
 ```
 
-然后创建：
+然后创建网站功能 PR：
 
 ```
 codex/<topic> → develop
