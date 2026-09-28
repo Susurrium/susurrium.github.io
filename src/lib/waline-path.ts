@@ -7,7 +7,15 @@
  * to the same value. Keep the root route as `/`.
  */
 export function normalizeWalinePath(pathname: string): string {
-  const value = String(pathname ?? '').split(/[?#]/, 1)[0] || '/'
+  const rawValue = String(pathname ?? '').split(/[?#]/, 1)[0] || '/'
+  // Astro exposes non-ASCII route segments URI-encoded. Use the decoded route
+  // as the comment id while keeping reserved characters such as %2F encoded.
+  let value = rawValue
+  try {
+    value = decodeURI(rawValue)
+  } catch {
+    // Keep the original path if it contains malformed percent encoding.
+  }
   const withLeadingSlash = value.startsWith('/') ? value : `/${value}`
   if (withLeadingSlash === '/') return '/'
 
