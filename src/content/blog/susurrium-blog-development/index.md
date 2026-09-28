@@ -2,6 +2,7 @@
 title: Susurrium's blog 的开发记录
 description: 记录我的个人博客开发到最终上线的过程。
 publishDate: 2026-09-04
+updatedDate: 2026-09-29
 tags:
   - Blog
   - Astro
