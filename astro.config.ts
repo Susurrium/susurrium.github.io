@@ -20,6 +20,7 @@ import searchIndex from './src/integrations/search-index.ts'
 // Local integrations
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
+import remarkRemoveDuplicateTitleHeading from './src/plugins/remark-remove-duplicate-title-heading.ts'
 // Shiki
 import {
   addCopyButton,
@@ -95,7 +96,7 @@ export default defineConfig({
   // Markdown Options
   markdown: {
     processor: unified({
-      remarkPlugins: [remarkMath, remarkAlert],
+      remarkPlugins: [remarkMath, remarkAlert, remarkRemoveDuplicateTitleHeading],
       rehypePlugins: [
         [rehypeKatex, { strict: false }],
         rehypeHeadingIds,
