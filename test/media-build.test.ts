@@ -1,6 +1,5 @@
 import { spawn } from 'node:child_process'
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from 'bun:test'
@@ -10,18 +9,14 @@ import sharp from 'sharp'
 import { srcsetUrls } from '../scripts/lib/resource-audit.mjs'
 
 const project = fileURLToPath(new URL('../', import.meta.url))
-async function buildFixture(root: string) {
+async function runFixture(root: string, command: string, args: string[]) {
   return new Promise<{ status: number | null; stdout: string; stderr: string }>(
     (resolveBuild, reject) => {
-      const child = spawn(
-        'node',
-        [resolve(project, 'node_modules/astro/bin/astro.mjs'), 'build', '--root', root],
-        {
-          cwd: root,
-          stdio: ['ignore', 'pipe', 'pipe'],
-          windowsHide: true
-        }
-      )
+      const child = spawn(command, args, {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true
+      })
       let stdout = ''
       let stderr = ''
       child.stdout.on('data', (chunk) => {
@@ -32,7 +27,7 @@ async function buildFixture(root: string) {
       })
       const timeout = setTimeout(() => {
         child.kill()
-        reject(new Error(`Astro build timed out:\n${stdout}\n${stderr}`))
+        reject(new Error(`${command} timed out:\n${stdout}\n${stderr}`))
       }, 180000)
       child.once('error', (error) => {
         clearTimeout(timeout)
@@ -46,9 +41,10 @@ async function buildFixture(root: string) {
   )
 }
 test('real JPEG and transparent PNG survive content loading, Astro optimization and publication', async () => {
-  const root = await mkdtemp(resolve(tmpdir(), 'susurrium-media-build-'))
-  if (!root.startsWith(`${resolve(tmpdir())}${sep}susurrium-media-build-`))
-    throw new Error('Unsafe build fixture path')
+  const fixtures = resolve(project, 'artifacts/media-build-tests')
+  await mkdir(fixtures, { recursive: true })
+  const root = await mkdtemp(resolve(fixtures, 'case-'))
+  if (!root.startsWith(`${fixtures}${sep}case-`)) throw new Error('Unsafe build fixture path')
   let completed = false
   try {
     for (const entry of [
@@ -56,17 +52,22 @@ test('real JPEG and transparent PNG survive content loading, Astro optimization 
       'public',
       'scripts',
       'package.json',
+      'bun.lock',
       'tsconfig.json',
       'astro.config.ts',
       'uno.config.ts',
       'patches'
     ])
       await cp(resolve(project, entry), resolve(root, entry), { recursive: true })
-    await symlink(
-      resolve(project, 'node_modules'),
-      resolve(root, 'node_modules'),
-      process.platform === 'win32' ? 'junction' : 'dir'
-    )
+    // Astro 组件及其虚拟样式模块必须解析到同一测试根目录。
+    const installed = await runFixture(root, process.execPath, [
+      'install',
+      '--frozen-lockfile',
+      '--offline'
+    ])
+    await writeFile(resolve(root, 'install.stdout.log'), installed.stdout)
+    await writeFile(resolve(root, 'install.stderr.log'), installed.stderr)
+    expect(installed.status, `${installed.stdout}\n${installed.stderr}`).toBe(0)
     const cases = [
       { kind: 'blog', slug: 'media-build-jpeg', extension: 'jpg', alpha: false },
       { kind: 'blog', slug: 'media-build-blog-png', extension: 'png', alpha: true },
@@ -97,7 +98,12 @@ test('real JPEG and transparent PNG survive content loading, Astro optimization 
         `---\ntitle: ${item.slug}\ndescription: Real image build regression\npublishDate: 2026-10-08\ntags: [media]\ndraft: false\n${cover}\n---\n\nBody image:\n\n![Actual body image](./cover.${item.extension})\n`
       )
     }
-    const built = await buildFixture(root)
+    const built = await runFixture(root, 'node', [
+      resolve(root, 'node_modules/astro/bin/astro.mjs'),
+      'build',
+      '--root',
+      root
+    ])
     await writeFile(resolve(root, 'build.stdout.log'), built.stdout)
     await writeFile(resolve(root, 'build.stderr.log'), built.stderr)
     expect(built.status, `${built.stdout}\n${built.stderr}`).toBe(0)

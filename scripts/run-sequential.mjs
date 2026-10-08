@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
@@ -56,6 +57,7 @@ const runCommand = ([command, args]) =>
   new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: process.cwd(),
+      env: environment,
       // Keep Astro's output on the caller's console rather than buffering a
       // second process stream during the Windows build sequence.
       stdio: 'inherit',
@@ -68,6 +70,14 @@ const runCommand = ([command, args]) =>
     })
     child.once('close', (status) => resolve(status ?? 1))
   })
+
+const environment = { ...process.env }
+if (sequenceName === 'ci') {
+  // CI 的测试和子进程统一在仓库内保存中间文件。
+  const temporary = resolve(process.cwd(), 'artifacts/runtime-tmp')
+  mkdirSync(temporary, { recursive: true })
+  Object.assign(environment, { TMPDIR: temporary, TMP: temporary, TEMP: temporary })
+}
 
 for (const command of sequence) {
   const status = await runCommand(command)
