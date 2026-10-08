@@ -8,6 +8,8 @@ type Props = SiteMeta & {
   noindex?: boolean
   /** The last editorial update, distinct from the publication timestamp. */
   articleModifiedDate?: string
+  ogImageWidth?: number
+  ogImageHeight?: number
 }
 
 const {
@@ -16,6 +18,8 @@ const {
   description,
   noindex = false,
   ogImage,
+  ogImageWidth,
+  ogImageHeight,
   title
 } = Astro.props
 
@@ -24,6 +28,9 @@ const siteTitle = isBlogIndex ? config.title : `${title} ${config.titleDelimiter
 const socialTitle = isBlogIndex ? config.title : title
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
 const socialImageURL = new URL(ogImage ? ogImage : '/images/social-card.webp', Astro.url).href
+const defaultSocialImage = !ogImage || ogImage === '/images/social-card.webp'
+const socialImageWidth = defaultSocialImage ? 1200 : ogImageWidth
+const socialImageHeight = defaultSocialImage ? 630 : ogImageHeight
 const umamiScriptUrl = 'https://cloud.umami.is/script.js'
 const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 ---
@@ -63,8 +70,14 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 <meta content={config.title} property='og:site_name' />
 <meta content={config.locale.attrs} property='og:locale' />
 <meta content={socialImageURL} property='og:image' />
-<meta content='1200' property='og:image:width' />
-<meta content='630' property='og:image:height' />
+{
+  socialImageWidth && socialImageHeight && (
+    <>
+      <meta content={String(socialImageWidth)} property='og:image:width' />
+      <meta content={String(socialImageHeight)} property='og:image:height' />
+    </>
+  )
+}
 {
   articleDate && (
     <>

@@ -51,6 +51,8 @@ export type ImageSource = 'content' | 'fallback' | 'decorative' | 'none'
 
 export interface ContentImageInput {
   readonly src: string
+  readonly width?: number
+  readonly height?: number
   readonly alt?: string
   readonly key?: string
 }

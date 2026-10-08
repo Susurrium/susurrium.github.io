@@ -13,6 +13,7 @@ import {
   type ReadingMediaVariant,
   type ReadingOpeningMediaBackdropConfig
 } from '@/lib/content-layer/reading-policy'
+import { publicReadingImageOptions, readingImageOptions } from '@/lib/media/reading-image'
 
 import ReadingOpeningMediaBackdrop from './ReadingOpeningMediaBackdrop.astro'
 
@@ -56,6 +57,7 @@ const imageClass =
           fetchpriority='high'
           loading='eager'
           src={imageMetadata}
+          {...readingImageOptions(imageMetadata)}
         />
       ) : (
         <img
@@ -65,12 +67,14 @@ const imageClass =
           fetchpriority='high'
           loading='eager'
           src={data.src}
+          {...publicReadingImageOptions(data.src)}
         />
       )}
       {showBackdrop && (
         <ReadingOpeningMediaBackdrop
           source={data.source}
           src={data.src}
+          {...publicReadingImageOptions(data.src)}
           variant={backdropVariant}
         />
       )}
@@ -89,6 +93,7 @@ const imageClass =
           fetchpriority='high'
           loading='eager'
           src={imageMetadata}
+          {...readingImageOptions(imageMetadata)}
         />
       ) : (
         <img

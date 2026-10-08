@@ -18,6 +18,7 @@ Susurrium 的个人博客，基于 [Arthals-Ink](https://github.com/zhuozhiyongd
 - [最终内容替换与发布交接](./docs/FINAL_RELEASE_HANDOFF.zh-CN.md)
 - [内容数据架构](./docs/CONTENT_DATA_ARCHITECTURE.zh-CN.md)
 - [卡片裁剪工作台](./docs/CARD_CROP_REVIEW.md)
+- [图片交付与预算验证](./docs/MEDIA_DELIVERY.md)
 - [来源与复用台账](./docs/SOURCE_LEDGER.md)
 - [第三方素材说明](./docs/THIRD_PARTY_NOTICES.md)
 - [视觉基线](./docs/VISUAL_BASELINE.md)

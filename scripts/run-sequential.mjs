@@ -7,6 +7,7 @@ const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
 const astroCli = resolve(process.cwd(), 'node_modules', 'astro', 'bin', 'astro.mjs')
 const node = process.execPath
 const buildSequence = [
+  [bun, ['run', 'verify:media-images']],
   // `astro build` owns the required content sync. Checking its resulting
   // generated types avoids a second content sync while keeping a full
   // type/diagnostic gate in every build.
