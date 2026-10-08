@@ -1,323 +1,165 @@
-# 开发与 Git 流程
+# 开发与维护指南
 
-## 1. 首次准备
+适用于运行、配置、维护、验证和发布网站。正文编辑见 [内容指南](./CONTENT.md)，实现契约见 [架构说明](./ARCHITECTURE.md)，裁剪应用见 [工作台](./MEDIA_WORKBENCH.md)。本文件集中维护操作要求；历史证据见 [归档索引](./archive/README.md)。
 
-要求：
+## 环境与本地运行
 
-- Node.js 22.12 或更高；项目和 CI 固定使用 `.node-version` 的 24.18.0。
-- Bun 1.4.0。
-- Git。
-
-安装依赖：
+准备 Git、[`.node-version`](../.node-version) 指定的 Node 和 [`package.json`](../package.json) 的 `packageManager` 指定的 Bun。Node 最低要求见 `engines`；本地验证与 CI 应使用固定版本。
 
 ```powershell
 bun install --frozen-lockfile
-```
-
-运行开发服务器：
-
-```powershell
 bun run dev
 ```
 
-## 2. 验证
-
-快速环境检查：
+访问终端输出的地址。生产预览需要新构建：
 
 ```powershell
-bun run preflight
-```
-
-类型和 Astro 检查：
-
-```powershell
-bun run check
-```
-
-只读 ESLint（不会自动改文件）：
-
-```powershell
-bun run lint:check
-```
-
-完整静态构建：
-
-```powershell
-bun run build
-```
-
-Windows 本地建议直接运行 `node scripts/run-sequential.mjs build`，完整 CI 对应 `node scripts/run-sequential.mjs ci`，检查内容与 Bun 命令完全相同。2026-09-12 的本机验证中，Bun 启动链曾在 `Building static entrypoints` 停滞；检查发现 esbuild 子进程输入管道存在未完成写入，换直接 Node 入口后完整流程通过。该现象尚未定位到上游根因，不依赖自动重试掩盖失败。重新构建前先用 `bun run preview -- stop` 停止本项目的后台预览。
-
-如果开发覆盖层提示 `Failed to load url /vendor/maplibre...`，先停止并重新启动开发服务器，再硬刷新浏览器。MapLibre 6.4.1 的发行模块、shared、worker 和 CSS 都固定在 `public/vendor`；地图接近视口时通过本地 `<script type="module">` 桥接加载，不交给 Vite 重打包。替换版本必须同步全部依赖模块、来源台账和 `verify:phase5` 哈希。
-
-已完成阶段的静态契约回归：
-
-```powershell
-bun run verify:phase1
-bun run test:phase2
-bun run verify:phase2
-bun run verify:phase3
-bun run test:phase4
-bun run verify:phase4
-bun run test:phase5
-bun run verify:phase5
-bun run verify:phase6
-```
-
-`verify:phase3` 覆盖根路径可重复入口、本地入口媒体哈希、Typed.js 固定版本、全局音乐单例/详情紧凑模式、已登记音乐运行时/图片缩放/二维码运行时、原生 View Transition rejection guard，以及 ClientRouter 生命周期清理。音乐播放器继续使用当前公共网易云 Meting 配置；这不是文章媒体的通用远程白名单。
-
-`test:phase4` 覆盖页面 profile 的纯策略边界；`verify:phase4` 复核 PKU/George 原始 vendor 文件和构建产物的 SHA-256、原始 PKU 参数、宿主的销毁钩子、路由映射，以及生产产物中不存在效果脚本热链。
-
-`test:phase5` 覆盖 HanLife 公开贡献 HTML 的解析、53 周中性骨架，以及 SkyWT 复用的地理计算；`verify:phase5` 复核 SkyWT/TNXG/MapLibre 的本地资源哈希、MapLibre 惰性加载与 ClientRouter 清理契约、热力图的无 Token 回退、About-only 小人和生产产物中无 TNXG 热链。
-
-`verify:phase6` 是开发期的发布就绪审计：它验证 noindex、canonical、RSS、sitemap、静态资源、语言声明、图片替代文本决策、已登记的外部资源边界、公共网易云音乐配置和手动部署保护。占位扫描和外部资源扫描针对的是最终生成 HTML 中用户实际能看到或加载的 DOM/属性，不把源码注释、CSS 类名或只存在于脚本字符串中的测试字样误判为页面内容。为了允许当前测试内容继续用于开发，测试文章、上游身份和未替换的文章媒体会显示为警告，而不会让普通 CI 失败；未知远程资源的警告同时给出有限数量的精确 URL 和页面，便于逐项决定。
-
-`bun run ci` 还会运行 `bun run test:all`，覆盖 `test/` 下的全部测试文件，而不只运行按阶段命名的测试。
-
-2026-09-08 工具链已升级为 Astro 7.3.1 / Pure 1.4.7 / MDX 8.0.0 / sharp 0.35.4。构建通过 Node 运行，Pure 兼容补丁保存在 `patches/`，安装时由 Bun 自动重放。Markdown 明确使用 unified，保留原有插件。ESLint 同时检查 `src/`、`scripts/` 和根配置，完整 CI 的各测试只执行一次。
-
-需要逐条审阅全部未知远程资源时，可在构建后运行 `node scripts/verify-phase6.mjs --external-details`；它只读取 `dist`，在不改变门禁结论的前提下输出完整 URL/页面清单。不要把该清单中的整域名直接加入白名单。
-
-候选或最终资料替换完成后，必须在新构建之后额外执行严格门禁：
-
-```powershell
-bun run release:gate --strict
-```
-
-严格门禁会将上述开发期警告升级为失败；它通过才表示产物可进入人工上线检查。当前生产基线支持 Blog/Trace 空集合和现有 Saying 内容，但真实内容、素材权利、个人资料和公开位置仍需人工确认；历史路径的完整对账见 [归档审计报告](./archive/BRANCH_STATE_RECONCILIATION.zh-CN.md)。最终内容替换的精确路径、媒体约束和上线顺序见 [最终内容替换与 GitHub Pages 发布交接](./FINAL_RELEASE_HANDOFF.zh-CN.md)。
-
-已确认的运行时例外只包括当前保留的功能：CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像。它们按精确服务/路径登记；文章正文中的其他远程图片、音频、视频、iframe、脚本或样式不会因为“同一域名”而自动放行。
-
-浏览器回归分成三项：`verify:phase6:browser` 验证移动端目录的打开、焦点、Tab 循环、Escape、空 Blog 归档和减少动画，并确认 Home 随机 Saying 与归档保持同一图片/裁剪身份；`verify:home-hero` 验证固定 Hero 在越界、边界反向滚动和不同视口下的连续裁剪；`verify:browser:lifecycle` 验证入口、Home 固定结构、本地 MapLibre ESM 运行时加载不会触发 Vite 覆盖层、空白点击过滤、Links 中含引号文本的复制、十次以上真实 ClientRouter 路由切换、音乐持久化、各效果 profile、About-only 小人、Blog/Trace/Saying 公共 Opening Media 是否复用同源图片并满足参考站的右对齐/向下偏移、`blur(24px)` 与 `.6/.45/.3/.15` 四档透明度、直接暗色 Home 中透明效果 iframe 不会遮盖内容，以及 reduced-motion 下的销毁。脚本会从当前构建动态发现详情路由，因此不会把某一篇测试文章写死。GitHub Linux CI 会在生产预览上自动执行三项；本机也可连接默认的 `http://127.0.0.1:9224` Chrome DevTools 与 `http://127.0.0.1:4321` 预览，或通过 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖：
-
-```powershell
+node scripts/run-sequential.mjs build
 bun run preview -- --host 127.0.0.1 --port 4321
+```
+
+Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build`。顺序脚本先校验响应式媒体清单，再以 Node 执行 Astro CLI 的 `build` 和 `check --noSync`，避免重复内容同步。Pagefind 在构建时生成；修改内容后重新构建才能更新生产预览。
+
+后台预览可用 `bun run preview -- --background --host 127.0.0.1 --port 4321`，停止使用 `bun run preview -- stop`。启动命令退出不代表后台服务已停止，重新构建前停止占用本项目 `dist/` 的预览。
+
+依赖精确版本、完整性和兼容补丁分别由 `package.json`、`bun.lock`、`patches/` 维护。升级需审阅补丁并完成相关检查；不使用 `latest`，不保留仅写入 `node_modules` 的修复。新增依赖说明用途、浏览器开销和外部请求。
+
+## 配置导航
+
+| 对象                 | 修改位置                                                                                            | 核对范围                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| 网站身份、导航、集成 | [site.config.ts](../src/site.config.ts)                                                             | 标题、作者、简介、语言、Logo、页脚、友链申请资料及集成配置 |
+| 简介、履历、联系方式 | [src/data/](../src/data/) 的 profile、education、experience、connect                                | Home 与 About 共用简介；公开事实保持用户明确范围           |
+| 入口媒体与文字       | [entrance.ts](../src/data/entrance.ts)、[public/media/](../public/media/)                           | 桌面/手机、WebM/MP4 与 poster 成套更新                     |
+| 音乐                 | [music.ts](../src/data/music.ts)                                                                    | 歌单 ID、链接和 API 模板一起核对                           |
+| 居住地               | [residence.ts](../src/data/residence.ts)、[residence 素材](../public/media/residence/)              | 地点文案、坐标、头像、回退图与 CARTO 明暗样式              |
+| 友链                 | [links.json](../public/links.json)                                                                  | 主链接、头像、分组；Friend Circle 保持关闭                 |
+| 内容策略和分页       | [policy.ts](../src/lib/content-layer/policy.ts)、[site.config.ts](../src/site.config.ts)            | 入口、内容类型及独立分页配置                               |
+| 页面、布局、组件     | [src/pages/](../src/pages/)、[src/layouts/](../src/layouts/)、[src/components/](../src/components/) | 按架构约定修改并执行相应回归                               |
+
+居住地公开精度保持已确认的城市级；新增个人事实、项目链接、二维码或扩大公开范围时记录用户明确决定。已有授权在适用范围内继续有效，原始决定见 [站长确认记录](./archive/OWNER_CONFIRMATION_RECORD.zh-CN.md)。93 个历史内容的取舍按该记录保留，恢复具体条目时记录新的决定并验证。
+
+## 公共素材维护
+
+文章封面和正文图片由 [内容指南](./CONTENT.md#封面与正文图片) 维护。公共头像、签名和二维码位于 `src/assets/`，正式图标位于 `public/favicon/`；构建需使用的文件纳入 Git，原始下载素材备份可另存仓库外。
+
+### 公共图库与 Hero
+
+1. 将准备好的 WebP 放入 `public/images/home-media/`。建议宽度不超过 1920px，小图保持实际尺寸；`public/` 文件不会被 Astro 自动优化。
+2. 更新 `src/data/home-media.ts` 中的资源池、用途和描述。Hero、Saying 装饰图、Trace 备用图各自维护。
+3. 更新公共图片后运行 `bun run generate:media-images`，生成 Hero、卡片与 About 装饰人物的派生图和清单。只更新 Hero 可运行 `bun run generate:hero-images`。用 `bun run verify:media-images` 核验源哈希、尺寸、比例、候选字节和引用；具体参数以 [生成脚本](../scripts/generate-hero-images.ts) 为准。
+4. 核对已有裁剪记录。同名图片替换会继续读取原配置，应在 [工作台](./MEDIA_WORKBENCH.md) 重新确认；旧候选只有在核对清单与引用后才能移除。
+5. 新构建后检查相关页面和资源预算，素材、图库清单、候选与裁剪配置一起审阅。
+
+公共素材来源登记在 [来源台账](./SOURCE_LEDGER.md)，使用条件见 [第三方说明](./THIRD_PARTY_NOTICES.md)。正式页面默认使用同源素材；新增外部正文媒体按精确 URL 审阅，现有服务例外不扩大到同域其他资源。
+
+| 派生素材 | 候选宽度 | 目录与清单 |
+| --- | --- | --- |
+| Hero | 768、1280、1920px | `public/images/home-hero/`、`src/data/hero-images.json` |
+| 卡片 | 480、960、1920px | `public/images/card-media/`、`src/data/card-images.json` |
+| About 装饰人物 | 240、480、960px | `public/media/effects/responsive/`、`src/data/companion-images.json` |
+
+小图保持实际宽度，派生 WebP 质量为 86，源文件保留原始字节。替换 `public/media/effects/tracer-companion.webp` 后同样执行生成与核验命令。历史 LargeSkull 参考图位于 `test/fixtures/reference-images/largeskull/`，Phase 2 核验原始哈希并确认它们不进入发布目录。
+
+### 图片预算与回归
+
+`bun run check:assets` 按用途区分可发布资源（`delivery`）、内容源文件（`source`）、图标母版（`master`）和历史参考图（`reference`）。相同字节、相同阈值的告警归并展示，明细保留全部路径和用途。建议值与硬限制见 [图片预算](./CONTENT.md#图片预算)；单文件还必须小于 50 MiB。告警数量不等于独立图片数量，源图存储与浏览器下载量需要分别核对。
+
+媒体测试覆盖真实生成文件、透明度、比例、小图不放大、源文件保留、清单失效、预算边界和历史例外；隔离构建使用真实 JPEG、透明 PNG 验证 Blog／Trace 封面、正文和分享元数据。浏览器回归核对实际 `currentSrc`、阅读前景与背投图复用、裁剪工作台切换素材，以及 About 装饰人物按需加载。
+
+### 图标
+
+正式图标位于 `public/favicon/`；源文件为 `src/assets/favicon/master.png`（已确认母版）及 `base-before-outline.png`（描边前底图）。两个源文件均为 1024×1024 透明 PNG，来源和迁入哈希见 [图标来源](./SOURCE_LEDGER.md#图标制作源文件)。使用项目固定的 Node 版本运行：
+
+```powershell
+node scripts/adjust-favicon-outline.mjs --check
+node scripts/generate-favicon.mjs --check
+node scripts/generate-favicon.mjs --out artifacts/favicon/preview
+node scripts/generate-favicon.mjs --out artifacts/favicon/preview --check
+node scripts/adjust-favicon-outline.mjs --out artifacts/favicon/candidate.png
+```
+
+`--check` 在内存中重建并核对尺寸、解码 RGBA 像素和 ICO 各帧的数量、顺序及位深，缺失或不一致时失败。描边脚本的检查始终针对已确认母版；不带 `--out` 的描边生成默认写 `artifacts/favicon/master.png`。审阅通过后才更新正式母版。
+
+确认母版后运行 `node scripts/generate-favicon.mjs`，生成 16、32、180、192、512 像素 PNG 和包含 16/32/48 像素帧的 ICO。脚本先编码整批，再逐个原子替换目标；相对 `--out` 路径以仓库为基准。manifest 与页面引用保持现有路径。
+
+重建使用项目 sharp，ICO 解码使用固定版本的 icojs，仅用于开发脚本，不进入浏览器产物或发起运行时外部请求。CI 执行两项只读检查；依赖升级后仍须满足逐像素一致，允许无损编码字节变化。描边步骤始终读取底图，不重复应用于母版。
+
+### 分享图、字体与友链
+
+- `bun run generate:social-card` 从已确认 Home 素材生成 `public/images/social-card.webp`，输出 1200×630 分享图。
+- `python scripts/generate-fonts.py` 重建 `public/fonts/` 中的 WOFF2，需安装脚本声明的 `fonttools[woff]==4.64.0`。页面使用 WOFF2，原始字体和许可文本保留。
+- `bun run links:check:dry` 只探测友链主链接，不写数据；头像 CDN 不参与失效判定。
+- `bun run links:check` 更新 `cf-links`／`inactive-links` 和本地 `scripts/link-health.json`。默认每次请求重试 3 次，临时错误连续 2 次检查失败后移动；证书错误、404/410 和降级至 HTTP 的重定向在本次重试后立即移动。恢复后按稳定顺序移回。参数为 `--retries=N`、`--threshold=N`、`--timeout=N`、`--concurrency=N`，写入结果审阅后单独提交。
+- 启用 `cacheAvatar` 后，`bun run cache:avatars` 写入 `public/avatars/`，可能更新 `public/links.json`。缓存目录已忽略，作为正式资源提交前检查来源与清单差异。
+
+部署只使用友链只读检查，不定时写回、不自动 commit/push。健康计数是被忽略的本地状态。
+
+## 验证
+
+| 命令                   | 用途与输入                                                           |
+| ---------------------- | -------------------------------------------------------------------- |
+| `bun run preflight`    | 环境、依赖与工程配置预检                                             |
+| `bun run docs:check`   | 文档入口、链接、锚点、归档索引、YAML 示例与命令引用                  |
+| `bun run lint:check`   | 只读 ESLint，覆盖源码、脚本及根配置                                  |
+| `bun run check`        | Astro 与类型检查                                                     |
+| `bun run ci`           | 预检、文档检查、lint、构建、Astro 检查、全部测试、阶段契约与资源预算 |
+| `bun run release:gate` | 对最新 `dist/` 执行严格发布检查，命令已包含 `--strict`               |
+| `bun run check:assets` | 源文件、产物和初始 HTML/JS/CSS 预算检查                              |
+
+Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构建序列，全部 `test/` 只执行一次。代码改动运行对应行为测试与必要集成验证；文档改动核对内容、引用和检查脚本。发布候选必须通过完整 CI、严格检查及下述浏览器回归。
+
+`verify:phase6` 的开发模式将测试内容、旧身份和未登记外部资源报告为警告；`release:gate` 将这些警告升级为失败。扫描依据最终 HTML/CSS 的资源与 DOM，完整未知外部资源清单可用 `node scripts/verify-phase6.mjs --external-details` 查看。不要将扫描到的整域名直接加入允许列表。
+
+资源预算覆盖 `public/`、`src/assets/`、`src/content/`、参考图夹具和 `dist/`。旧资源例外由 `scripts/asset-budget-legacy.json` 精确锁定路径、字节和 SHA-256；替换后同步移除旧条目，不为新资源扩大例外。初始 gzip 预算不代表按需加载地图、音乐的完整成本。
+
+### 专项检查入口
+
+| 范围             | 命令                                                                  | 重点                                                              |
+| ---------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 内容与卡片       | `verify:phase1`、`verify:phase2`、`test:phase2`、`test:content-layer` | 三类内容、路由、卡片与策略；补充 `test/content-hardening.test.ts` |
+| 入口与客户端资源 | `verify:phase3`                                                       | 入口资源、音乐、缩放、二维码、View Transition 和路由清理          |
+| 背景效果         | `verify:phase4`、`test:phase4`                                        | 原始 vendor 哈希、参数、页面 profile 与销毁                       |
+| 地图与贡献记录   | `verify:phase5`、`test:phase5`                                        | SkyWT/TNXG/MapLibre 哈希、懒加载、无 Token 数据与失败状态         |
+| 产物与发布       | `verify:phase6`                                                       | SEO、RSS、sitemap、语言、替代文本、资源和部署保护                 |
+
+上表脚本名通过 `bun run` 执行。阶段编号沿用脚本名，修改时按实际功能选择检查，不依赖历史实施顺序。
+
+### 浏览器回归
+
+生产预览默认 `http://127.0.0.1:4321`，Chrome DevTools 默认 `http://127.0.0.1:9224`。可用 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖；Hero 另支持 `HOME_HERO_SITE_URL`。
+
+```powershell
 bun run verify:phase6:browser
-# Home Hero 固定媒体在边界和反向滚动时的连续裁剪
 bun run verify:home-hero
 bun run verify:browser:lifecycle
 ```
 
-`verify:home-hero` 会在桌面、标准移动和短移动视口分别采样 Hero 顶部、完全越界、边界反向返回等状态，确认固定媒体的裁剪高度与 Hero 剩余可见高度一致；如使用其他端口，设置 `HOME_HERO_SITE_URL`。
+- Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
+- Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
+- Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
 
-视觉基线取证使用另一个、不会把截图提交到 Git 的命令。它需要将冻结的 Arthals 产物服务在 `4322`、当前 `dist`/预览服务在 `4321`，并启动带 `--remote-debugging-port=9224` 的 Chrome：
+脚本从真实构建发现详情、搜索词和目录分支，缺失分支明确记录。CI 与 Pages 复用同一份待发布产物，不注入测试文章。专项行为要求见 [架构说明](./ARCHITECTURE.md)。
 
-```powershell
-bun run capture:visual-baseline
-```
+### 视觉复核
 
-该命令会采集 `/`（上游）对 `/home`（当前）以及 Blog、标签、归档、搜索、About、Links 的桌面/移动、明/暗主题顶部和底部截图，并写入 `artifacts/visual-baseline/`。详情页不再写死测试 slug；如需详情证据，设置 `VISUAL_CURRENT_BLOG_DETAIL_PATH`（及可选的 upstream/GitHub 详情变量）。复核范围和已登记差异见 [VISUAL_BASELINE.md](./VISUAL_BASELINE.md)。
+在已获得截图与视觉检查授权的范围内执行。冻结上游 `Arthals-Ink@15f5ad110af8ed8f38a1e506dd890d2d921f118f` 的对照产物使用隔离 worktree；历史验证需 Node 22，上游含本地 Pure 定制时按原脚本设置 `BUN_LINK_PKG=true`。
 
-Opening Media 的本地视觉样本使用 `qa-local-*` 与 `zz-qa-visual-*` 前缀，覆盖 Blog、Trace、Saying 的正方形、宽幅、深浅色和 fallback 图片。它们必须在本地构建后重新启动预览服务才能出现；审阅结束后要按前缀连同 `src/assets/qa-local-media/` 一起移出，不能把这些占位内容带入正式发布树。
+1. 上游服务在 4322，当前生产预览在 4321，隔离 Chrome 开启远程调试端口 9224。
+2. 运行 `bun run capture:visual-baseline`，默认输出 `artifacts/visual-baseline/`；自定义 `VISUAL_OUTPUT_DIR` 选择已忽略的本地目录。
+3. 核对 manifest：默认 7 页、4 个视口/主题、2 个站点、顶部/底部，共 112 张截图。指定 `VISUAL_CURRENT_BLOG_DETAIL_PATH` 及可选上游/GitHub 详情变量时按实际数量核对，最多 9 页、144 张。
+4. 上游 `/` 对应当前 `/home`；其余 Blog、标签（上游 `/tags` 对本站 `/blog/tags`）、归档、搜索、About、Links 分别比较。采用无尾斜杠 URL。
+5. 按 [视觉与交互约定](./ARCHITECTURE.md#视觉与交互约定) 检查字号、间距、颜色、圆角、布局、Header/Footer 和交互，记录提交、工作树状态、视口、主题、异常与未覆盖范围。
 
-资源预算：
+Opening Media 临时样本采用 `qa-local-*`、`zz-qa-visual-*`，专用资源位于 `src/assets/qa-local-media/`；卡片样本采用 `card-preview-*`。审阅完成后移出这些样本与专用素材，再构建正式产物。`.gitignore` 不阻止内容加载器读取本地文件。历史采集结果见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
 
-```powershell
-bun run check:assets
-```
+## 分支与发布
 
-上游遗留的大图只可通过 `scripts/asset-budget-legacy.json` 的精确路径、字节数和 SHA-256 临时豁免。不要为新资源增加宽泛例外；替换上游占位图时同时删除对应条目。
+Fork 的 GitHub CLI 操作显式指定 `--repo Susurrium/susurrium.github.io`，首次可用 `gh repo set-default Susurrium/susurrium.github.io` 配置。`main` 为生产分支，`develop` 为网站集成分支，`codex/*` 为短期分支。开始前检查工作区，妥善隔离其他未提交修改。
 
-预算同时扫描 `public/`、`src/assets/`、`src/content/` 与生成的 `dist/`。另统计单页 HTML 和初始 JS/CSS 的 gzip 大小；它不代表懒加载地图/音乐等完整交互成本。Hero 原图或图库列表变更后执行 `bun run generate:hero-images`，将候选图和 `src/data/hero-images.json` 一起审阅。字体页面使用 WOFF2，原始字体和可选重建脚本 `scripts/generate-fonts.py` 保留。
+### 独立内容发布
 
-## 内容创建与维护
-
-```powershell
-bun run new --type blog --folder --language zh-CN "新的文章"
-bun run new --type trace "一段记录"
-bun run new --type saying --author "作者" --source "出处" "一句话"
-bun run new --type blog --mdx --dry-run "先预览创建结果"
-bun run date --dry-run
-```
-
-创建命令默认 `draft: true`；显式 `--publish` 才创建公开条目，也可以审阅正文后手动更改 frontmatter。支持 `--slug`、`--folder`、`--mdx`；`--language` 使用现行字段，旧 `--lang` / `-l` 保留兼容。标题、引号和多行描述由 YAML 序列化，不要手工拼接脚本输入。
-
-日期脚本递归处理 Blog 的 Markdown/MDX，使用相对路径维护校验记录；不带 `--dry-run` 才应用。解析任何文章失败都会终止写入。展示时区统一为 Asia/Shanghai。
-
-## 当前浏览器与发布行为
-
-音乐控件首次点击才请求 APlayer 和 Meting 歌单；站点不再加载 Meting2 runtime。失败时显示重试和歌单链接，路由切换保留播放实例。浏览器回归先激活播放，再验证事件订阅数量和持久化。
-
-Astro 7 支持后台预览：`bun run preview -- --background --host 127.0.0.1 --port 4321`；停止使用 `bun run preview -- stop`。代理环境可能自动使用后台模式，不应假定启动命令退出就意味着服务已停止。
-
-CI 的浏览器任务下载静态验证生成的 dist，不再次构建。手动 Pages 工作流仅允许 main；上传前对这份产物执行严格门禁和同一套浏览器检查。所有详情、搜索词和目录分支从真实内容发现，缺失分支明确报告；测试内容不会注入待部署产物。
-
-友链健康检查：
-
-```powershell
-# dry-run：只检查，不改动友链文件
-bun run links:check:dry
-
-# 检查并按状态更新 cf-links / inactive-links
-bun run links:check
-```
-
-检查器只探测博客主链接，不探测头像 CDN。临时故障连续失败达到默认阈值（2 次）才会移动；
-证书错误、HTTP 404/410 和降级到 HTTP 的重定向会立即移动。恢复后会按稳定顺序移回；
-状态计数保存在 `scripts/link-health.json`。发布候选只运行 dry-run；不会启用定时
-workflow，也不会让 Pages 部署在工作树中写回链接状态。若要使用写模式，必须人工审阅
-diff 后单独提交。
-
-CI 等价命令：
-
-```powershell
-bun run ci
-```
-
-构建、preflight 与 CI 通过 `scripts/run-sequential.mjs` 逐项启动子命令，不依赖 shell 的 `&&`。构建先以
-`node node_modules/astro/bin/astro.mjs build` 刷新内容/类型，再用同一个 Node 入口运行 `check --noSync`；CI 内联同一组命令而不再嵌套
-`bun run build`。Windows 本机推荐 `node scripts/run-sequential.mjs ci`，减少嵌套 Bun launcher 导致子进程管道停滞的风险。Linux CI 仍执行同一组构建与诊断门槛。
-
-## 3. 分支
-
-这是 Fork 仓库。GitHub CLI 可能默认选择上游仓库；首次使用先执行
-`gh repo set-default Susurrium/susurrium.github.io`。创建 PR、查询 CI、合并和触发部署时仍建议显式传入
-`--repo Susurrium/susurrium.github.io`，避免把发布操作发给上游。
-
-- `main`：生产分支，只接收经过验证的发布合并。
-- `develop`：网站集成分支，必须包含当前生产基线；网站功能和需要新代码支持的内容从这里开发。
-- `codex/*`：短生命周期工作分支。网站功能从 `develop` 创建并 PR 到 `develop`；独立内容从 `main` 创建并 PR 到 `main`。
-- `upstream`：Arthals-Ink 的只读参考源，不直接合并未经审阅的代码。
-
-网站功能与独立内容使用不同的发布路线：
-
-```text
-网站功能：
-develop → codex/<feature>（从 develop 创建）
-        → PR 合并到 develop
-        → develop → main 发布 PR
-        → 手动部署 Pages
-
-独立内容：
-main → codex/content-<topic>（从 main 创建，只含内容与随文媒体）
-     → PR 合并到 main
-     → 手动部署 Pages
-     → main → develop 同步 PR
-```
-
-独立内容发布用于在网站开发尚未完成时发布兼容当前线上版本的 Blog、Trace 或 Saying。它只能修改内容文件及该内容专属的本地媒体，不得依赖 `develop` 中尚未进入 `main` 的 schema、模板、组件、站点配置或样式。若必须修改这些代码，应先走网站功能路线发布代码，再发布内容。内容 PR 合并并部署后，要通过 `main → develop` PR 同步生产基线，保证 `develop` 始终包含线上版本。
-
-### 3.1 基线收敛
-
-如果 `develop` 曾落后于已发布的 `main`，先将生产基线同步回 `develop`，再开始新的功能开发。共享分支不要 rebase、force-push 或 reset：
-
-```powershell
-git fetch origin
-git switch main
-git pull --ff-only origin main
-git switch -c codex/sync-production-baseline origin/develop
-git merge --ff-only origin/main
-git push -u origin codex/sync-production-baseline
-```
-
-创建 `codex/sync-production-baseline → develop` 的 PR，等待 CI 通过后合并。若仓库明确允许直接快进更新，也可以在确认工作树干净后将同一快进提交推送到 `develop`。完成后确认：
-
-```powershell
-git fetch origin
-git rev-list --left-right --count origin/develop...origin/main
-```
-
-结果应为 `0 0`，表示开发和生产没有基线差异。已合并且没有独有提交的旧分支可以先保留归档，确认无误后再使用安全删除：
-
-```powershell
-git branch -d codex/<merged-topic>
-git push origin --delete codex/<merged-topic>
-```
-
-删除前必须先检查 `git log origin/main..origin/<merged-topic>` 为空；任何仍有独有提交的分支都不得删除。
-
-### 3.2 日常开发
-
-```powershell
-git fetch origin
-git switch develop
-git pull --ff-only origin develop
-git switch -c codex/<topic>
-
-# 开发和本地预览
-bun run dev
-
-# 提交前验证
-bun run ci
-bun run release:gate --strict
-bun run links:check:dry
-
-git status
-git add <明确需要提交的文件>
-git commit -m "feat: describe change"
-git push -u origin codex/<topic>
-```
-
-网站功能分支通过 PR 合并到 `develop`。独立内容分支的流程见第 8.1 节。当前 CI 对 `develop`/`main` 的 push 和针对这两个分支的 PR 执行；分支单独 push 不等于已经完成 CI，因此应始终创建 PR。
-
-## 4. 提交边界
-
-以下内容应分开提交：
-
-1. 框架/依赖迁移。
-2. 内容 schema 和路由。
-3. 卡片视觉。
-4. 单个外部效果。
-5. 媒体资源。
-6. 测试和基线更新。
-
-不要在一个提交中同时升级框架、重构路由和接入多个视觉效果。
-
-## 5. Upstream
-
-查看上游：
-
-```powershell
-git fetch upstream
-git log --oneline --decorate develop..upstream/main
-```
-
-`upstream` 仅供读取，push URL 已禁用。不得直接 merge 未审阅的 upstream/main。
-
-## 6. 历史项目
-
-`E:\code\homepage` 是只读素材源。
-
-提取前：
-
-- 对照 `docs/SOURCE_LEDGER.md` 确认来源。
-- 校验历史仓库的 HEAD、tracked diff 指纹和 untracked 路径清单指纹与台账一致。
-- 默认从 `E:\code\homepage-snapshots\2026-08-27-pre-blog-migration` 的固定快照读取；只有台账明确标记时才读取当前工作树。
-- 如果任一指纹发生变化，先建立新的只读快照并更新台账，不能把两个时间点的文件记作同一来源。
-- 只复制明确需要的组件、样式、脚本、数据和测试。
-- 不在历史仓库运行格式化、安装或修复命令。
-
-## 7. 依赖规则
-
-- 不使用 `latest`。
-- 当前 Astro 固定 7.3.1，Pure 固定 1.4.7；历史首版来源见 SOURCE_LEDGER。
-- 依赖兼容修复使用 `bun patch`，将补丁及锁文件一并审阅，不保留只存在于 `node_modules` 的临时修改。
-- 新依赖必须说明用途、是否进入浏览器、是否增加外部请求。
-- 若依赖只为一个小函数服务，优先评估本地纯函数。
-
-## 8. 部署
-
-当前生产地址是 `https://susurrium.github.io/`，部署平台是 GitHub Pages，不是 Vercel。生产发布链路为：
-
-```text
-codex/<topic>
-  → PR 合并到 develop
-  → PR 合并到 main
-  → main push 触发 CI
-  → Actions 手动运行 Deploy to GitHub Pages
-  → 验证线上页面
-```
-
-### 8.1 发布文章或功能
-
-先判断内容是否完全兼容当前 `main`：
-
-- 若只新增或修改正文、frontmatter 和该内容专属媒体，且使用的 schema、模板和组件都已存在于 `main`，可走“独立内容发布”。
-- 若需要新增或修改 schema、路由、组件、样式、站点配置或构建脚本，必须先走“网站功能发布”。不能让文章分支依赖 `develop` 中尚未发布的代码。
-
-#### 独立内容发布
-
-先确认工作区干净，或将其他未提交改动妥善隔离；不要把开发分支上的工作带入内容发布分支。然后从最新 `main` 创建分支：
+只修改兼容当前 `main` 的正文、元数据和随文媒体时：
 
 ```powershell
 git fetch origin
@@ -326,17 +168,11 @@ git pull --ff-only origin main
 git switch -c codex/content-<topic>
 ```
 
-1. Blog 文件放在 `src/content/blog/`；Trace 放在 `src/content/traces/`；Saying 放在 `src/content/sayings/`。字段约束以 `src/content.config.ts` 在当前 `main` 中的版本为准。
-2. 正式内容使用 `draft: false`；Blog 必须有 `title`、`description`、`publishDate`；Trace 设置 `cover` 时必须同时设置 `coverAlt`。
-3. 图片、音频、视频优先使用仓库内、仅供该内容使用的资源；检查来源权利和未登记的远程媒体。PR 不得夹带网站代码或配置改动。
-4. 运行 `bun run dev` 预览；在新构建后运行 `bun run ci`、`bun run release:gate --strict` 和 `bun run links:check:dry`。严格门禁失败时不得合并或部署。
-5. 检查暂存范围后提交、推送，创建 `codex/content-<topic> → main` PR。等待 `CI` 的 `validate` 和 `browser-regression` 成功，并人工审阅预览、内容、媒体权利和公开信息后合并。
-6. 按第 8.2 节手动部署并检查线上文章。
-7. 创建 `main → develop` 同步 PR；CI 通过后合并。若在此期间 `develop` 已有自己的提交，应通过 PR 完成合并，不得对共享分支 rebase、force-push 或 reset。
+按 [内容指南](./CONTENT.md) 完成编辑与预览。运行完整 CI（包含新构建），成功后执行 `bun run release:gate` 和 `bun run links:check:dry`。审阅内容、素材及公开范围后，只暂存相关文件，提交、推送，创建工作分支到 `main` 的 PR。等待 `validate`、`browser-regression` 成功后合并。
 
-#### 网站功能发布
+按下面的 Pages 流程部署，之后通过 `main → develop` PR 同步生产基线。需要未发布 schema、模板、组件、站点配置或样式的内容，先按网站功能流程发布依赖代码。
 
-网站功能仍从最新 `develop` 创建工作分支：
+### 网站功能发布
 
 ```powershell
 git fetch origin
@@ -345,29 +181,63 @@ git pull --ff-only origin develop
 git switch -c codex/<topic>
 ```
 
-完成后运行 `bun run ci`、`bun run release:gate --strict` 和 `bun run links:check:dry`，创建 `codex/<topic> → develop` PR。经过 CI 和人工预览后合并；确认准备上线后，再创建 `develop → main` 发布 PR。
+先确认 develop 包含生产基线，再实施和验证。运行完整 CI、新产物的严格检查和友链只读检查；涉及展示时完成相应人工与浏览器复核。检查差异后提交、推送并创建 `codex/* → develop` PR；CI 和审阅通过后合并，再创建 `develop → main` 发布 PR。
 
-### 8.2 GitHub Pages 发布
+框架/依赖、内容模型、卡片、单个效果、媒体与测试按职责分开提交。工作分支单独推送不会触发针对 main/develop 的 PR 检查，应创建对应 PR。
 
-当前 `.github/workflows/deploy.yml` 保留 `workflow_dispatch`，所以 `main` push 不会自动部署。合并到 `main` 后：
+### GitHub Pages 发布
 
-1. 确认 `CI` 的 `validate` 和 `browser-regression` 成功。
-2. 在 GitHub Actions 选择 `Deploy to GitHub Pages`，点击 **Run workflow**，选择 `main`。
-3. 等待 workflow 内的 `bun run ci` 和严格 `bun run release:gate` 通过；严格门禁失败时不得绕过。
-4. 验证 `/`、`/home`、文章详情、标签、归档、`/404`、`/rss.xml`、sitemap、移动端、暗色主题和关键第三方运行时。
+当前 [部署工作流](../.github/workflows/deploy.yml) 仅手动触发，并限制 `main`；合并不会自动上线。上线操作须在用户授权范围内进行。
 
-如以后需要合并即自动上线，才在保留 `workflow_dispatch` 的同时增加 `push → branches: [main]`；不得添加 PR 或 `schedule` 部署触发。自动发布前应先启用 `main` 分支保护，要求 PR、CI 状态检查和禁止 force-push。
+1. 确认目标 PR 和 `main` 的 CI 成功，候选内容与素材已经审阅。
+2. Pages 发布源使用 GitHub Actions；运行 `Deploy to GitHub Pages`，选择 `main`。
+3. 工作流对同一产物执行完整 CI、严格发布检查和三项浏览器回归，再上传部署；失败时修正候选并重新验证。
+4. 检查线上 `/`、`/home`、详情、标签、归档、搜索、404、RSS、sitemap、canonical、移动端、暗色与关键第三方交互。
 
-首版不创建 `schedule`。
+保持手动发布和无 schedule。未来只有用户明确要求自动发布时，才在保留手动入口的同时增加 main push 触发，并先启用相应分支保护；不增加 PR 或定时部署触发。
 
-## 9. 参考实现
+### 同步与分支清理
 
-复制或改动参考实现时，在代码文件头或邻近注释记录：
+`develop` 落后时先通过 `main → develop` PR 同步。双方已有独立提交时正常合并并处理冲突，不对共享分支 rebase、force-push 或 reset。可快进时也可从 `origin/develop` 创建同步分支，以 `git merge --ff-only origin/main` 合并后 PR 回 develop。
 
-- 来源 URL。
-- 仓库和 commit（若有）。
-- 台账条目 ID。
-- 复用方式：直接、略调、混合或自行开发。
-- 与原实现的必要差异。
+更新远端引用后检查 `git rev-list --left-right --count origin/develop...origin/main`：第二个数字为 0 表示已包含生产提交，`0 0` 表示双方无独有提交。删除旧分支前确认 `git log origin/main..origin/<topic>` 为空，并核对本地分支；确认可删除后使用 `git branch -d` 和对应远端删除操作。
 
-来源变化必须同步更新 `docs/SOURCE_LEDGER.md`。
+## 故障处理与来源维护
+
+- Windows 构建停在 `Building static entrypoints`：停止本项目占用预览，使用本页直接 Node 入口。历史 esbuild 管道停滞的上游根因未确认，不通过无限重试放行。
+- 地图出现 `/vendor/maplibre...` 加载覆盖层：重启开发服务器并硬刷新。地图使用本地 ESM 主模块、shared、worker 和 CSS；升级时同步整套文件、来源台账和 `verify:phase5` 哈希。
+- 音乐加载失败：先检查配置的 API 模板与歌单，页面提供重试及歌单链接；公共服务状态需按当次响应核实。
+- 搜索内容未更新：重新构建并重启预览，核对 Pagefind 索引生成结果。
+- 裁剪导入或恢复问题：按 [工作台异常处理](./MEDIA_WORKBENCH.md#异常与恢复) 检查输入与状态。
+
+`upstream` 为只读参考源，push URL 为 `DISABLED`。通过 `git fetch upstream`、`git log develop..upstream/main` 审阅差异后选择所需变更，不直接合并未经审阅的上游。
+
+历史项目 `E:\code\homepage` 是只读素材源。默认读取 [台账](./SOURCE_LEDGER.md) 指定的固定快照，提取前核对 HEAD、tracked diff 和 untracked 清单指纹；变化时先建立新快照和来源记录。只提取需要的文件，不在历史仓库安装、格式化或修复。代码中的来源注释保留 URL、版本/提交、台账 ID、复用方式和必要差异。
+
+提取前核对来源身份，提取后记录本地路径与 SHA-256，来源变化同步更新台账。完成模块测试、生命周期、外部资源和授权范围内的视觉复核。不复制来源页面中与目标功能无关的广告、统计、配置、凭据或用户数据。
+
+## 低频工具与本地材料
+
+| 操作                 | 命令或入口                            | 写入范围                                                                |
+| -------------------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| 新建和日期维护       | [内容指南](./CONTENT.md)              | 正文与日期校验记录                                                      |
+| 裁剪应用             | [工作台](./MEDIA_WORKBENCH.md)        | 两份裁剪 generated 配置                                                 |
+| 卡片完整队列审阅     | `bun run card-preview:generate`       | Saying/Trace 的 `card-preview-*` 正文，不覆盖已有文章；发布前移出       |
+| 只读 lint / 自动修复 | `bun run lint:check` / `bun run lint` | 后者改写被检查代码                                                      |
+| 格式化               | `bun run format`                      | 批量改写匹配文件；任务中应显式限定文件范围后运行 Prettier               |
+| 清理构建             | `bun run clean`                       | 删除本仓库 `.astro/`、`.vercel/`、`dist/`，先核对目标                   |
+| 历史状态审计         | `bun run branch:audit`                | 新建 `artifacts/branch-state-audit-<timestamp>/` 或明确指定的不存在目录 |
+
+审计器读取 refs、checkpoint/capture refs、reflog，按 commit/tree 去重比较；支持多次 `--snapshot-dir`、`--bundle`，`--out` 指定输出，`--include-unreachable-trees` 扩展候选。不切换分支或修改 Git 对象，目标目录已存在时拒绝执行。
+
+输出含 `refs.csv`、`states.csv`、`path-diffs.csv`、`path-decisions.csv`、`snapshot-evidence.csv`、`unreachable.csv`、`sources.csv`、`report.md` 和 `run.json`。其中 path 决策聚合唯一文件路径，快照证据包含 patch 无法覆盖的未跟踪路径；补丁大小和 SHA-256 保存在 sources 中。
+
+分类器版本 1 包括 `CURRENT_ONLY`、`EXPECTED_EVOLUTION`、`QUARANTINE_TEMP`、`REJECT_ORPHAN_DOC_ASSET`、`USER_CONFIRM_CONTENT`、`REJECT_GENERATED_CONTENT`、`REJECT_DRAFT_CONTENT`、`REJECT_SUPERSEDED_RUNTIME`、`REJECT_UNUSED_ASSET`、`REJECT_SIDE_EFFECT_WORKFLOW`、`REJECT_GENERATED_STATE`、`UNCLASSIFIED`。未分类路径和运行时候选数必须核实，不能据未分类结果自动恢复或删除。恢复候选逐项核对来源、隐私、许可、产品意图和行为；真实内容需明确决定。历史调用及校验示例见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
+
+`artifacts/` 已被忽略，保存日志、失败诊断、状态、补丁、草稿和预览。清理前核对引用、独立备份、可再生成性，并停止占用文件的进程。裁剪导出可能含唯一确认历史；PR 描述草稿应确认正式记录已完整保存后再清理。原始授权证据、未另存补丁及有用失败记录按其用途保留。
+
+## 文档维护
+
+README 提供入口；作者操作归 CONTENT，网站操作归本页，实现语义归 ARCHITECTURE，裁剪操作归 MEDIA_WORKBENCH，来源与许可分别归台账和第三方说明。其他位置只保留必要摘要和章节链接。历史记录标注原始日期，当前代码行为与设计要求不一致时先核实具体差异。
+
+修改后运行 `bun run docs:check` 并审阅语义；它不会证明外部服务可用或历史证据仍存于原机器。归档索引必须链接全部历史文档，迁移前后核对原始决定、哈希和验证结果。

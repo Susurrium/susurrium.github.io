@@ -24,6 +24,8 @@ interface Props {
     noindex?: boolean
     /** Preserve publication and editorial timestamps for article metadata. */
     articleModifiedDate?: string
+    ogImageWidth?: number
+    ogImageHeight?: number
   }
   highlightColor?: string
   /** Home overlays the initial transparent header on the Media Hero. */
@@ -41,6 +43,8 @@ const {
     description = config.description,
     noindex = false,
     ogImage,
+    ogImageWidth,
+    ogImageHeight,
     title
   },
   highlightColor,
@@ -55,7 +59,16 @@ const hasPageBackground = Astro.slots.has('page-background')
 
 <html lang={config.locale.lang}>
   <head>
-    <BaseHead {articleDate} {articleModifiedDate} {description} {noindex} {ogImage} {title} />
+    <BaseHead
+      {articleDate}
+      {articleModifiedDate}
+      {description}
+      {noindex}
+      {ogImage}
+      {ogImageWidth}
+      {ogImageHeight}
+      {title}
+    />
     <ThemeProvider />
     <Fragment set:html={`<script src="/theme-handoff.js" data-theme-role="write"></script>`} />
     <script is:inline>

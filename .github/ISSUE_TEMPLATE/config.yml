@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 👾 Chat
-    url: https://t.me/astro_pure
-    about: Chat with the community on Telegram
-  - name: 📘 Documentation
-    url: https://astro-pure.js.org/docs
-    about: Checkout the documentation for more information
-  - name: 💁 Discussion
-    url: https://github.com/cworld1/astro-theme-pure/discussions
-    about: 'This issue tracker is not for support questions. Leave a comment on the discussion board if you need help.'
+  - name: 📘 项目文档
+    url: https://github.com/Susurrium/susurrium.github.io/blob/main/README.md
+    about: 查阅本项目的运行、内容维护和发布说明。
+  - name: ✉️ 联系站长
+    url: https://susurrium.github.io/about
+    about: 一般咨询或需要私下反馈的事项，可通过 About 页公开的联系方式联系站长。

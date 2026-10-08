@@ -59,13 +59,13 @@ function imageFor(item: PageItem, record: ContentRecord) {
 }
 
 describe('content publishing regressions', () => {
-  test('preserves real Astro local image metadata in cards and social metadata', () => {
+  test('preserves local image metadata through adapters and social metadata', () => {
     const entry = {
       collection: 'blog',
       id: 'local-cover',
       data: {
         title: 'Local cover',
-        description: 'A real image fixture',
+        description: 'Local image metadata',
         comment: true,
         draft: false,
         publishDate: new Date('2026-01-01'),
@@ -79,6 +79,8 @@ describe('content publishing regressions', () => {
     const record = adaptBlogEntry(entry)
     expect(record.image?.src).toBe('/_astro/cover.webp')
     expect(toReadingFrameData(record).meta.ogImage).toBe('/_astro/cover.webp')
+    expect(toReadingFrameData(record).meta.ogImageWidth).toBe(100)
+    expect(toReadingFrameData(record).meta.ogImageHeight).toBe(80)
   })
 
   test('shares fallback and real Trace covers across home, archive, tags and detail placements', () => {

@@ -8,6 +8,7 @@
 import { Image } from 'astro:assets'
 import type { ReadingImageSource } from '@/lib/content-layer/reading-data'
 import type { ReadingOpeningMediaBackdropVariant } from '@/lib/content-layer/reading-policy'
+import { publicReadingImageOptions, readingImageOptions } from '@/lib/media/reading-image'
 
 interface Props {
   source: ReadingImageSource
@@ -35,6 +36,7 @@ const imageMetadata = typeof source === 'string' ? undefined : source
           : undefined
       ]}
       src={imageMetadata}
+      {...readingImageOptions(imageMetadata)}
     />
   ) : (
     <img
@@ -51,6 +53,7 @@ const imageMetadata = typeof source === 'string' ? undefined : source
           : undefined
       ]}
       src={src}
+      {...publicReadingImageOptions(src)}
     />
   )
 }

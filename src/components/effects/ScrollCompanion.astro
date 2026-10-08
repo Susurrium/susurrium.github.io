@@ -5,6 +5,8 @@
  * and a long-tail fade that are both driven by About's actual scroll distance.
  * No historical breathing/click behaviour remains.
  */
+import companionImages from '@/data/companion-images.json'
+
 interface Props {
   class?: string
   minWidth?: number
@@ -19,6 +21,7 @@ const {
 const basePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
 const resolvedSrc =
   /^[a-z][a-z\d+.-]*:/i.test(src) || src.startsWith('//') ? src : `${basePath}${src}`
+const candidate = (companionImages as Record<string, { srcset: string }>)[src]
 ---
 
 <scroll-companion
@@ -31,6 +34,8 @@ const resolvedSrc =
   <span class='scroll-companion__stage'>
     <img
       data-src={resolvedSrc}
+      data-srcset={candidate?.srcset}
+      data-sizes={candidate ? 'calc((100vw - 70rem) * 0.62 - 1.86rem)' : undefined}
       alt=''
       width='820'
       height='420'
@@ -126,11 +131,18 @@ const resolvedSrc =
     private activateImage() {
       const image = this.querySelector<HTMLImageElement>('img[data-src]')
       const source = image?.dataset.src
-      if (image && source && !image.getAttribute('src')) image.src = source
+      if (image && source && !image.getAttribute('src')) {
+        if (image.dataset.sizes) image.sizes = image.dataset.sizes
+        if (image.dataset.srcset) image.srcset = image.dataset.srcset
+        image.src = source
+      }
     }
 
     private deactivateImage() {
-      this.querySelector<HTMLImageElement>('img[data-src]')?.removeAttribute('src')
+      const image = this.querySelector<HTMLImageElement>('img[data-src]')
+      image?.removeAttribute('srcset')
+      image?.removeAttribute('sizes')
+      image?.removeAttribute('src')
     }
 
     private handleVisibilityChange = () => {

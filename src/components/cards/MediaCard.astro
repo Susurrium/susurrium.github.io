@@ -43,6 +43,7 @@ interface Props {
   crop?: CardCropRuntime
   /** Extra class for the shared image element (used by the workbench). */
   imageClass?: string
+  responsive?: boolean
   date?: Date
   description?: string
   footerText?: string
@@ -80,6 +81,7 @@ const {
   href,
   image,
   imageClass,
+  responsive = true,
   imageFit = 'cover',
   imageSource = image?.source ?? 'none',
   index = 0,
@@ -163,6 +165,7 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
         imageClass={`media-card__image${imageClass ? ` ${imageClass}` : ''}`}
         mask={cutSide}
         src={image?.src}
+        responsive={responsive}
         transform={runtimeCrop?.transform}
         width={640}
         height={448}

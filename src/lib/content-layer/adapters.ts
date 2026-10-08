@@ -24,7 +24,20 @@ function toImageInput(
   contentId: string
 ): ContentImageInput | undefined {
   const src = imageSource(source)
-  return src ? { alt, key: `content-${contentId}`, src } : undefined
+  const dimensions =
+    source &&
+    typeof source === 'object' &&
+    'width' in source &&
+    'height' in source &&
+    typeof source.width === 'number' &&
+    Number.isFinite(source.width) &&
+    source.width > 0 &&
+    typeof source.height === 'number' &&
+    Number.isFinite(source.height) &&
+    source.height > 0
+      ? { width: source.width, height: source.height }
+      : {}
+  return src ? { alt, key: `content-${contentId}`, src, ...dimensions } : undefined
 }
 
 export function contentKey(kind: ContentKind, id: string): string {

@@ -1,0 +1,32 @@
+{
+  "/media/effects/tracer-companion.webp": {
+    "width": 1920,
+    "height": 1080,
+    "quality": 86,
+    "sourceSha256": "a68c070b24760685b2329e088edd30d951d6833154096fbb13fecfe2920c3af0",
+    "srcset": "/media/effects/responsive/tracer-companion-240.webp 240w, /media/effects/responsive/tracer-companion-480.webp 480w, /media/effects/responsive/tracer-companion-960.webp 960w",
+    "candidates": [
+      {
+        "src": "/media/effects/responsive/tracer-companion-240.webp",
+        "width": 240,
+        "height": 135,
+        "bytes": 6840,
+        "sha256": "59e90d23508c7cd073626feb4ad946087c758fff3baa34a5e593c0e2e11df1bd"
+      },
+      {
+        "src": "/media/effects/responsive/tracer-companion-480.webp",
+        "width": 480,
+        "height": 270,
+        "bytes": 19172,
+        "sha256": "0fc65c28817b5c43a222c17045791fdc5e795f0443521c9eae67e637e77ccf41"
+      },
+      {
+        "src": "/media/effects/responsive/tracer-companion-960.webp",
+        "width": 960,
+        "height": 540,
+        "bytes": 55282,
+        "sha256": "2b3e2fac087b4e29cb93c923c27e577cea93737bb7908bc38bd8e3b8589980ab"
+      }
+    ]
+  }
+}

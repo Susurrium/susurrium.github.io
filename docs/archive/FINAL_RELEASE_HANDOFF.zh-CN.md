@@ -1,0 +1,84 @@
+# 最终内容替换与 GitHub Pages 发布交接
+
+> 历史交接记录：适用仓库为 `Susurrium/susurrium.github.io`，2026-09-26 候选包含 1 篇 Blog、5 篇 Saying，Trace 为空。收尾见 [发布候选记录](./RELEASE_20260926.zh-CN.md)。现行内容维护、媒体约束和发布流程统一见 [开发文档](../DEVELOPMENT.md)；站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)。
+
+这份清单沿用现有站点结构。历史 93 个内容不恢复的决定仍保留；本次改进已有代码和当前内容的渲染，不恢复历史快照。具体技术变更与验证见 [项目加固记录](./PROJECT_HARDENING.zh-CN.md)。后续内容按用户明确的编辑与发布要求进入验证流程。
+
+## 1. 必须由站长提供或确认的资料
+
+| 类别      | 需要的最终资料                                                             | 唯一入口                                                                                                            |
+| --------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 站点身份  | 站名、作者名、简介、语言、Logo、favicon、社交链接、备案/页脚和友链申请资料 | `src/site.config.ts`                                                                                                |
+| About 文案 | 站长确认的四段简介（含删除线语义）                                         | `src/data/profile.ts`（决定记录见 [站长确认记录](./OWNER_CONFIRMATION_RECORD.zh-CN.md)）                                    |
+| 入口页    | 视频、poster、Typed 文案                                                   | `public/media/` 与 `src/data/entrance.ts`                                                                           |
+| Home 图库 | 六张 Hero 图、Saying 装饰图、无图 Trace 的回退图                           | `public/images/home-media/` 与 `src/data/home-media.ts`（旧锁定图留在 `public/images/largeskull/` 供回归/回滚）       |
+| 音乐      | 公共网易云歌单、APlayer/MetingJS 播放器参数与临时歌单 ID                    | `src/data/music.ts` 与 `src/components/MusicPlayer.astro`                                                          |
+| 居住地    | 对外可公开的地点粒度、文案、坐标、头像和回退地图                           | `src/data/residence.ts` 与 `public/media/residence/`                                                                |
+| 正式内容  | Blog、Trace、Saying 的正文和元数据                                         | `src/content/blog/`、`src/content/traces/`、`src/content/sayings/`                                                  |
+| 静态页面  | About、Projects、Links 与本地友链快照                                      | `src/pages/about/index.astro`、`src/pages/projects/index.astro`、`src/pages/links/index.astro`、`public/links.json` |
+
+`src/site.config.ts` 已切换到当前站点身份（`Susurrium`）。后续若要更换最终身份资料，不要只改首页标题：配置中的 `theme.title`、`author`、`description`、`logo`、`footer`、`integ.links.applyTip` 需要一起更新，并重新运行构建与严格门禁。
+
+Home 图库已按交接时的生产基线清单完成一次本地化：源目录为 `E:\UserData\Desktop\blog_image`，54 张图片均已转为 `public/images/home-media/*.webp` 并登记在 `src/data/home-media.ts`。当时 Hero 顺序为 `1381117 → 43935854 → 949729 → 725406 → 986446 → 556375`；Saying 使用 34 张、Trace 无图回退使用 20 张。站长已在 owner 工作单确认该媒体范围；来源/许可证据仍按 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) 留档。
+
+## 2. 内容与卡片规则
+
+三种内容是独立 collection，不要把 Trace 或 Saying 塞回 Blog：
+
+| 内容   | 目录                   | 必填元数据                            | 展示规则                                                                                                                                    |
+| ------ | ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blog   | `src/content/blog/`    | `title`、`description`、`publishDate` | 默认 `text` 无图文字卡；只有需要时再加 `heroImage`。只进入 RSS、Blog 标签与 Blog 时间线。                                                  |
+| Trace  | `src/content/traces/`  | `title`、`publishDate`                | 原始 `cover` 优先，设置时同时写 `coverAlt`；备用图由归档统一分配并在 Home/标签/详情复用。需要永久固定图片的条目应显式提供 cover。 |
+| Saying | `src/content/sayings/` | `text`                              | 可选 `originalText`、`author`、`source`、HTTP/HTTPS `sourceUrl` 和 `tags`；不记录日期。不进主导航；Home 随机展示，About 提供完整归档入口。卡片使用 Media 装饰图。 |
+
+每个 collection 的完整 schema 都在 `src/content.config.ts`。普通列表和详情页在开发服务器与生产构建中均过滤 `draft: true`；需要通过这些页面预览时，应将对应条目设为 `draft: false`，并在提交前核对发布意图。内容层的 preview 模式需要调用方显式启用。
+
+题图、正文图片、头像、音频和封面默认应放入仓库内的 `public/` 或由 Astro 静态资源管线处理。最终内容中的远程正文图片、音频、视频、iframe、脚本和样式必须逐项检查：严格门禁会列出精确 URL 及出现页面，不能用“整域名白名单”一并放行。当前已确认并保留的运行时例外是 CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像；普通正文超链接不属于媒体资源扫描，已确认的 CARTO 地图样式也不受文章媒体规则限制。
+
+Links 的 Friend Circle 已关闭：页面不输出标题、空占位区、状态文案，也不会请求远程接口；相关历史代码可以保留，但不能重新挂载到页面。友链头像仍按现有 `public/links.json` 方案处理，不要求本次改成统一本地头像。
+
+## 3. 入口、音乐和居住地的替换约束
+
+### 入口
+
+`src/data/entrance.ts` 的所有媒体路径已按桌面/移动、WebM/MP4 与 poster 分开。替换时保持这些同源路径可访问；根路径 `/` 每次直达都会重新播放，并通过手动进入跳转到 `/home`，不要把 Media Hero 放回根入口。
+
+### 音乐
+
+当前音乐暂使用参考站公共网易云歌单 `12812783625`。如需切换到第二个参考站，修改 `src/data/music.ts` 中的 `id` 和 `playlistUrl` 为 `8152976493`；如公共接口失效，再统一替换同文件中的 `api` 模板。发布前应确认播放器脚本、公共接口和歌单内容仍可访问，并评估版权与第三方服务稳定性。
+
+用户点击播放后才加载 APlayer 并从公共 Meting API 取得曲目，不再加载 Meting2 runtime。加载失败显示重试和打开歌单，不会报告播放成功。严格门禁继续检查登记的资源；公共服务失效时，可更新 `src/data/music.ts` 中的 API 模板或歌单 ID。
+
+### 居住地
+
+`src/data/residence.ts` 是唯一配置源。请只放入愿意公开的地点精度；更新 `label`、`city`、`region`、`displayName`、`caption`、`latitude`、`longitude`、`mapImage`、`ownerAvatar` 与 `visitorAvatar` 后，保留 CARTO 的明/暗地图样式作为现有惰性加载地图的底图。不要把精确住址或不适合公开的坐标提交进 Git 历史。
+
+## 4. 逐项替换顺序
+
+1. 网站身份、静态页面、schema、路由和其他运行时代码从最新 `develop` 创建 `codex/<topic>` 分支，按网站功能流程发布。与当前 `main` 完全兼容的独立 Blog、Trace、Saying 内容可从最新 `main` 创建 `codex/content-<topic>` 分支，并直接 PR 到 `main`；分支只包含正文、frontmatter 和该内容专属的媒体，不能依赖 `develop` 中尚未发布的代码。当前发布基线不纳入历史 Blog/Trace/Saying 内容与旧聚合路由，93 个真实历史内容已按 owner 决定全部不恢复，原始内容仍可从外部快照恢复。Projects、公开链接、个人资料、居住地和二维码若发生新增或精度变化，必须先建立新的逐项 owner 记录。Friend Circle 保持关闭状态，不要恢复标题或“准备中”占位。
+2. 本次图库已完成本地化；若后续继续替换，请在 `public/images/home-media/` 生成同源 WebP，并同步更新 Hero、Saying 装饰和 Trace 回退三组数组的描述及路径。三组数组即使复用同一批图，也要保持独立，避免一次替换误伤另一种卡片策略。Media 的装饰斜边参考由 `src/data/home-media.ts` 的 `cardCutSideByFilename` 按文件名固定，不要恢复按索引奇偶交替。图片源内容的保留侧不能再从斜边方向推断；请使用本地 `/tools/card-crop-review` 统一裁剪工作台逐张拖动/缩放与正式卡片同步的两个斜边框，确认后导出 JSON，并用 `scripts/apply-card-crops.mjs` 应用到 `src/data/card-crop-selections.generated.ts`。未确认的图继续使用安全回退。
+3. 填写居住地并确认公共音乐配置；居住地默认只公开城市级精度，任何区域/街道级展示都必须先取得新的明确确认。确认音频不自动播放，只在用户点击后播放。
+4. 运行下方的完整验证。候选验证必须在干净 worktree 中执行 `bun run ci`、`bun run links:check:dry` 和 `bun run release:gate --strict`；不要把最终资料写入白名单，也不要删除检查来“通过”。
+5. 人工浏览 `/`、`/home`、Blog/Trace/Saying 详情、`/about`、`/links`、移动端和暗色主题，确认自己的图、文案、坐标和链接均符合预期。
+
+## 5. 最终验证与发布
+
+在没有本地预览进程占用 `dist/` 时运行：
+
+```powershell
+bun run ci
+bun run capture:visual-baseline
+bun run release:gate
+```
+
+`capture:visual-baseline` 生成的截图位于被 Git 忽略的 `artifacts/visual-baseline/`，用于人工确认新增资料没有破坏已锁定的主体视觉或已登记的目标差异。候选的 `release:gate --strict` 必须以 `0 failure(s)` 结束；素材权利、个人资料和内容授权仍由人工清单决定，不由脚本替代。
+
+只有这三项完成且站长明确授权上线后，才执行发布动作：
+
+1. 复核 `git status`，只暂存本次已审核的文件。
+2. 网站功能通过 PR 合并到 `develop`，确认发布后再通过 `develop → main` 发布 PR。独立内容按前述规则通过 PR 合并到 `main`；上线后再创建 `main → develop` 同步 PR，确保开发分支包含生产内容。
+3. 在 GitHub 仓库 Settings → Pages 中确认发布源为 **GitHub Actions**。
+4. workflow 保持手动触发，仅允许 main；上传前必须完成 `ci`、严格 `release:gate` 和三项浏览器回归，检查后上传同一份产物。合并 main 后，由站长或其明确授权的执行者手动运行 `Deploy to GitHub Pages`。
+5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、文章详情、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
+
+发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](../DEVELOPMENT.md)、[准备状态](./PREPARATION_STATUS.md)、[历史视觉采集](./REFERENCE_HISTORY_20261008.md#2026-09-02-视觉采集) 与 [来源台账](../SOURCE_LEDGER.md)。

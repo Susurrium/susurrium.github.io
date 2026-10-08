@@ -97,6 +97,8 @@ export interface ReadingFrameData {
     readonly articleModifiedDate?: string
     readonly description: string
     readonly ogImage?: string
+    readonly ogImageWidth?: number
+    readonly ogImageHeight?: number
     readonly title: string
   }
 }
@@ -346,7 +348,12 @@ export function toReadingFrameData(record: ContentRecord): ReadingFrameData {
       ...(articleModifiedDate && { articleModifiedDate }),
       description: record.description ?? record.title,
       ...(record.kind === 'blog' && {
-        ogImage: record.image?.src ?? '/images/social-card.webp'
+        ogImage: record.image?.src ?? '/images/social-card.webp',
+        ...(record.image?.width &&
+          record.image?.height && {
+            ogImageWidth: record.image.width,
+            ogImageHeight: record.image.height
+          })
       }),
       title
     }
