@@ -14,9 +14,11 @@
 import sharp from 'sharp'
 
 import { discoverPublishedContent } from './lib/browser-content.mjs'
+import { matchesBrowserRoute, normalizePathname } from './lib/browser-route.mjs'
 
 const cdpEndpoint = (process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224').replace(/\/$/, '')
 const siteUrl = (process.env.PHASE6_SITE_URL ?? 'http://127.0.0.1:4321').replace(/\/$/, '')
+const canonicalSiteUrl = process.env.CANONICAL_SITE_URL ?? 'https://susurrium.github.io'
 const failures = []
 const publishedContent = await discoverPublishedContent(siteUrl)
 const searchSample = publishedContent.find((entry) => entry.indexed && entry.query)
@@ -183,12 +185,6 @@ async function evaluate(cdp, expression) {
     )
   }
   return result.result.value
-}
-
-function normalizePathname(pathname) {
-  const value = String(pathname ?? '').split(/[?#]/, 1)[0] || '/'
-  if (value === '/') return value
-  return `/${value.replace(/^\/+|\/+$/g, '')}`
 }
 
 async function navigate(cdp, url) {
@@ -413,7 +409,11 @@ async function assertRoute(
   )
 
   const state = await readRouteState(cdp)
-  expect(state.pathname === pathname, `${pathname} renders the expected route`)
+  const canonical = await evaluate(cdp, `document.querySelector('link[rel="canonical"]')?.href`)
+  expect(
+    matchesBrowserRoute({ pathname: state.pathname, canonical }, pathname, canonicalSiteUrl),
+    `${pathname} renders the expected route with its canonical URL`
+  )
   expect(state.profile === profile, `${pathname} uses the ${profile} effect profile`)
   expect(
     JSON.stringify(frameKinds(state)) === JSON.stringify([...effectKinds].sort()),

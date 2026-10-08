@@ -1,7 +1,6 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { dirname, resolve, sep } from 'node:path'
-import { afterEach, describe, expect, test } from 'bun:test'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { describe, expect } from 'bun:test'
 import sharp from 'sharp'
 import { parse } from 'yaml'
 
@@ -21,26 +20,16 @@ import {
 } from '../scripts/lib/resource-audit.mjs'
 import { createContent } from '../scripts/new-content.mjs'
 import { updateBlogDates } from '../scripts/updateBlogDates'
+import { createTestDirectory, testWithFixtures as test } from './helpers/fixtures.mjs'
 
-const roots: string[] = []
 async function sandbox() {
-  const root = await mkdtemp(resolve(tmpdir(), 'susurrium-tools-'))
-  roots.push(root)
-  return root
+  return createTestDirectory('tools')
 }
 async function put(root: string, path: string, value: string) {
   const target = resolve(root, path)
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, value)
 }
-afterEach(async () => {
-  for (const root of roots.splice(0)) {
-    if (!resolve(root).startsWith(`${resolve(tmpdir())}${sep}susurrium-tools-`))
-      throw new Error('Unsafe test cleanup path')
-    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
-  }
-})
-
 const transform = { x: 30, y: 70, zoom: 1.5 }
 const hero = (x = 30) => ({ desktop: { ...transform, x }, mobile: transform, schemaVersion: 1 })
 const card = (x = 30) => ({

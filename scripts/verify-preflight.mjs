@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { subset } from 'semver'
+
+import { nodeRequirement, requireNodeVersion } from './lib/node-runtime.mjs'
 
 const root = resolve(process.cwd())
 const failures = []
@@ -37,23 +40,19 @@ function command(name, args) {
   }).trim()
 }
 
-function compareVersions(actual, minimum) {
-  const left = actual.split('.').map(Number)
-  const right = minimum.split('.').map(Number)
-  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
-    const difference = (left[index] ?? 0) - (right[index] ?? 0)
-    if (difference !== 0) return difference
-  }
-  return 0
-}
-
 const pkg = JSON.parse(read('package.json'))
 const configuredNodeVersion = read('.node-version').trim()
 
-expect(
-  compareVersions(configuredNodeVersion, '22.12.0') >= 0,
-  `.node-version ${configuredNodeVersion} satisfies >=22.12.0`
-)
+pass(`.node-version: ${requireNodeVersion(configuredNodeVersion)}`)
+for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })) {
+  const installed = JSON.parse(read(`node_modules/${name}/package.json`))
+  const range = installed.engines?.node
+  if (range)
+    expect(
+      subset(nodeRequirement, range),
+      `Node ${nodeRequirement} satisfies ${name} requirement ${range}`
+    )
+}
 expect(
   process.versions.bun === '1.4.0',
   `Bun is exactly 1.4.0 (actual: ${process.versions.bun ?? 'not Bun'})`

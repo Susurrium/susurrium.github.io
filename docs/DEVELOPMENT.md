@@ -6,6 +6,8 @@
 
 准备 Git、[`.node-version`](../.node-version) 指定的 Node 和 [`package.json`](../package.json) 的 `packageManager` 指定的 Bun。Node 最低要求见 `engines`；本地验证与 CI 应使用固定版本。
 
+版本检查统一读取 `package.json` 的 Node 范围；预检同时核对固定版本和已安装直接依赖的 Node 要求。依赖升级提高最低版本时，同步更新声明并验证固定版本。
+
 ```powershell
 bun install --frozen-lockfile
 bun run dev
@@ -109,6 +111,10 @@ node scripts/adjust-favicon-outline.mjs --out artifacts/favicon/candidate.png
 
 Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构建序列，全部 `test/` 只执行一次。代码改动运行对应行为测试与必要集成验证；文档改动核对内容、引用和检查脚本。发布候选必须通过完整 CI、严格检查及下述浏览器回归。
 
+`bunfig.toml` 将测试发现范围固定为 `test/`，直接 `bun test` 与 CI 使用相同范围。指定文件时使用 `bun test ./test/文件名.test.ts`，避免按路径片段筛选到其他工作区。
+
+文件夹具均保存在项目 `artifacts/`：普通夹具使用 `test-fixtures/`，真实媒体构建使用 `media-build-tests/`，CI 子进程临时文件使用 `runtime-tmp/`。普通夹具在对应测试成功后清理；异常继续上报并保留失败夹具。媒体构建失败另保留安装与构建日志。清理只接受已登记并核对真实位置的目录，复现和归档失败证据后再整理残留文件。
+
 `verify:phase6` 的开发模式将测试内容、旧身份和未登记外部资源报告为警告；`release:gate` 将这些警告升级为失败。扫描依据最终 HTML/CSS 的资源与 DOM，完整未知外部资源清单可用 `node scripts/verify-phase6.mjs --external-details` 查看。不要将扫描到的整域名直接加入允许列表。
 
 资源预算覆盖 `public/`、`src/assets/`、`src/content/`、参考图夹具和 `dist/`。旧资源例外由 `scripts/asset-budget-legacy.json` 精确锁定路径、字节和 SHA-256；替换后同步移除旧条目，不为新资源扩大例外。初始 gzip 预算不代表按需加载地图、音乐的完整成本。
@@ -128,6 +134,8 @@ Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构�
 ### 浏览器回归
 
 生产预览默认 `http://127.0.0.1:4321`，Chrome DevTools 默认 `http://127.0.0.1:9224`。可用 `CHROME_CDP_URL`、`PHASE6_SITE_URL` 覆盖；Hero 另支持 `HOME_HERO_SITE_URL`。
+
+同一套脚本支持本地生产预览和线上站点。线上验证将 `PHASE6_SITE_URL` 与 `HOME_HERO_SITE_URL` 设为站点地址；路径核验允许 GitHub Pages 的目录尾斜杠，canonical 的域名和目标路径仍精确匹配。`CANONICAL_SITE_URL` 默认 `https://susurrium.github.io`，本地预览同样使用该发布地址；验证其他发布域名时显式覆盖。
 
 ```powershell
 bun run verify:phase6:browser

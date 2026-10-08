@@ -5,7 +5,7 @@
   "private": true,
   "packageManager": "bun@1.4.0",
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=22.22.2",
     "bun": "1.4.0"
   },
   "overrides": {
@@ -42,11 +42,11 @@
     "card-preview:generate": "bun scripts/generate-card-preview-content.ts",
     "hero-crops:apply": "node scripts/apply-hero-crops.mjs",
     "release:gate": "bun scripts/verify-phase6.mjs --strict",
-    "test:all": "bun test test",
-    "test:phase2": "bun test test/phase2-strategies.test.ts",
-    "test:content-layer": "bun test test/content-layer.test.ts",
-    "test:phase4": "bun test test/phase4-effects.test.ts",
-    "test:phase5": "bun test test/phase5-specialty.test.ts",
+    "test:all": "bun test",
+    "test:phase2": "bun test ./test/phase2-strategies.test.ts",
+    "test:content-layer": "bun test ./test/content-layer.test.ts",
+    "test:phase4": "bun test ./test/phase4-effects.test.ts",
+    "test:phase5": "bun test ./test/phase5-specialty.test.ts",
     "check:assets": "bun scripts/check-asset-budget.mjs",
     "ci": "node scripts/run-sequential.mjs ci",
     "astro": "astro",
@@ -113,6 +113,7 @@
     "prettier-plugin-astro": "^0.14.1",
     "remark-parse": "11.0.0",
     "rollup-plugin-visualizer": "^6.0.11",
+    "semver": "7.8.5",
     "tsx": "^4.23.13",
     "typescript-eslint": "8.70.0",
     "unocss": "66.10.0",
