@@ -380,13 +380,15 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 
 ## 图标制作源文件
 
-`FAVICON-MASTER`：2026-10-06 的本地图标制作素材记录，来源目录为 `E:\code\release-prep-quarantine-20260902-021422\.tmp-favicon-c-preview`。下表保留母版与底图的文件身份和当次核验哈希，原始素材按该来源位置追溯。
+`FAVICON-MASTER`：2026-10-06 从 `E:\code\release-prep-quarantine-20260902-021422\.tmp-favicon-c-preview` 原样迁入，当前制作源文件位于 `src/assets/favicon/`。下表保留母版与底图的文件身份和迁入哈希。
 
 | 文件                      | 原文件名                                    | 迁入时 SHA-256                                                     |
 | ------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
 | `master.png`              | `outline-edge-brown-union-conservative.png` | `7cc7e7854b22a7ea1f05a1b445af0244647f3682e617b66c66d618413d4099b0` |
 | `base-before-outline.png` | `feet-restored-v3.png`                      | `ba2f1d67de77f3d625947f9797652ac06fe5f171226079f987358baf24dc3e8d` |
 
-母版与底图均为 1024×1024 透明 PNG，当次制作使用描边处理、Lanczos3 缩放及 ICO 编码；正式图标位置见 [开发指南](./DEVELOPMENT.md#图标)，当次像素核验结论见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
+母版与底图均为 1024×1024 透明 PNG。生成保留既有描边算法、Lanczos3 缩放参数及 ICO 编码；维护方法见 [开发指南](./DEVELOPMENT.md#图标)，迁移时的像素核验结论见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
+
+`TOOL-ICOJS`：图标核验使用 npm `icojs@1.0.1`（[egy186/icojs](https://github.com/egy186/icojs)，MIT），包完整性由 `bun.lock` 固定。开发脚本直接使用其 ICO 解码接口，逐帧核对尺寸、位深和 RGBA；不将该依赖加入网站运行时。
 
 来源提取、注释与验证要求统一见 [来源维护](./DEVELOPMENT.md#故障处理与来源维护)。首版阶段进展见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md#首版实施进展记录)。

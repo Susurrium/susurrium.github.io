@@ -20,6 +20,8 @@ const sequences = {
   ci: [
     [bun, ['run', 'preflight']],
     [node, ['scripts/check-docs.mjs']],
+    [node, ['scripts/adjust-favicon-outline.mjs', '--check']],
+    [node, ['scripts/generate-favicon.mjs', '--check']],
     [bun, ['run', 'lint:check']],
     // Do not execute `bun run build` here. On Windows that adds a nested Bun
     // launcher above this synchronous runner and can intermittently leave the

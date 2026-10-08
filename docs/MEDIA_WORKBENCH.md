@@ -55,7 +55,7 @@
 New-Item -ItemType Directory -Force artifacts/media-workbench/exports, artifacts/media-workbench/previews
 ```
 
-下载位置由浏览器决定。将导出 JSON 保存到 `exports/`，可按日期分批并保留原文件名；截图和临时验证产物放入 `previews/`。目录均被 Git 忽略，需长期保存的记录另行备份。下载到仓库根目录的 JSON 应移入上述本地目录。
+下载位置由浏览器决定。将导出 JSON 保存到 `exports/`，可按日期分批并保留原文件名；截图和临时验证产物放入 `previews/`。目录均被 Git 忽略，需长期保存的记录另行备份。根目录的误下载 `card-crop-editor-v*.json`、`hero-crop-editor-v*.json` 也被忽略，仍应移入上述本地目录。
 
 ## 应用卡片配置
 

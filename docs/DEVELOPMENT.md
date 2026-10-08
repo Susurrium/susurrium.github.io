@@ -69,7 +69,21 @@ Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build
 
 ### 图标
 
-正式图标位于 `public/favicon/`，包括 16、32、180、192、512 像素 PNG，以及包含 16/32/48 像素帧的 ICO。替换时核对各尺寸、透明背景、页面引用和 `site.webmanifest`，保留制作源文件与来源证据。历史制作素材的标识及核验结果见 [图标来源](./SOURCE_LEDGER.md#图标制作源文件)。
+正式图标位于 `public/favicon/`；源文件为 `src/assets/favicon/master.png`（已确认母版）及 `base-before-outline.png`（描边前底图）。两个源文件均为 1024×1024 透明 PNG，来源和迁入哈希见 [图标来源](./SOURCE_LEDGER.md#图标制作源文件)。使用项目固定的 Node 版本运行：
+
+```powershell
+node scripts/adjust-favicon-outline.mjs --check
+node scripts/generate-favicon.mjs --check
+node scripts/generate-favicon.mjs --out artifacts/favicon/preview
+node scripts/generate-favicon.mjs --out artifacts/favicon/preview --check
+node scripts/adjust-favicon-outline.mjs --out artifacts/favicon/candidate.png
+```
+
+`--check` 在内存中重建并核对尺寸、解码 RGBA 像素和 ICO 各帧的数量、顺序及位深，缺失或不一致时失败。描边脚本的检查始终针对已确认母版；不带 `--out` 的描边生成默认写 `artifacts/favicon/master.png`。审阅通过后才更新正式母版。
+
+确认母版后运行 `node scripts/generate-favicon.mjs`，生成 16、32、180、192、512 像素 PNG 和包含 16/32/48 像素帧的 ICO。脚本先编码整批，再逐个原子替换目标；相对 `--out` 路径以仓库为基准。manifest 与页面引用保持现有路径。
+
+重建使用项目 sharp，ICO 解码使用固定版本的 icojs，仅用于开发脚本，不进入浏览器产物或发起运行时外部请求。CI 执行两项只读检查；依赖升级后仍须满足逐像素一致，允许无损编码字节变化。描边步骤始终读取底图，不重复应用于母版。
 
 ### 分享图、字体与友链
 
@@ -97,7 +111,7 @@ Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构�
 
 `verify:phase6` 的开发模式将测试内容、旧身份和未登记外部资源报告为警告；`release:gate` 将这些警告升级为失败。扫描依据最终 HTML/CSS 的资源与 DOM，完整未知外部资源清单可用 `node scripts/verify-phase6.mjs --external-details` 查看。不要将扫描到的整域名直接加入允许列表。
 
-资源预算覆盖 `public/`、`src/assets/`、`src/content/` 和 `dist/`。旧资源例外由 `scripts/asset-budget-legacy.json` 精确锁定路径、字节和 SHA-256；替换后同步移除旧条目，不为新资源扩大例外。初始 gzip 预算不代表按需加载地图、音乐的完整成本。
+资源预算覆盖 `public/`、`src/assets/`、`src/content/`、参考图夹具和 `dist/`。旧资源例外由 `scripts/asset-budget-legacy.json` 精确锁定路径、字节和 SHA-256；替换后同步移除旧条目，不为新资源扩大例外。初始 gzip 预算不代表按需加载地图、音乐的完整成本。
 
 ### 专项检查入口
 
