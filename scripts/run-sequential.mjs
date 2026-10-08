@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
@@ -7,6 +8,7 @@ const bun = process.platform === 'win32' ? 'bun.exe' : 'bun'
 const astroCli = resolve(process.cwd(), 'node_modules', 'astro', 'bin', 'astro.mjs')
 const node = process.execPath
 const buildSequence = [
+  [bun, ['run', 'verify:media-images']],
   // `astro build` owns the required content sync. Checking its resulting
   // generated types avoids a second content sync while keeping a full
   // type/diagnostic gate in every build.
@@ -19,6 +21,8 @@ const sequences = {
   ci: [
     [bun, ['run', 'preflight']],
     [node, ['scripts/check-docs.mjs']],
+    [node, ['scripts/adjust-favicon-outline.mjs', '--check']],
+    [node, ['scripts/generate-favicon.mjs', '--check']],
     [bun, ['run', 'lint:check']],
     // Do not execute `bun run build` here. On Windows that adds a nested Bun
     // launcher above this synchronous runner and can intermittently leave the
@@ -53,6 +57,7 @@ const runCommand = ([command, args]) =>
   new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: process.cwd(),
+      env: environment,
       // Keep Astro's output on the caller's console rather than buffering a
       // second process stream during the Windows build sequence.
       stdio: 'inherit',
@@ -65,6 +70,14 @@ const runCommand = ([command, args]) =>
     })
     child.once('close', (status) => resolve(status ?? 1))
   })
+
+const environment = { ...process.env }
+if (sequenceName === 'ci') {
+  // CI 的测试和子进程统一在仓库内保存中间文件。
+  const temporary = resolve(process.cwd(), 'artifacts/runtime-tmp')
+  mkdirSync(temporary, { recursive: true })
+  Object.assign(environment, { TMPDIR: temporary, TMP: temporary, TEMP: temporary })
+}
 
 for (const command of sequence) {
   const status = await runCommand(command)

@@ -18,7 +18,7 @@ node scripts/run-sequential.mjs build
 bun run preview -- --host 127.0.0.1 --port 4321
 ```
 
-Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build`。顺序脚本以 Node 依次执行 Astro CLI 的 `build` 和 `check --noSync`，避免重复内容同步。Pagefind 在构建时生成；修改内容后重新构建才能更新生产预览。
+Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build`。顺序脚本先校验响应式媒体清单，再以 Node 执行 Astro CLI 的 `build` 和 `check --noSync`，避免重复内容同步。Pagefind 在构建时生成；修改内容后重新构建才能更新生产预览。
 
 后台预览可用 `bun run preview -- --background --host 127.0.0.1 --port 4321`，停止使用 `bun run preview -- stop`。启动命令退出不代表后台服务已停止，重新构建前停止占用本项目 `dist/` 的预览。
 
@@ -47,17 +47,43 @@ Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build
 
 1. 将准备好的 WebP 放入 `public/images/home-media/`。建议宽度不超过 1920px，小图保持实际尺寸；`public/` 文件不会被 Astro 自动优化。
 2. 更新 `src/data/home-media.ts` 中的资源池、用途和描述。Hero、Saying 装饰图、Trace 备用图各自维护。
-3. Hero 图片或顺序变化后运行 `bun run generate:hero-images`，核对 `public/images/home-hero/` 和 `src/data/hero-images.json`。脚本生成 768、1280、1920px 候选，限制到原图宽度，WebP 质量为 86；具体参数以 [生成脚本](../scripts/generate-hero-images.ts) 为准。
+3. 更新公共图片后运行 `bun run generate:media-images`，生成 Hero、卡片与 About 装饰人物的派生图和清单。只更新 Hero 可运行 `bun run generate:hero-images`。用 `bun run verify:media-images` 核验源哈希、尺寸、比例、候选字节和引用；具体参数以 [生成脚本](../scripts/generate-hero-images.ts) 为准。
 4. 核对已有裁剪记录。同名图片替换会继续读取原配置，应在 [工作台](./MEDIA_WORKBENCH.md) 重新确认；旧候选只有在核对清单与引用后才能移除。
 5. 新构建后检查相关页面和资源预算，素材、图库清单、候选与裁剪配置一起审阅。
 
 公共素材来源登记在 [来源台账](./SOURCE_LEDGER.md)，使用条件见 [第三方说明](./THIRD_PARTY_NOTICES.md)。正式页面默认使用同源素材；新增外部正文媒体按精确 URL 审阅，现有服务例外不扩大到同域其他资源。
 
-历史 LargeSkull 参考图位于 `public/images/largeskull/`，由 Phase 2 核验原始字节与哈希；当前 Home 使用 `home-media/` 中的用户图库。
+| 派生素材 | 候选宽度 | 目录与清单 |
+| --- | --- | --- |
+| Hero | 768、1280、1920px | `public/images/home-hero/`、`src/data/hero-images.json` |
+| 卡片 | 480、960、1920px | `public/images/card-media/`、`src/data/card-images.json` |
+| About 装饰人物 | 240、480、960px | `public/media/effects/responsive/`、`src/data/companion-images.json` |
+
+小图保持实际宽度，派生 WebP 质量为 86，源文件保留原始字节。替换 `public/media/effects/tracer-companion.webp` 后同样执行生成与核验命令。历史 LargeSkull 参考图位于 `test/fixtures/reference-images/largeskull/`，Phase 2 核验原始哈希并确认它们不进入发布目录。
+
+### 图片预算与回归
+
+`bun run check:assets` 按用途区分可发布资源（`delivery`）、内容源文件（`source`）、图标母版（`master`）和历史参考图（`reference`）。相同字节、相同阈值的告警归并展示，明细保留全部路径和用途。建议值与硬限制见 [图片预算](./CONTENT.md#图片预算)；单文件还必须小于 50 MiB。告警数量不等于独立图片数量，源图存储与浏览器下载量需要分别核对。
+
+媒体测试覆盖真实生成文件、透明度、比例、小图不放大、源文件保留、清单失效、预算边界和历史例外；隔离构建使用真实 JPEG、透明 PNG 验证 Blog／Trace 封面、正文和分享元数据。浏览器回归核对实际 `currentSrc`、阅读前景与背投图复用、裁剪工作台切换素材，以及 About 装饰人物按需加载。
 
 ### 图标
 
-正式图标位于 `public/favicon/`，包括 16、32、180、192、512 像素 PNG，以及包含 16/32/48 像素帧的 ICO。替换时核对各尺寸、透明背景、页面引用和 `site.webmanifest`，保留制作源文件与来源证据。历史制作素材的标识及核验结果见 [图标来源](./SOURCE_LEDGER.md#图标制作源文件)。
+正式图标位于 `public/favicon/`；源文件为 `src/assets/favicon/master.png`（已确认母版）及 `base-before-outline.png`（描边前底图）。两个源文件均为 1024×1024 透明 PNG，来源和迁入哈希见 [图标来源](./SOURCE_LEDGER.md#图标制作源文件)。使用项目固定的 Node 版本运行：
+
+```powershell
+node scripts/adjust-favicon-outline.mjs --check
+node scripts/generate-favicon.mjs --check
+node scripts/generate-favicon.mjs --out artifacts/favicon/preview
+node scripts/generate-favicon.mjs --out artifacts/favicon/preview --check
+node scripts/adjust-favicon-outline.mjs --out artifacts/favicon/candidate.png
+```
+
+`--check` 在内存中重建并核对尺寸、解码 RGBA 像素和 ICO 各帧的数量、顺序及位深，缺失或不一致时失败。描边脚本的检查始终针对已确认母版；不带 `--out` 的描边生成默认写 `artifacts/favicon/master.png`。审阅通过后才更新正式母版。
+
+确认母版后运行 `node scripts/generate-favicon.mjs`，生成 16、32、180、192、512 像素 PNG 和包含 16/32/48 像素帧的 ICO。脚本先编码整批，再逐个原子替换目标；相对 `--out` 路径以仓库为基准。manifest 与页面引用保持现有路径。
+
+重建使用项目 sharp，ICO 解码使用固定版本的 icojs，仅用于开发脚本，不进入浏览器产物或发起运行时外部请求。CI 执行两项只读检查；依赖升级后仍须满足逐像素一致，允许无损编码字节变化。描边步骤始终读取底图，不重复应用于母版。
 
 ### 分享图、字体与友链
 
@@ -85,7 +111,7 @@ Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构�
 
 `verify:phase6` 的开发模式将测试内容、旧身份和未登记外部资源报告为警告；`release:gate` 将这些警告升级为失败。扫描依据最终 HTML/CSS 的资源与 DOM，完整未知外部资源清单可用 `node scripts/verify-phase6.mjs --external-details` 查看。不要将扫描到的整域名直接加入允许列表。
 
-资源预算覆盖 `public/`、`src/assets/`、`src/content/` 和 `dist/`。旧资源例外由 `scripts/asset-budget-legacy.json` 精确锁定路径、字节和 SHA-256；替换后同步移除旧条目，不为新资源扩大例外。初始 gzip 预算不代表按需加载地图、音乐的完整成本。
+资源预算覆盖 `public/`、`src/assets/`、`src/content/`、参考图夹具和 `dist/`。旧资源例外由 `scripts/asset-budget-legacy.json` 精确锁定路径、字节和 SHA-256；替换后同步移除旧条目，不为新资源扩大例外。初始 gzip 预算不代表按需加载地图、音乐的完整成本。
 
 ### 专项检查入口
 

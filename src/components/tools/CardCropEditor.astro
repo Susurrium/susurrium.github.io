@@ -244,6 +244,7 @@ const serializedInitialSelections = JSON.stringify(cardCropSelections).replace(/
               data-editor-canvas
             >
               <CardMediaFrame
+                responsive={false}
                 class='card-crop-editor__image-window'
                 imageClass='card-crop-editor__source-image'
                 src={editorAssets[0]?.src}
@@ -345,6 +346,7 @@ const serializedInitialSelections = JSON.stringify(cardCropSelections).replace(/
 
     <div class='card-crop-editor__preview-rail'>
       <MediaCard
+        responsive={false}
         actionLabel='Preview'
         class='card-crop-editor__card-preview'
         contentId='card-crop-editor-preview'

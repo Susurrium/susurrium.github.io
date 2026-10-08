@@ -462,11 +462,15 @@ if (existsSync(distFile('home/index.html'))) {
       path: 'images/largeskull/hero-06.png'
     }
   ]) {
-    const sourcePath = resolve(root, 'public', asset.path)
-    expect(existsSync(distFile(asset.path)), `${asset.path} is emitted locally`)
+    const sourcePath = resolve(
+      root,
+      'test/fixtures/reference-images',
+      asset.path.slice('images/'.length)
+    )
+    expect(!existsSync(distFile(asset.path)), `${asset.path} is kept out of the published site`)
     expect(
       existsSync(sourcePath) && sha256(sourcePath) === asset.hash,
-      `${asset.path} retains its locked source hash`
+      `${asset.path} reference fixture retains its locked source hash`
     )
   }
 

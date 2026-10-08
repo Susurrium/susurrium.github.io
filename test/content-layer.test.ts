@@ -176,6 +176,8 @@ describe('canonical content adapters', () => {
     })
     expect(blog.image).toEqual({
       alt: 'A meaningful cover',
+      width: 800,
+      height: 600,
       key: 'content-canonical-blog',
       src: '/images/blog-cover.webp'
     })

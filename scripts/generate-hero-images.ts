@@ -1,33 +1,55 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { basename, resolve } from 'node:path'
-import sharp from 'sharp'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-import { heroSlides } from '../src/data/home-media'
+import { heroSlides, sayingDecorativeImages, traceFallbackImages } from '../src/data/home-media'
+import { generateResponsiveImages, verifyResponsiveImages } from './lib/responsive-images.mjs'
 
-// Keep the original images and focal-point keys stable. Only browser delivery
-// uses these lossless-in-layout, lower-bandwidth derivatives.
-const output = resolve('public/images/home-hero')
-await mkdir(output, { recursive: true })
-const manifest: Record<string, { srcset: string; width: number; height: number }> = {}
-for (const slide of heroSlides) {
-  const source = resolve('public', slide.src.slice(1))
-  const metadata = await sharp(source).metadata()
-  if (!metadata.width || !metadata.height) throw new Error(`Missing dimensions: ${source}`)
-  const widths = [...new Set([768, 1280, 1920].map((width) => Math.min(width, metadata.width!)))]
-  const candidates = []
-  for (const width of widths) {
-    const name = `${basename(slide.src, '.webp')}-${width}.webp`
-    await sharp(source)
-      .resize({ width, withoutEnlargement: true })
-      .webp({ quality: 86 })
-      .toFile(resolve(output, name))
-    candidates.push(`/images/home-hero/${name} ${width}w`)
+const root = fileURLToPath(new URL('../', import.meta.url))
+const args = process.argv.slice(2)
+if (args.some((arg) => !['--hero', '--check'].includes(arg)))
+  throw new Error('Usage: generate-hero-images.ts [--hero] [--check]')
+const profiles = [
+  {
+    sources: heroSlides.map((slide) => slide.src),
+    output: '/images/home-hero',
+    manifest: 'src/data/hero-images.json',
+    widths: [768, 1280, 1920]
+  },
+  {
+    sources: [
+      ...new Set([...sayingDecorativeImages, ...traceFallbackImages].map((image) => image.src))
+    ],
+    output: '/images/card-media',
+    manifest: 'src/data/card-images.json',
+    widths: [480, 960, 1920]
+  },
+  {
+    sources: ['/media/effects/tracer-companion.webp'],
+    output: '/media/effects/responsive',
+    manifest: 'src/data/companion-images.json',
+    widths: [240, 480, 960]
   }
-  manifest[slide.src] = {
-    srcset: candidates.join(', '),
-    width: metadata.width,
-    height: metadata.height
+]
+for (const profile of args.includes('--hero') ? profiles.slice(0, 1) : profiles) {
+  if (args.includes('--check')) {
+    const count = await verifyResponsiveImages(
+      root,
+      profile.sources,
+      profile.output,
+      profile.manifest,
+      profile.widths
+    )
+    console.log(`PASS ${count} responsive files: ${profile.manifest}`)
+  } else {
+    await generateResponsiveImages(
+      root,
+      profile.sources,
+      profile.output,
+      profile.manifest,
+      profile.widths
+    )
+    console.log(
+      `Generated ${profile.sources.length} responsive sources: ${resolve(root, profile.manifest)}`
+    )
   }
 }
-await writeFile('src/data/hero-images.json', `${JSON.stringify(manifest, null, 2)}\n`)
-console.log(`Generated responsive candidates for ${heroSlides.length} Hero images.`)

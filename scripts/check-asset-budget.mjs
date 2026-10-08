@@ -4,9 +4,9 @@ import { extname, resolve } from 'node:path'
 import { parse } from 'node-html-parser'
 
 import { createInitialAssetInspector } from './lib/initial-asset-budget.mjs'
+import { formatMiB, inspectMediaBudgets, mediaLimits, MiB } from './lib/media-budget.mjs'
 
 const root = resolve(process.cwd())
-const MiB = 1024 * 1024
 const warnings = []
 const failures = []
 const legacyBudget = JSON.parse(
@@ -18,19 +18,6 @@ const legacyFingerprints = new Set(
 )
 if (legacyBudget.schemaVersion !== 1) failures.push('unsupported legacy asset budget schema')
 
-const mediaLimits = {
-  '.woff2': { recommended: 0.1 * MiB, hard: 0.2 * MiB },
-  '.avif': { recommended: 0.5 * MiB, hard: 2 * MiB },
-  '.gif': { recommended: 2 * MiB, hard: 10 * MiB },
-  '.jpeg': { recommended: 0.5 * MiB, hard: 2 * MiB },
-  '.jpg': { recommended: 0.5 * MiB, hard: 2 * MiB },
-  '.mp3': { recommended: 12 * MiB, hard: 25 * MiB },
-  '.mp4': { recommended: 20 * MiB, hard: 50 * MiB },
-  '.ogg': { recommended: 12 * MiB, hard: 25 * MiB },
-  '.png': { recommended: 1 * MiB, hard: 5 * MiB },
-  '.webm': { recommended: 20 * MiB, hard: 50 * MiB },
-  '.webp': { recommended: 0.5 * MiB, hard: 2 * MiB }
-}
 const audioExtensions = new Set(['.mp3', '.ogg'])
 
 async function filesUnder(directory) {
@@ -47,10 +34,6 @@ async function filesUnder(directory) {
   return output
 }
 
-function formatMiB(bytes) {
-  return `${(bytes / MiB).toFixed(2)} MiB`
-}
-
 function relativePath(file) {
   return file.slice(root.length + 1).replaceAll('\\', '/')
 }
@@ -63,7 +46,9 @@ async function sha256(file) {
 
 const sourceFiles = (
   await Promise.all(
-    ['public', 'src/assets', 'src/content'].map((directory) => filesUnder(resolve(root, directory)))
+    ['public', 'src/assets', 'src/content', 'test/fixtures/reference-images'].map((directory) =>
+      filesUnder(resolve(root, directory))
+    )
   )
 ).flat()
 const sourceFileMap = new Map(sourceFiles.map((file) => [relativePath(file), file]))
@@ -87,31 +72,6 @@ for (const [relative, entry] of Object.entries(legacyEntries)) {
   verifiedLegacy.add(relative)
 }
 
-for (const file of sourceFiles) {
-  const bytes = (await stat(file)).size
-  const relative = relativePath(file)
-  if (bytes >= 50 * MiB) {
-    failures.push(`${relative} is ${formatMiB(bytes)}; repository files must stay below 50 MiB`)
-  }
-  const limit = mediaLimits[extname(file).toLowerCase()]
-  if (!limit) continue
-  if (bytes > limit.hard) {
-    if (verifiedLegacy.has(relative)) {
-      warnings.push(
-        `${relative} is a hash-locked upstream test asset above the current hard media limit`
-      )
-    } else {
-      failures.push(
-        `${relative} is ${formatMiB(bytes)}; hard media limit is ${formatMiB(limit.hard)}`
-      )
-    }
-  } else if (bytes > limit.recommended) {
-    warnings.push(
-      `${relative} is ${formatMiB(bytes)}; recommended maximum is ${formatMiB(limit.recommended)}`
-    )
-  }
-}
-
 const sourceAudioBytes = (
   await Promise.all(
     sourceFiles
@@ -130,29 +90,16 @@ const distFiles = await filesUnder(resolve(root, 'dist'))
 if (distFiles.length === 0)
   failures.push('dist is missing or empty; run the production build first')
 
-for (const file of distFiles) {
-  const bytes = (await stat(file)).size
-  const relative = relativePath(file)
-  if (bytes >= 50 * MiB) {
-    failures.push(`${relative} is ${formatMiB(bytes)}; generated files must stay below 50 MiB`)
-  }
-  const limit = mediaLimits[extname(file).toLowerCase()]
-  if (!limit) continue
-  if (bytes > limit.hard) {
-    const fingerprint = `${bytes}:${await sha256(file)}`
-    if (legacyFingerprints.has(fingerprint)) {
-      warnings.push(`${relative} is an exact generated copy of a hash-locked upstream test asset`)
-    } else {
-      failures.push(
-        `${relative} is ${formatMiB(bytes)}; generated media hard limit is ${formatMiB(limit.hard)}`
-      )
-    }
-  } else if (bytes > limit.recommended) {
-    warnings.push(
-      `${relative} is ${formatMiB(bytes)}; generated media recommended maximum is ${formatMiB(limit.recommended)}`
-    )
-  }
-}
+const mediaEntries = await Promise.all(
+  [...sourceFiles, ...distFiles].map(async (file) => ({
+    path: relativePath(file),
+    bytes: (await stat(file)).size,
+    sha256: mediaLimits[extname(file).toLowerCase()] ? await sha256(file) : undefined
+  }))
+)
+const mediaReport = inspectMediaBudgets(mediaEntries, { verifiedLegacy, legacyFingerprints })
+warnings.push(...mediaReport.warnings)
+failures.push(...mediaReport.failures)
 
 const distBytes = (
   await Promise.all(distFiles.map(async (file) => (await stat(file)).size))

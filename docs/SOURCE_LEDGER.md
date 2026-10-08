@@ -258,16 +258,16 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ### 6.1 Phase 2 本地化核验
 
-2026-08-27 已下载并逐项复核原始 SHA-256。历史参考图存放在 `public/images/largeskull/`，由 Phase 2 检查原始字节与哈希；当前 Home 使用下方登记的用户图库。
+2026-08-27 已下载并逐项复核原始 SHA-256。历史参考图保存在 `test/fixtures/reference-images/largeskull/`，Phase 2 核验其原始哈希，并确认它们不进入发布目录。参考文件仍受仓库存储预算检查，当前 Home 使用下方登记的用户图库。
 
-| 顺序 | 本地路径                                |    字节数 | SHA-256                                                            |
-| ---: | --------------------------------------- | --------: | ------------------------------------------------------------------ |
-|    1 | `public/images/largeskull/hero-01.jpg`  | 1,915,733 | `e77260690388904ca6f0ca2b19f5f3206468f97b6d7272a06c920df1d9cb0e6d` |
-|    2 | `public/images/largeskull/hero-02.webp` |   190,834 | `319f2a38009f13e8ae5f1c6cbea9013b74e5408f29b6958fa1ac1571e991b8ca` |
-|    3 | `public/images/largeskull/hero-03.jpg`  | 1,845,471 | `010664a398386fa5f387764e9c41c28f2bc729151915229dc172fbe11abb9909` |
-|    4 | `public/images/largeskull/hero-04.webp` |    57,512 | `235f105fcc5bbf6ea9acb69f2b75def95fb8f79867be0beafc27fa153da35dc4` |
-|    5 | `public/images/largeskull/hero-05.webp` |   110,742 | `d7f20af3e09c32dd6a1494af6a02383599218131a2796a71c33e4f796bd615c6` |
-|    6 | `public/images/largeskull/hero-06.png`  |   735,786 | `277c5db8d016a8993467481d88ad840926adc8d54f8b49de5213e047476f6c0f` |
+| 顺序 | 本地路径                                                 |    字节数 | SHA-256                                                            |
+| ---: | -------------------------------------------------------- | --------: | ------------------------------------------------------------------ |
+|    1 | `test/fixtures/reference-images/largeskull/hero-01.jpg`  | 1,915,733 | `e77260690388904ca6f0ca2b19f5f3206468f97b6d7272a06c920df1d9cb0e6d` |
+|    2 | `test/fixtures/reference-images/largeskull/hero-02.webp` |   190,834 | `319f2a38009f13e8ae5f1c6cbea9013b74e5408f29b6958fa1ac1571e991b8ca` |
+|    3 | `test/fixtures/reference-images/largeskull/hero-03.jpg`  | 1,845,471 | `010664a398386fa5f387764e9c41c28f2bc729151915229dc172fbe11abb9909` |
+|    4 | `test/fixtures/reference-images/largeskull/hero-04.webp` |    57,512 | `235f105fcc5bbf6ea9acb69f2b75def95fb8f79867be0beafc27fa153da35dc4` |
+|    5 | `test/fixtures/reference-images/largeskull/hero-05.webp` |   110,742 | `d7f20af3e09c32dd6a1494af6a02383599218131a2796a71c33e4f796bd615c6` |
+|    6 | `test/fixtures/reference-images/largeskull/hero-06.png`  |   735,786 | `277c5db8d016a8993467481d88ad840926adc8d54f8b49de5213e047476f6c0f` |
 
 实现文件：`src/data/home-media.ts`（三个独立资源池与稳定分配策略）、`src/components/cards/ContentCard.astro`（页面覆盖 → 类型默认 → 安全回退的唯一策略宿主）、`src/components/home/HeroGallery.astro`（原 Hero / wave DOM 与时序）、`src/components/cards/MediaCard.astro`（原 `.segments` 斜边卡片）。必要适配仅包括 Astro 局部样式、当前主题变量、无障碍的单一链接语义、原站 767px/容器响应式和 `prefers-reduced-motion`；无日期 Saying 以内容 ID 作为固定归档键。
 
@@ -281,7 +281,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 | `sayingDecorativeImages` |       34 | 角色/插画/图形类图片，包含用户保留的 Logo、水印和文字                                                                                   |
 | `traceFallbackImages`    |       20 | 环境/风景类图片，用于无封面 Trace；当前分配契约见 [架构说明](./ARCHITECTURE.md#卡片与媒体)                                              |
 
-Saying 与 Trace 两个清单的并集恰好覆盖 54 个源文件且各自不重复；Hero 允许复用其中六张。历史参考图与 SHA 锁保存在 `public/images/largeskull/`，供来源核验使用。
+Saying 与 Trace 两个清单的并集恰好覆盖 54 个源文件且各自不重复；Hero 允许复用其中六张。历史参考图与 SHA 锁保存在 `test/fixtures/reference-images/largeskull/`，供来源核验使用。
 
 #### 6.1.2 历史素材斜边参考
 
@@ -380,13 +380,15 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 
 ## 图标制作源文件
 
-`FAVICON-MASTER`：2026-10-06 的本地图标制作素材记录，来源目录为 `E:\code\release-prep-quarantine-20260902-021422\.tmp-favicon-c-preview`。下表保留母版与底图的文件身份和当次核验哈希，原始素材按该来源位置追溯。
+`FAVICON-MASTER`：2026-10-06 从 `E:\code\release-prep-quarantine-20260902-021422\.tmp-favicon-c-preview` 原样迁入，当前制作源文件位于 `src/assets/favicon/`。下表保留母版与底图的文件身份和迁入哈希。
 
 | 文件                      | 原文件名                                    | 迁入时 SHA-256                                                     |
 | ------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
 | `master.png`              | `outline-edge-brown-union-conservative.png` | `7cc7e7854b22a7ea1f05a1b445af0244647f3682e617b66c66d618413d4099b0` |
 | `base-before-outline.png` | `feet-restored-v3.png`                      | `ba2f1d67de77f3d625947f9797652ac06fe5f171226079f987358baf24dc3e8d` |
 
-母版与底图均为 1024×1024 透明 PNG，当次制作使用描边处理、Lanczos3 缩放及 ICO 编码；正式图标位置见 [开发指南](./DEVELOPMENT.md#图标)，当次像素核验结论见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
+母版与底图均为 1024×1024 透明 PNG。生成保留既有描边算法、Lanczos3 缩放参数及 ICO 编码；维护方法见 [开发指南](./DEVELOPMENT.md#图标)，迁移时的像素核验结论见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
+
+`TOOL-ICOJS`：图标核验使用 npm `icojs@1.0.1`（[egy186/icojs](https://github.com/egy186/icojs)，MIT），包完整性由 `bun.lock` 固定。开发脚本直接使用其 ICO 解码接口，逐帧核对尺寸、位深和 RGBA；不将该依赖加入网站运行时。
 
 来源提取、注释与验证要求统一见 [来源维护](./DEVELOPMENT.md#故障处理与来源维护)。首版阶段进展见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md#首版实施进展记录)。

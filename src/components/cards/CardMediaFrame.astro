@@ -13,6 +13,7 @@
  * `mask` input remains for frame-less media blocks, but it cannot contradict
  * a supplied diagonal frame.
  */
+import cardImages from '@/data/card-images.json'
 import {
   CARD_CROP_FRAME_RATIO,
   DEFAULT_CARD_CROP_TRANSFORM,
@@ -38,6 +39,7 @@ interface Props {
   /** Draw the editor-only frame outline inside the same clipped element. */
   outline?: boolean
   src?: string
+  responsive?: boolean
   transform?: CardCropTransform
   width?: number
   height?: number
@@ -60,6 +62,7 @@ const {
   mask = frame === 'diagonal-left' ? 'left' : frame === 'diagonal-right' ? 'right' : 'right',
   outline = false,
   src,
+  responsive = true,
   transform = DEFAULT_CARD_CROP_TRANSFORM,
   width = 640,
   height = 448,
@@ -68,6 +71,11 @@ const {
 } = Astro.props as Props
 
 const normalizedTransform = normalizeCropTransform(transform)
+const candidate =
+  src && responsive ? (cardImages as Record<string, { srcset: string }>)[src] : undefined
+const imageSizes = candidate
+  ? `(max-width: 767px) calc(100vw * ${normalizedTransform.zoom}), ${Math.ceil(640 * normalizedTransform.zoom)}px`
+  : undefined
 const position = `${normalizedTransform.x}% ${normalizedTransform.y}%`
 const frameRatio = aspectRatio ?? CARD_CROP_FRAME_RATIO
 const effectiveMask: CardMediaMask = frame ? (frame === 'diagonal-left' ? 'left' : 'right') : mask
@@ -110,6 +118,8 @@ const mediaStyle = [
         height={height}
         loading={loading}
         src={src}
+        srcset={candidate?.srcset}
+        sizes={imageSizes}
         width={width}
       />
     ) : (

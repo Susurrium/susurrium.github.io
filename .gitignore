@@ -43,6 +43,10 @@ bunfig.toml
 backup/
 artifacts/
 
+# 浏览器误下载到仓库根目录的裁剪草稿；正式配置保存在 src/data/。
+/card-crop-editor-v*.json
+/hero-crop-editor-v*.json
+
 # Release-prep and local browser/preview scratch files. Keep these patterns
 # root-scoped so production media under public/ and src/assets/ remains
 # visible to Git and can be reviewed explicitly.
