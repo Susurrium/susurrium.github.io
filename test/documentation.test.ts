@@ -1,16 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve, sep } from 'node:path'
-import { afterEach, expect, test } from 'bun:test'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { expect } from 'bun:test'
 
 import { checkDocumentation } from '../scripts/lib/documentation.mjs'
-
-const base = resolve('artifacts/docs-check-tests')
-const roots: string[] = []
+import { createTestDirectory, testWithFixtures as test } from './helpers/fixtures.mjs'
 
 function fixture(files: Record<string, string> = {}) {
-  mkdirSync(base, { recursive: true })
-  const root = mkdtempSync(join(base, 'case-'))
-  roots.push(root)
+  const root = createTestDirectory('docs')
   const entries = {
     'package.json': JSON.stringify({ scripts: { ci: 'node ci.mjs' } }),
     'README.md': '# 项目\n\n[指南](docs/guide.md) · [历史](docs/archive/README.md)\n',
@@ -25,13 +21,6 @@ function fixture(files: Record<string, string> = {}) {
   }
   return () => checkDocumentation(root, { entryPoints: ['README.md', 'docs/guide.md'] })
 }
-
-afterEach(() => {
-  for (const root of roots.splice(0)) {
-    if (!root.startsWith(`${base}${sep}`)) throw new Error('测试目录越界')
-    rmSync(root, { recursive: true, force: true })
-  }
-})
 
 test('Markdown 表格、编码路径和重复标题锚点按真实语法解析', () => {
   const check = fixture({

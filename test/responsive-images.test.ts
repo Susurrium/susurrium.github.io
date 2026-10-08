@@ -1,7 +1,6 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { dirname, resolve, sep } from 'node:path'
-import { afterEach, describe, expect, test } from 'bun:test'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { describe, expect } from 'bun:test'
 import sharp from 'sharp'
 
 import {
@@ -10,11 +9,10 @@ import {
   verifyResponsiveImages
 } from '../scripts/lib/responsive-images.mjs'
 import { readingImageOptions } from '../src/lib/media/reading-image'
+import { createTestDirectory, testWithFixtures as test } from './helpers/fixtures.mjs'
 
-const roots: string[] = []
 async function fixture(width = 1000) {
-  const root = await mkdtemp(resolve(tmpdir(), 'susurrium-responsive-'))
-  roots.push(root)
+  const root = createTestDirectory('responsive')
   const source = resolve(root, 'public/images/test.webp')
   await mkdir(dirname(source), { recursive: true })
   await sharp({ create: { width, height: 600, channels: 4, background: '#33669980' } })
@@ -22,14 +20,6 @@ async function fixture(width = 1000) {
     .toFile(source)
   return { root, source }
 }
-afterEach(async () => {
-  for (const root of roots.splice(0)) {
-    if (!root.startsWith(`${resolve(tmpdir())}${sep}susurrium-responsive-`))
-      throw new Error('Unsafe responsive fixture cleanup')
-    await rm(root, { recursive: true, force: true, maxRetries: 5 })
-  }
-})
-
 describe('responsive image generation and verification', () => {
   test('keeps source bytes, aspect ratio and alpha; never enlarges small inputs', async () => {
     const { root, source } = await fixture(500)

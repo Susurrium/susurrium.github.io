@@ -1,16 +1,14 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { dirname, resolve, sep } from 'node:path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
 import { gzipSync } from 'node:zlib'
-import { afterEach, expect, test } from 'bun:test'
+import { expect } from 'bun:test'
 import { parse } from 'node-html-parser'
 
 import { createInitialAssetInspector } from '../scripts/lib/initial-asset-budget.mjs'
+import { createTestDirectory, testWithFixtures as test } from './helpers/fixtures.mjs'
 
-const directories: string[] = []
 async function fixture(assets: Record<string, string>) {
-  const directory = await mkdtemp(resolve(tmpdir(), 'susurrium-budget-'))
-  directories.push(directory)
+  const directory = createTestDirectory('budget')
   const files: string[] = []
   for (const [path, source] of Object.entries(assets)) {
     const file = resolve(directory, path)
@@ -20,13 +18,6 @@ async function fixture(assets: Record<string, string>) {
   }
   return createInitialAssetInspector(directory, files)
 }
-afterEach(async () => {
-  for (const directory of directories.splice(0)) {
-    if (!directory.startsWith(`${resolve(tmpdir())}${sep}susurrium-budget-`))
-      throw new Error('Unsafe fixture cleanup')
-    await rm(directory, { recursive: true, force: true, maxRetries: 5 })
-  }
-})
 const compressed = (...sources: string[]) =>
   sources.reduce((sum, source) => sum + gzipSync(source).byteLength, 0)
 

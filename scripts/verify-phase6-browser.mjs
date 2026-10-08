@@ -1,7 +1,9 @@
 import { discoverPublishedContent } from './lib/browser-content.mjs'
+import { matchesBrowserRoute } from './lib/browser-route.mjs'
 
 const cdpEndpoint = (process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224').replace(/\/$/, '')
 const siteUrl = (process.env.PHASE6_SITE_URL ?? 'http://127.0.0.1:4321').replace(/\/$/, '')
+const canonicalSiteUrl = process.env.CANONICAL_SITE_URL ?? 'https://susurrium.github.io'
 
 function pass(message) {
   console.log(`PASS ${message}`)
@@ -427,9 +429,12 @@ try {
       )
     }
     await navigate(cdp, `${siteUrl}${taxonomy.indexHref}`)
-    const indexPathname = await evaluate(cdp, 'location.pathname')
+    const indexRoute = await evaluate(
+      cdp,
+      `({ pathname: location.pathname, canonical: document.querySelector('link[rel="canonical"]')?.href })`
+    )
     assert(
-      indexPathname === archive.tagPath,
+      matchesBrowserRoute(indexRoute, archive.tagPath, canonicalSiteUrl),
       `${archive.kind} archive View all tags opens its index page`
     )
     const firstTagHref = taxonomy.tagHrefs[0]
