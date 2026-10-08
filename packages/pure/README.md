@@ -1,5 +1,7 @@
 # Astro Theme Pure (Integration Package)
 
+> 本目录保留 Arthals-Ink 上游提交中的历史 Pure 源码及说明。本站通过根 `package.json` 使用 npm `astro-pure`，兼容补丁由 `patches/` 与 Bun 锁文件维护；本目录不参与应用模块解析，并从根 TypeScript 检查中排除。项目操作见 [根 README](../../README.md)，来源见 [来源台账](../../docs/SOURCE_LEDGER.md)。下文保留上游说明及链接。
+
 A simple, fast and powerful blog & document theme built by Astro.
 
 [![GitHub deployments](https://img.shields.io/github/deployments/cworld1/astro-theme-pure/production?style=flat&logo=vercel&label=vercel)](https://astro-pure.js.org/)

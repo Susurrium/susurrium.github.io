@@ -1,12 +1,12 @@
 # 来源与复用台账
 
-> 台账版本：1.10｜来源冻结日期：2026-08-27｜最近更新：2026-09-12｜当前加固实施见 [PROJECT_HARDENING.zh-CN.md](./PROJECT_HARDENING.zh-CN.md)。历史生产基线和来源证据保留于本台账及 [归档审计材料](./archive/)，本次工作树尚未发布。
+> 来源冻结日期：2026-08-27；各条目另列后续核验时点。版本、提交和哈希用于定位来源。现行操作见 [开发指南](./DEVELOPMENT.md)，设计契约见 [架构说明](./ARCHITECTURE.md)，历史实施记录见 [归档索引](./archive/README.md)。
 
 ## 1. 作用与边界
 
-本文档回答每个模块的四个问题：从哪里来、锁定到哪个版本、直接复用到什么程度、为了本博客允许改什么。
+本文维护稳定来源 ID、精确来源、本地对应、复用范围、必要差异和核验证据。来源版本与当前依赖版本分别记录，升级依赖不改写已复制代码的原始来源。条目中的历史核验结果只适用于注明的时点。
 
-用户已确认对列出的参考网站和组件取得所需授权，并在 2026-09-02 的 owner 工作单中确认当前候选媒体、字体、链接和位置范围。本台账仍保留公开来源、版本、哈希和必要差异，目的是保证实现可复现、后续可维护，并防止把“参考视觉”“历史封装”和“本项目新代码”混为一体。第三方许可证/授权证据仍应按 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) 与 owner 记录留档；项目许可证本身不扩大素材授权。
+2026-09-02 的 [站长确认记录](./archive/OWNER_CONFIRMATION_RECORD.zh-CN.md) 保存当时媒体、字体、链接和位置的确认范围。第三方许可、署名和外部授权证据见 [素材说明](./THIRD_PARTY_NOTICES.md)。
 
 生产站默认不热链参考站资源。已确认的例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、CodeTime 徽章、Waline、构建期 GitHub 贡献数据和现有友链头像；这些服务/路径在门禁中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
 
@@ -31,18 +31,18 @@
 - 主题控制器、播放器订阅/加载、评论和地图生命周期由站点维护，视觉来源不变。Meting2 runtime 不再加载，歌单数据仍来自原登记公共 API。
 - npm `@waline/client@3.15.2` 的实际入口 `dist/slim.js` 使用 `patches/@waline%2Fclient@3.15.2.patch` 修正 ArticleReaction watcher 的取消处理；仅处理自身请求的 AbortError，其他错误继续传播。发布包完整性和补丁由 `bun.lock` 固定。
 - Hero 的响应式 WebP 是既有原图的派生文件；`src/data/hero-images.json` 记录候选，不改变 crop 身份。字体 WOFF2 由既有字体转换，未更换字库；生成脚本见 `scripts/generate-fonts.py`。
-- CI 浏览器任务复用已有产物，Pages 手动部署限制 main 并校验同一产物；本次未执行线上部署。
+- CI 浏览器任务复用已有产物，Pages 手动部署限制 main 并校验同一产物。
 
-| ID                 | 对象                | 精确来源                                                                                                       | 锁定证据                                                                                                                                                                        | 实施方式                                                                 |
-| ------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `BASE-ARTHALS`     | 站点骨架和测试内容  | [`zhuozhiyongde/Arthals-Ink`](https://github.com/zhuozhiyongde/Arthals-Ink)                                    | commit `15f5ad110af8ed8f38a1e506dd890d2d921f118f`；本地/远端标签 `arthals-upstream-2026-03-22`                                                                                  | 直接复用；只做已登记的 Astro 6、导航、配置和新模块适配                   |
-| `BASE-PURE`        | Pure 主题运行时     | npm `astro-pure@1.4.6` / [`cworld1/astro-theme-pure`](https://github.com/cworld1/astro-theme-pure)             | npm gitHead `c2bb1155b6c0b9b339d62b8289c4c95e38528075`；integrity `sha512-m6mFcLfk69LjAOaCZX7qvwgH/ROA6xP6JzpbCT6Ns09CuKnN/vHa7Q+6az4Fd4vNi7A4WmzyfYPU7HDnb6SV+A==`；Apache-2.0 | 直接使用发布包；Astro 精确对齐 6.1.8                                     |
-| `BASE-ASTRO`       | Astro               | npm `astro@6.1.8`                                                                                              | lock integrity `sha512-6fT9M12U3fpi13DiPavNKDIoBflASTSxmKTEe+zXhWtlebQuOqfOnIrMWyRmlXp+mgDsojmw+fVFG9LUTzKSog==`                                                                | 直接使用；首版不漂移版本                                                 |
-| `BASE-SIGNATURE`   | Arthals 签名组件    | `BASE-ARTHALS` 的 `packages/pure/components/user/Signature.astro`                                              | Git blob `45b373ea652808539004d528b86378a2acf48071`；本地落点 `src/components/shared/Signature.astro`                                                                          | 直接复制到本地维护，因为 npm Pure 1.4.6 未导出它                         |
-| `BASE-FOOTER`      | Pure Footer         | `astro-pure@1.4.6` 的 `components/basic/Footer.astro`                                                          | 本地落点 `src/components/layout/SiteFooter.astro`；对应 npm 固定版本见 `BASE-PURE`                                                                                                  | 直接复制 DOM/CSS/config 契约；仅为所有新标签页链接补 `noopener noreferrer` |
-| `BASE-MEDIUM-ZOOM` | 文章图片放大运行时  | npm `medium-zoom@1.1.0` / [`francoischalifour/medium-zoom`](https://github.com/francoischalifour/medium-zoom)  | lock integrity `sha512-ewyDsp7k4InCUp3jRmwHBRFGyjBimKps/AJLjRSox+2q/2H4p/PNpQf+pwONWlJiOudkBXtbdmVbFjqyybfTmQ==`；MIT                                                           | 保留 Pure 的交互/样式契约，固定为本地 `dist/pure` 入口，不使用运行时 CDN |
-| `BASE-QRCODEJS`    | 文章二维码运行时    | npm `qrcodejs@1.0.0` / [`davidshimjs/qrcodejs`](https://github.com/davidshimjs/qrcodejs)                       | lock integrity `sha512-67rj3mMBhSBepaD57qENnltO+r8rSYlqM7HGThks/BiyDAkc86sLvkKqjkqPS5v13f7tvnt6dbEf3qt7zq+BCg==`；MIT                                                           | 本地 Vite 资源加载；保留 Pure 版权区 UI，不使用其运行时 CDN              |
-| `BASE-PAGES`       | GitHub Pages 工作流 | [Astro 官方 GitHub Pages 指南](https://docs.astro.build/en/guides/deploy/github/) 和 GitHub 官方 Pages Actions | `actions/checkout@v7`、`actions/setup-node@v6`、`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`                                     | 官方方案配置；准备阶段仅 `workflow_dispatch`，无 `push`、无 `schedule`   |
+| ID                 | 对象                | 精确来源                                                                                                       | 锁定证据                                                                                                                                                                        | 实施方式                                                                   |
+| ------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `BASE-ARTHALS`     | 站点骨架和测试内容  | [`zhuozhiyongde/Arthals-Ink`](https://github.com/zhuozhiyongde/Arthals-Ink)                                    | commit `15f5ad110af8ed8f38a1e506dd890d2d921f118f`；本地/远端标签 `arthals-upstream-2026-03-22`                                                                                  | 直接复用；只做已登记的 Astro 6、导航、配置和新模块适配                     |
+| `BASE-PURE`        | Pure 主题运行时     | npm `astro-pure@1.4.6` / [`cworld1/astro-theme-pure`](https://github.com/cworld1/astro-theme-pure)             | npm gitHead `c2bb1155b6c0b9b339d62b8289c4c95e38528075`；integrity `sha512-m6mFcLfk69LjAOaCZX7qvwgH/ROA6xP6JzpbCT6Ns09CuKnN/vHa7Q+6az4Fd4vNi7A4WmzyfYPU7HDnb6SV+A==`；Apache-2.0 | 直接使用发布包；Astro 精确对齐 6.1.8                                       |
+| `BASE-ASTRO`       | Astro               | npm `astro@6.1.8`                                                                                              | lock integrity `sha512-6fT9M12U3fpi13DiPavNKDIoBflASTSxmKTEe+zXhWtlebQuOqfOnIrMWyRmlXp+mgDsojmw+fVFG9LUTzKSog==`                                                                | 直接使用；首版不漂移版本                                                   |
+| `BASE-SIGNATURE`   | Arthals 签名组件    | `BASE-ARTHALS` 的 `packages/pure/components/user/Signature.astro`                                              | Git blob `45b373ea652808539004d528b86378a2acf48071`；本地落点 `src/components/shared/Signature.astro`                                                                           | 直接复制到本地维护，因为 npm Pure 1.4.6 未导出它                           |
+| `BASE-FOOTER`      | Pure Footer         | `astro-pure@1.4.6` 的 `components/basic/Footer.astro`                                                          | 本地落点 `src/components/layout/SiteFooter.astro`；对应 npm 固定版本见 `BASE-PURE`                                                                                              | 直接复制 DOM/CSS/config 契约；仅为所有新标签页链接补 `noopener noreferrer` |
+| `BASE-MEDIUM-ZOOM` | 文章图片放大运行时  | npm `medium-zoom@1.1.0` / [`francoischalifour/medium-zoom`](https://github.com/francoischalifour/medium-zoom)  | lock integrity `sha512-ewyDsp7k4InCUp3jRmwHBRFGyjBimKps/AJLjRSox+2q/2H4p/PNpQf+pwONWlJiOudkBXtbdmVbFjqyybfTmQ==`；MIT                                                           | 保留 Pure 的交互/样式契约，固定为本地 `dist/pure` 入口，不使用运行时 CDN   |
+| `BASE-QRCODEJS`    | 文章二维码运行时    | npm `qrcodejs@1.0.0` / [`davidshimjs/qrcodejs`](https://github.com/davidshimjs/qrcodejs)                       | lock integrity `sha512-67rj3mMBhSBepaD57qENnltO+r8rSYlqM7HGThks/BiyDAkc86sLvkKqjkqPS5v13f7tvnt6dbEf3qt7zq+BCg==`；MIT                                                           | 本地 Vite 资源加载；保留 Pure 版权区 UI，不使用其运行时 CDN                |
+| `BASE-PAGES`       | GitHub Pages 工作流 | [Astro 官方 GitHub Pages 指南](https://docs.astro.build/en/guides/deploy/github/) 和 GitHub 官方 Pages Actions | `actions/checkout@v7`、`actions/setup-node@v6`、`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`                                     | 官方方案配置；准备阶段仅 `workflow_dispatch`，无 `push`、无 `schedule`     |
 
 `BASE-GITHUB-CARD`：复用 `astro-pure@1.4.6` 的 `components/advanced/GithubCard.astro` 视觉层级；本地落点为 `src/components/shared/StaticGitHubCard.astro`。实现方式为略微调整：保留仓库链接和卡片语言，移除浏览器 GitHub REST 请求，并为新标签页链接补安全 `rel`。
 
@@ -51,7 +51,7 @@
 - `origin`：`https://github.com/Susurrium/susurrium.github.io.git`
 - `upstream`：`https://github.com/zhuozhiyongde/Arthals-Ink.git`
 - `upstream` push URL：`DISABLED`
-- `main` 与 `develop` 当前均指向生产提交 `7993411`；发布准备候选已完成合并并清理。历史整理起点和逐路径决定保留在 [归档对账报告](./archive/BRANCH_STATE_RECONCILIATION.zh-CN.md) 中。
+- 2026-09-03 归档记录中的 `main` 与 `develop` 曾共同指向 `7993411`。历史整理起点和逐路径决定保留在 [归档对账报告](./archive/BRANCH_STATE_RECONCILIATION.zh-CN.md) 中。当前分支提交与包含关系通过 Git 查询，操作流程见 [开发文档](./DEVELOPMENT.md#分支与发布)。
 
 ## 4. 历史项目固定快照
 
@@ -73,19 +73,19 @@
 
 ### 4.2 历史模块索引
 
-| ID                 | 目标用途                  | 固定快照中的主要路径                                                                                                                                                              | 复用边界                                                                 |
-| ------------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `HIST-ENTRANCE`    | 根路径视频入口            | `src/components/entrance/EntranceScene.astro`                                                                                                                                     | 直接复用场景、视频降级和进入流程；删除 session 跳过，导航改为 replace    |
-| `HIST-MUSIC`       | 全局音乐状态              | `src/components/MusicPlayer.astro`、`src/data/music.ts`                                                                                                                          | 保留持久化和生命周期；引擎改为公共 APlayer/MetingJS 网易云歌单             |
-| `HIST-SHOKA-HERO`  | Hero 的 Astro 外壳        | `src/components/effects/ShokaHero.astro`、`src/components/home/HomeRibbonLayer.astro`                                                                                             | 只复用生命周期和页面挂载；视觉核心以 LargeSkull 原站为准                 |
-| `HIST-TIMELINE`    | Blog 时间线               | `src/components/home/NotesPreview.astro`                                                                                                                                          | 基本直接复用；删除 notes 双模式，只从 Blog 自动生成                      |
-| `HIST-SAYINGS`     | Saying 数据和交互         | `src/components/says/SaysCollection.astro`、`SaysCard.astro`、`src/components/home/QuoteCard.astro`、`src/content/says/**`、`src/pages/says/**`                                   | 直接复用查询、随机、归档和详情方案；命名与路由适配为 Saying/Sayings      |
-| `HIST-TRACES`      | Trace 数据与页面          | `src/pages/traces/**`、`src/content/notes/**`、`src/pages/notes/**`                                                                                                               | 直接复用并统一重命名；最终落到 Trace collection                          |
-| `HIST-BACKDROP`    | PKU 生命周期              | `src/components/effects/GlobalBackdropEffects.astro`、`public/vendor/canvas-fluttering-ribbon.min.js`、`public/vendor/canvas-nest@1.1.3.min.js`                                   | 复用生命周期外壳和已有两层；视觉算法以锁定的 PKU 1.1.3 三层脚本为准      |
-| `HIST-GEORGE-HOST` | 花瓣/点击的生命周期与过滤 | `src/components/effects/SeasonalPetals.astro`、`ClickBurst.astro`、`src/layouts/BaseLayout.astro`                                                                                 | 只复用挂载、销毁和交互过滤；不采用历史自绘视觉核心                       |
-| `HIST-RESIDENCE`   | 居住地动图                | `src/components/home/ResidenceCard.astro`、`FlightOverlay.astro`、`src/scripts/residence-map.ts`、`residence-map-geometry.ts`、`src/styles/residence-map.css`、对应 e2e/spec 文档 | 几乎直接复用；只校准原站视觉、个人位置和文案                             |
+| ID                 | 目标用途                  | 固定快照中的主要路径                                                                                                                                                              | 复用边界                                                                                   |
+| ------------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `HIST-ENTRANCE`    | 根路径视频入口            | `src/components/entrance/EntranceScene.astro`                                                                                                                                     | 直接复用场景、视频降级和进入流程；删除 session 跳过，导航改为 replace                      |
+| `HIST-MUSIC`       | 全局音乐状态              | `src/components/MusicPlayer.astro`、`src/data/music.ts`                                                                                                                           | 保留持久化和生命周期；引擎改为公共 APlayer/MetingJS 网易云歌单                             |
+| `HIST-SHOKA-HERO`  | Hero 的 Astro 外壳        | `src/components/effects/ShokaHero.astro`、`src/components/home/HomeRibbonLayer.astro`                                                                                             | 只复用生命周期和页面挂载；视觉核心以 LargeSkull 原站为准                                   |
+| `HIST-TIMELINE`    | Blog 时间线               | `src/components/home/NotesPreview.astro`                                                                                                                                          | 基本直接复用；删除 notes 双模式，只从 Blog 自动生成                                        |
+| `HIST-SAYINGS`     | Saying 数据和交互         | `src/components/says/SaysCollection.astro`、`SaysCard.astro`、`src/components/home/QuoteCard.astro`、`src/content/says/**`、`src/pages/says/**`                                   | 直接复用查询、随机、归档和详情方案；命名与路由适配为 Saying/Sayings                        |
+| `HIST-TRACES`      | Trace 数据与页面          | `src/pages/traces/**`、`src/content/notes/**`、`src/pages/notes/**`                                                                                                               | 直接复用并统一重命名；最终落到 Trace collection                                            |
+| `HIST-BACKDROP`    | PKU 生命周期              | `src/components/effects/GlobalBackdropEffects.astro`、`public/vendor/canvas-fluttering-ribbon.min.js`、`public/vendor/canvas-nest@1.1.3.min.js`                                   | 复用生命周期外壳和已有两层；视觉算法以锁定的 PKU 1.1.3 三层脚本为准                        |
+| `HIST-GEORGE-HOST` | 花瓣/点击的生命周期与过滤 | `src/components/effects/SeasonalPetals.astro`、`ClickBurst.astro`、`src/layouts/BaseLayout.astro`                                                                                 | 只复用挂载、销毁和交互过滤；不采用历史自绘视觉核心                                         |
+| `HIST-RESIDENCE`   | 居住地动图                | `src/components/home/ResidenceCard.astro`、`FlightOverlay.astro`、`src/scripts/residence-map.ts`、`residence-map-geometry.ts`、`src/styles/residence-map.css`、对应 e2e/spec 文档 | 几乎直接复用；只校准原站视觉、个人位置和文案                                               |
 | `HIST-COMPANION`   | About 小人生命周期        | `src/components/effects/ScrollCompanion.astro`                                                                                                                                    | 复用 custom element、滚动/页面切换管理；视觉素材参考来源，滚动曲线按当前项目素材和导轨校准 |
-| `HIST-TESTS`       | 回归测试材料              | `tests/e2e/entrance.spec.ts`、`effects.spec.ts`、`home-ribbon.spec.ts`、`home-residence.spec.ts`、`residence-fidelity.spec.ts`、`says-about.spec.ts`、`blog-notes.spec.ts`        | 大量复用并适配最终路由和 DOM                                             |
+| `HIST-TESTS`       | 回归测试材料              | `tests/e2e/entrance.spec.ts`、`effects.spec.ts`、`home-ribbon.spec.ts`、`home-residence.spec.ts`、`residence-fidelity.spec.ts`、`says-about.spec.ts`、`blog-notes.spec.ts`        | 大量复用并适配最终路由和 DOM                                                               |
 
 明确不把历史 `TypewriterText.astro`、`ContributionHeatmap.astro`、`SeasonalPetals.astro` 或 `ClickBurst.astro` 的视觉核心当作最终原站真源。
 
@@ -116,16 +116,16 @@
 
 ### 5.2 xyx404 入口文字与音乐外观
 
-| 项目        | 值                                                                                                                        |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 台账 ID     | `XYX-TYPING`、`XYX-MUSIC-UI`                                                                                              |
-| 页面        | [`https://xyx404.github.io/`](https://xyx404.github.io/)                                                                  |
-| 仓库        | [`xyx404/xyx404.github.io`](https://github.com/xyx404/xyx404.github.io)                                                   |
-| commit      | `d4e1efc207e106f562bcf758acececd41f7635e7`                                                                                |
-| 核心文件    | `index.html` blob `0c207012b2a1f9dd51646b01de42284940e85016`                                                              |
-| Live 一致性 | Live HTML 与锁定提交一致；105,797 bytes；SHA-256 `2ad74c6a3b86178ae006ccf9663a84165279c59c4e72a5f2350cca0828452c63`       |
+| 项目        | 值                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 台账 ID     | `XYX-TYPING`、`XYX-MUSIC-UI`                                                                                                                                             |
+| 页面        | [`https://xyx404.github.io/`](https://xyx404.github.io/)                                                                                                                 |
+| 仓库        | [`xyx404/xyx404.github.io`](https://github.com/xyx404/xyx404.github.io)                                                                                                  |
+| commit      | `d4e1efc207e106f562bcf758acececd41f7635e7`                                                                                                                               |
+| 核心文件    | `index.html` blob `0c207012b2a1f9dd51646b01de42284940e85016`                                                                                                             |
+| Live 一致性 | Live HTML 与锁定提交一致；105,797 bytes；SHA-256 `2ad74c6a3b86178ae006ccf9663a84165279c59c4e72a5f2350cca0828452c63`                                                      |
 | 参数        | 参考外观记录为 `startDelay≈300`、`typeSpeed=150`、`backSpeed=50`；本项目经需求确认固定为 `startDelay=700`、`typeSpeed=62`、`backSpeed=34`、`backDelay=1700`、`loop=true` |
-| 实施        | 文字参数与可分离 DOM/CSS 直接复用并适配入口；音乐复用紧凑可见状态/交互，并接入参考站同款 APlayer/MetingJS 网易云歌单 |
+| 实施        | 文字参数与可分离 DOM/CSS 直接复用并适配入口；音乐复用紧凑可见状态/交互，并接入参考站同款 APlayer/MetingJS 网易云歌单                                                     |
 
 原站核验时通过浮动 URL `https://cdn.cbd.int/typed.js/dist/typed.umd.js` 解析到 `typed.js@3.0.0`，资源 SHA-256 为 `b91711cbe4aca07f45801bdbed5df00191484cbbc740269723044af26c2902dc`。本项目不沿用浮动 CDN，固定为：
 
@@ -163,25 +163,25 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ### 5.5 SkyWT 居住地
 
-| 项目           | 值                                                                                             |
-| -------------- | ---------------------------------------------------------------------------------------------- |
-| 台账 ID        | `SKY-RESIDENCE`                                                                                |
-| 视觉校准页     | [`https://skywt.cn/`](https://skywt.cn/)；核验日期 2026-08-27                                  |
-| 可维护代码真源 | `HIST-RESIDENCE` 固定快照                                                                      |
-| 实施           | 历史实现几乎直接复用；仅校准飞机、原点、云影、脉冲延迟、Globe 裁切、标题、控件、城市级坐标和测试 |
+| 项目           | 值                                                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 台账 ID        | `SKY-RESIDENCE`                                                                                                                                                      |
+| 视觉校准页     | [`https://skywt.cn/`](https://skywt.cn/)；核验日期 2026-08-27                                                                                                        |
+| 可维护代码真源 | `HIST-RESIDENCE` 固定快照                                                                                                                                            |
+| 实施           | 历史实现几乎直接复用；仅校准飞机、原点、云影、脉冲延迟、Globe 裁切、标题、控件、城市级坐标和测试                                                                     |
 | 本地实现       | `src/components/home/ResidenceCard.astro`、`FlightOverlay.astro`、`src/scripts/residence-map.ts`、`residence-map-geometry.ts`、`src/assets/styles/residence-map.css` |
-| 本地运行时 | `public/vendor/maplibre-gl@6.4.1/`：原始 ESM 主模块、shared/worker 与 CSS；`maplibre-gl.js` 是站点 module 桥接。完整字节与哈希见下表及 `verify:phase5`。 |
-| 外部运行时     | 只允许 CARTO/OSM 地图请求；Geolocation 仅在用户打开 Globe 后由浏览器授权流程使用              |
+| 本地运行时     | `public/vendor/maplibre-gl@6.4.1/`：原始 ESM 主模块、shared/worker 与 CSS；`maplibre-gl.js` 是站点 module 桥接。完整字节与哈希见下表及 `verify:phase5`。             |
+| 外部运行时     | 只允许 CARTO/OSM 地图请求；Geolocation 仅在用户打开 Globe 后由浏览器授权流程使用                                                                                     |
 
 2026-09-12 因安全公告 GHSA-jrc7-96c5-q579 将 MapLibre 升级到 6.4.1。npm 模块原样复制，旧 5.24.0 不再进入发布目录。
 
-| 文件 | bytes | SHA-256 |
-| --- | ---: | --- |
+| 文件                     |   bytes | SHA-256                                                            |
+| ------------------------ | ------: | ------------------------------------------------------------------ |
 | `maplibre-gl-shared.mjs` | 482,036 | `fcf4d81450df235da0aea74897cc23926774b5228d38ae1de6a7d701c5905785` |
-| `maplibre-gl-worker.mjs` | 18,592 | `ce4957017fe705ac2f9ebef206cca966d08d8621756c39326a78cf09757e7d75` |
-| `maplibre-gl.css` | 83,195 | `8e2dbbab312dc57656fbb76e9fa5308c75c9d7c7ba5808a7d55bcdb64cc813fa` |
-| `maplibre-gl.js` | 156 | `b444622ac66e84a2306bfbe4f0e9e03a5a4a3538b79cd6d4c5a561d0d5ed846b` |
-| `maplibre-gl.mjs` | 567,005 | `97e8b9a39ab8b823d6a0caf9c312237262bc9138a6162d9e29606f5f8d24127d` |
+| `maplibre-gl-worker.mjs` |  18,592 | `ce4957017fe705ac2f9ebef206cca966d08d8621756c39326a78cf09757e7d75` |
+| `maplibre-gl.css`        |  83,195 | `8e2dbbab312dc57656fbb76e9fa5308c75c9d7c7ba5808a7d55bcdb64cc813fa` |
+| `maplibre-gl.js`         |     156 | `b444622ac66e84a2306bfbe4f0e9e03a5a4a3538b79cd6d4c5a561d0d5ed846b` |
+| `maplibre-gl.mjs`        | 567,005 | `97e8b9a39ab8b823d6a0caf9c312237262bc9138a6162d9e29606f5f8d24127d` |
 
 飞机、云影、地图回退图和访客头像已经从 `HIST-RESIDENCE` 固定快照复制到 `public/media/residence/` 并由 `verify:phase5` 核验哈希。访客头像仍为 597 bytes，SHA-256 `415fb6bebdbcdafdac6031086e85cbf9ec9d4649878f1cc667b01ceaf2435351`。当前候选只公开 `39.9, 116.4` 的城市级坐标（`publicPrecision: 'city'`），该粒度已由 owner 确认；不记录或输出历史的精确居住地。MapLibre 固定为 `6.4.1`（BSD-3-Clause）：npm 依赖保留精确 TypeScript 类型，已经构建好的 ESM 主模块、shared/worker 模块与 CSS 本地惰性加载。此调整避免 Vite 在每个静态入口构建时重复处理约 1 MiB 的第三方运行时，不改变地图算法或加载时机，并兼容 GitHub Pages 的纯静态输出。
 
@@ -216,15 +216,15 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ### 5.8 TNXG About 小人
 
-| 项目     | 值                                                                                                                                          |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 台账 ID  | `TNXG-COMPANION`                                                                                                                            |
-| 校准页   | [`https://www.tnxg.moe/`](https://www.tnxg.moe/)；2026-08-27 重定向到 `/en`                                                                 |
-| 当前素材 | `https://cdn.tnxg.top/images/cover/background_aijo_karen.webp`                                                                              |
-| 素材证据 | 407,100 bytes；SHA-256 `bdfa95bf30097a9bd10500e8847c33bbf28cbf9a7013f933db3f63b5ea57f511`                                                   |
-| 本地原始素材 | `public/media/effects/tnxg-background-aijo-karen.webp`；保留上述 SHA-256                                                               |
+| 项目         | 值                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 台账 ID      | `TNXG-COMPANION`                                                                                                                                                                      |
+| 校准页       | [`https://www.tnxg.moe/`](https://www.tnxg.moe/)；2026-08-27 重定向到 `/en`                                                                                                           |
+| 当前素材     | `https://cdn.tnxg.top/images/cover/background_aijo_karen.webp`                                                                                                                        |
+| 素材证据     | 407,100 bytes；SHA-256 `bdfa95bf30097a9bd10500e8847c33bbf28cbf9a7013f933db3f63b5ea57f511`                                                                                             |
+| 本地原始素材 | `public/media/effects/tnxg-background-aijo-karen.webp`；保留上述 SHA-256                                                                                                              |
 | 当前使用素材 | `public/media/effects/tracer-companion.webp`；基于项目确认的 PNG 抠图生成并将蓝色推进尾焰调整为更浅的冰蓝；SHA-256 `a68c070b24760685b2329e088edd30d951d6833154096fbb13fecfe2920c3af0` |
-| 实施     | 当前 WebP 与当前滚动变换作为视觉/公式真源；`HIST-COMPANION` 提供 Astro custom element 和生命周期；本项目只做 About 路由、≥1440px、70rem 容器和层级适配 |
+| 实施         | 当前 WebP 与当前滚动变换作为视觉/公式真源；`HIST-COMPANION` 提供 Astro custom element 和生命周期；本项目只做 About 路由、≥1440px、70rem 容器和层级适配                                |
 
 最终组件为 `src/components/effects/ScrollCompanion.astro`：运行时只使用当前项目的 `tracer-companion.webp`；针对新素材右侧主体和窄导轨，采用最大右移 `22%`、最大旋转 `10deg` 的连续轻微漂移，退出时间轴按 About 实际可滚动距离的 `88%` 动态计算，并在时间轴 `68%` 后以平滑长尾淡出；路由切换、页面隐藏、bfcache、减少动画和阈值宽度变化都会暂停或释放更新。
 
@@ -232,12 +232,12 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ### 5.9 Astro Pure Opening Media 投影
 
-| 项目     | 值                                                                                                                                                                                                                         |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 台账 ID  | `PURE-OPENING-MEDIA`                                                                                                                                                                                                        |
-| 页面     | [`https://cworld0.com/blog/vscode-vim`](https://cworld0.com/blog/vscode-vim)；核验日期 2026-09-03                                                                                                                           |
-| 源码     | [`Hero.astro`](https://raw.githubusercontent.com/cworld1/astro-theme-pure/main/packages/pure/components/pages/Hero.astro)；上游仓库采用 Apache-2.0                                                                                       |
-| 实施     | 直接复用同源图片副本、`end-0 top-4`、`h-full max-w-[65ch] rounded-3xl opacity-60` 和 `blur(24px)`；本项目仅以 `data-*` 选择器替代全局 `id`、加入无障碍隐藏属性，并将原内联滚动阈值接入 ClientRouter 清理运行时 |
+| 项目    | 值                                                                                                                                                                                                             |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 台账 ID | `PURE-OPENING-MEDIA`                                                                                                                                                                                           |
+| 页面    | [`https://cworld0.com/blog/vscode-vim`](https://cworld0.com/blog/vscode-vim)；核验日期 2026-09-03                                                                                                              |
+| 源码    | [`Hero.astro`](https://raw.githubusercontent.com/cworld1/astro-theme-pure/main/packages/pure/components/pages/Hero.astro)；上游仓库采用 Apache-2.0                                                             |
+| 实施    | 直接复用同源图片副本、`end-0 top-4`、`h-full max-w-[65ch] rounded-3xl opacity-60` 和 `blur(24px)`；本项目仅以 `data-*` 选择器替代全局 `id`、加入无障碍隐藏属性，并将原内联滚动阈值接入 ClientRouter 清理运行时 |
 
 原站脚本在滚动达到视口高度的 1/9、2/9、3/9 后将副本透明度设为 `.45/.3/.15`；没有额外 mask、缩放或颜色滤镜，也不在同一次页面内回滚透明度。Blog、Trace、Saying 三类详情页统一使用该变体；旧 `blur` 仅保留为显式回退，不属于首版基线。
 
@@ -258,7 +258,7 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 ### 6.1 Phase 2 本地化核验
 
-2026-08-27 已下载并逐项复核原始 SHA-256；历史回归构建保留并核验下列本地路径，不再热链 `loli.net`。两张大 JPEG 仍低于 2 MiB 硬门槛，当前候选继续保留它们作为历史回归/回滚夹具，资源门禁会提示推荐尺寸警告；它们不属于当前 Home 媒体入口。
+2026-08-27 已下载并逐项复核原始 SHA-256。历史参考图存放在 `public/images/largeskull/`，由 Phase 2 检查原始字节与哈希；当前 Home 使用下方登记的用户图库。
 
 | 顺序 | 本地路径                                |    字节数 | SHA-256                                                            |
 | ---: | --------------------------------------- | --------: | ------------------------------------------------------------------ |
@@ -275,69 +275,53 @@ George 当前定制脚本未发现可锁定的公开源码仓库，因此以 202
 
 用户已确认将 `E:\UserData\Desktop\blog_image` 中的全部 54 张图片投入当前本地候选，并在 owner 工作单中确认当前候选的媒体公开范围。原图统一转为 WebP（保持原始构图，宽度上限 1920px）并写入 `public/images/home-media/`；因此生产页面不再依赖桌面路径。图中第三方角色/Logo/水印的来源证据仍应随 owner 记录留档。三组资源池在 `src/data/home-media.ts` 中保持独立：
 
-| 资源池 | 数量 | 当前配置 |
-| ------ | ---: | -------- |
-| `heroSlides` | 6 | `thumb-1920-1381117` → `43935854_p0_master1200` → `thumb-1920-949729` → `thumb-1920-725406` → `thumb-1920-986446` → `thumb-1920-556375` |
-| `sayingDecorativeImages` | 34 | 角色/插画/图形类图片，包含用户保留的 Logo、水印和文字 |
-| `traceFallbackImages` | 20 | 环境/风景类图片，按 Trace 内容 ID 稳定哈希选择 |
+| 资源池                   | 登记数量 | 来源素材与用途                                                                                                                          |
+| ------------------------ | -------: | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `heroSlides`             |        6 | `thumb-1920-1381117` → `43935854_p0_master1200` → `thumb-1920-949729` → `thumb-1920-725406` → `thumb-1920-986446` → `thumb-1920-556375` |
+| `sayingDecorativeImages` |       34 | 角色/插画/图形类图片，包含用户保留的 Logo、水印和文字                                                                                   |
+| `traceFallbackImages`    |       20 | 环境/风景类图片，用于无封面 Trace；当前分配契约见 [架构说明](./ARCHITECTURE.md#卡片与媒体)                                              |
 
-Saying 与 Trace 两个清单的并集恰好覆盖 54 个源文件且各自不重复；Hero 允许复用其中六张。旧 `public/images/largeskull/hero-*` 文件及其 SHA 锁仍保留，仅用于历史回归和回滚，不再作为当前 Home 媒体入口。
+Saying 与 Trace 两个清单的并集恰好覆盖 54 个源文件且各自不重复；Hero 允许复用其中六张。历史参考图与 SHA 锁保存在 `public/images/largeskull/`，供来源核验使用。
 
-#### 6.1.2 斜边方向参考与裁切人工审核
+#### 6.1.2 历史素材斜边参考
 
-本轮不再按卡片索引奇偶交替 `is-even`。`src/data/home-media.ts` 的
-`cardCutSideByFilename` 以文件名为键，为每张本地素材固定 `left` 或 `right`：
+以下保存 2026-08-30 素材审阅时的方向依据与文件清单。`cardCutSideByFilename` 以文件名为键记录 `left` 或 `right`：
 
 - `right`：桌面卡片图片留在左侧，右上角斜切；手机卡片右下角斜切。
 - `left`：桌面卡片图片移到右侧，左下角斜切；手机卡片左下角斜切。
 
 方向依据主体位置、文字/Logo 是否需要保留、视觉动线以及被切角落的信息密度逐张判断，
-不是为了凑数量或保持交替。当前 54 张的固定清单如下（`L`/`R` 与预览文件名一致）：
+以下 54 张为该批审阅清单（`L`/`R` 与历史预览文件名一致）：
 
-| 方向 | 文件名 |
-| ---- | ------ |
-| L | `thumb-1920-1100118`、`thumb-1920-1305986`、`thumb-1920-1348996`、`thumb-1920-206280`、`thumb-1920-25430`、`thumb-1920-330278`、`thumb-1920-411820`、`thumb-1920-556375`、`thumb-1920-582756`、`thumb-1920-655990`、`thumb-1920-689823`、`thumb-1920-695454`、`thumb-1920-704042`、`thumb-1920-705101`、`thumb-1920-710137`、`thumb-1920-719184`、`thumb-1920-723809`、`thumb-1920-725406`、`thumb-1920-769914`、`thumb-1920-806818`、`thumb-1920-83606`、`thumb-1920-893435`、`thumb-1920-919958`、`thumb-1920-920085`、`thumb-1920-939173`、`thumb-1920-949729`、`thumb-1920-986446` |
-| R | `13534647_p0_master1200`、`43935854_p0_master1200`、`85970602_p0_master1200`、`riki32-naruto-7203819`、`thumb-1920-1083849`、`thumb-1920-1110448`、`thumb-1920-1199807`、`thumb-1920-1377699`、`thumb-1920-1381117`、`thumb-1920-432644`、`thumb-1920-444982`、`thumb-1920-476288`、`thumb-1920-484717`、`thumb-1920-568874`、`thumb-1920-608170`、`thumb-1920-655989`、`thumb-1920-672421`、`thumb-1920-704341`、`thumb-1920-704565`、`thumb-1920-705691`、`thumb-1920-729590`、`thumb-1920-76071`、`thumb-1920-888035`、`thumb-1920-905838`、`thumb-1920-916541`、`thumb-1920-919724`、`thumb-1920-934905` |
+| 方向 | 文件名                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| L    | `thumb-1920-1100118`、`thumb-1920-1305986`、`thumb-1920-1348996`、`thumb-1920-206280`、`thumb-1920-25430`、`thumb-1920-330278`、`thumb-1920-411820`、`thumb-1920-556375`、`thumb-1920-582756`、`thumb-1920-655990`、`thumb-1920-689823`、`thumb-1920-695454`、`thumb-1920-704042`、`thumb-1920-705101`、`thumb-1920-710137`、`thumb-1920-719184`、`thumb-1920-723809`、`thumb-1920-725406`、`thumb-1920-769914`、`thumb-1920-806818`、`thumb-1920-83606`、`thumb-1920-893435`、`thumb-1920-919958`、`thumb-1920-920085`、`thumb-1920-939173`、`thumb-1920-949729`、`thumb-1920-986446`                       |
+| R    | `13534647_p0_master1200`、`43935854_p0_master1200`、`85970602_p0_master1200`、`riki32-naruto-7203819`、`thumb-1920-1083849`、`thumb-1920-1110448`、`thumb-1920-1199807`、`thumb-1920-1377699`、`thumb-1920-1381117`、`thumb-1920-432644`、`thumb-1920-444982`、`thumb-1920-476288`、`thumb-1920-484717`、`thumb-1920-568874`、`thumb-1920-608170`、`thumb-1920-655989`、`thumb-1920-672421`、`thumb-1920-704341`、`thumb-1920-704565`、`thumb-1920-705691`、`thumb-1920-729590`、`thumb-1920-76071`、`thumb-1920-888035`、`thumb-1920-905838`、`thumb-1920-916541`、`thumb-1920-919724`、`thumb-1920-934905` |
 
 相同文件无论出现在 Hero 复用、Saying 随机卡片还是 Trace 无图回退卡片中，都沿用同一条
 **装饰斜边**参考；Hero 本身仍是完整背景，不应用斜边卡片规则。桌面/手机四组历史预览见
 `artifacts/home-media-card-previews/09`–`12`。
 
-2026-08-31 起，图片源内容的左右裁切不再由这张斜边表推断。原因是卡片内部的
-`object-fit: cover` 会根据卡片比例裁掉源图内容；例如左侧人物的宽图在方形 Trace 卡片中使用居中裁切时，人物可能先于斜边被裁掉。新增本地统一裁剪工作台
-`/tools/card-crop-review`（实现见 `src/components/tools/CardCropEditor.astro` 与
-`src/scripts/card-crop-editor.ts`）：
-
-- 每个唯一文件只出现一次，即使它同时被 Saying、Trace 或 Hero 复用；
-- 提供“斜边在左/斜边在右”两个与正式 LargeSkull 媒体框同步的框，斜边方向与图片焦点分离；导出里的 640×448 仅是稳定的参考坐标；
-- 图片可在框下拖动、滚轮/滑杆缩放，并记录 `cover/contain` 适配方式；
-- 可确认一个框、确认两个框都可以，或明确标记两个框都不合适；
-- 草稿保存在浏览器并可导出/导入，确认前不会改变正式页面。
-
-确认后的 JSON 用 `scripts/apply-card-crops.mjs` 校验源图、计算标准化 crop rectangle，写入
-`src/data/card-crop-selections.generated.ts`。`MediaCard` 通过 `ResolvedCardImage.crop`
-读取已应用记录，没有记录时继续使用旧的文件名斜边和安全回退。完整操作说明见
-`docs/CARD_CROP_REVIEW.md`。工作台源代码作为内部开发工具随候选保留，但不等同于访问控制；
-当前候选不提交 `card-preview-*` 文章、截图或其他预览产物。
+2026-08-31 引入独立焦点与缩放审阅，原始斜边表继续作为来源记录。当前操作和生产应用见 [媒体工作台](./MEDIA_WORKBENCH.md)，历史分配说明见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
 
 ### 6.2 Phase 3 根路径入口媒体本地化核验
 
 入口媒体来自 `HIST-ENTRANCE` 的固定历史快照（`E:\code\homepage-snapshots\2026-08-27-pre-blog-migration`），在 2026-08-27 复制至 `public/media/` 后逐项复核。生产根路径仅引用下列本地资源；不保留视频、海报或 Typed.js 的运行时热链。
 
-| 本地路径                                 |  字节数 | SHA-256                                                            |
-| ---------------------------------------- | ------: | ------------------------------------------------------------------ |
-| `public/media/entrance-loop-waterfall.webm`        | 994,319 | `ff6488f821cb87d4cbd77770701d8895eba61d8d6f23f52f3ee8709da11f3598` |
-| `public/media/entrance-loop-waterfall.mp4`         | 3,399,550 | `991e7e350af89c3550f206411a1be46a56042badf05e60ac40b2da5e5c1d59c7` |
-| `public/media/entrance-loop-waterfall-mobile.webm` | 409,629 | `a0d777e8446c1b3ff9e5a0ff969de5b11a91596d8b46bc46f8e2f59995b3fae2` |
-| `public/media/entrance-loop-waterfall-mobile.mp4`  | 1,318,413 | `706182ed35e8ad6064aeabb2d9e3c3dceffc68fc9b15a8014ae4b29df770dec6` |
-| `public/media/entrance-waterfall-poster.webp`      | 209,276 | `39d7ee3b42f3fb48d4d546973418bf564061c67a9549e6a98b738494febfd2a4` |
-| `public/media/entrance-waterfall-poster-mobile.webp` | 49,362 | `f946e566bfd85df014f7f8dc6a202d9f9832fb1bc7a734109cb6780e2ceafabf` |
+| 本地路径                                             |    字节数 | SHA-256                                                            |
+| ---------------------------------------------------- | --------: | ------------------------------------------------------------------ |
+| `public/media/entrance-loop-waterfall.webm`          |   994,319 | `ff6488f821cb87d4cbd77770701d8895eba61d8d6f23f52f3ee8709da11f3598` |
+| `public/media/entrance-loop-waterfall.mp4`           | 3,399,550 | `991e7e350af89c3550f206411a1be46a56042badf05e60ac40b2da5e5c1d59c7` |
+| `public/media/entrance-loop-waterfall-mobile.webm`   |   409,629 | `a0d777e8446c1b3ff9e5a0ff969de5b11a91596d8b46bc46f8e2f59995b3fae2` |
+| `public/media/entrance-loop-waterfall-mobile.mp4`    | 1,318,413 | `706182ed35e8ad6064aeabb2d9e3c3dceffc68fc9b15a8014ae4b29df770dec6` |
+| `public/media/entrance-waterfall-poster.webp`        |   209,276 | `39d7ee3b42f3fb48d4d546973418bf564061c67a9549e6a98b738494febfd2a4` |
+| `public/media/entrance-waterfall-poster-mobile.webp` |    49,362 | `f946e566bfd85df014f7f8dc6a202d9f9832fb1bc7a734109cb6780e2ceafabf` |
 
 旧的 `entrance-loop*` / `entrance-poster.webp` 文件已从本候选删除，仅作为历史快照信息记录，不应与本候选的 waterfall 媒体混用；原件保存在发布隔离区，可按快照/bundle 恢复。上述新媒体的 owner 决定已记录，来源/许可证据仍按 `THIRD_PARTY_NOTICES.md` 和 owner 记录留档。
 
 实现文件为 `src/data/entrance.ts`、`src/components/entrance/EntranceScene.astro`、`src/components/entrance/EntranceTypedText.astro` 和 `src/layouts/EntranceLayout.astro`。`HIST-ENTRANCE` 的场景、视频降级、页面可见性与键盘进入逻辑直接复用；必要差异为删除 `sessionStorage` 跳过、用 `location.replace()` 进入 `/home`、补充 `AbortController` 清理与缓存视频 `play()` 成功后的就绪状态。`XYX-TYPING` 的锁定文字参数以本地 `typed.js@2.1.0` 实现，版本和完整性见 §5.2。
 
-音乐首版暂使用参考站的公共网易云歌单 `12812783625`。`src/data/music.ts` 集中声明服务端、歌单 ID、Meting API 模板及播放参数；`MusicPlayer` 只负责持久化壳层、无障碍状态和详情页紧凑模式，APlayer/MetingJS 负责按需取得音频、封面与歌词。后续切换到第二个参考站歌单时，只需把 ID 改为 `8152976493`。
+音乐首版参考公共网易云歌单 `12812783625`，另一个参考歌单为 `8152976493`；该来源关系归属 `XYX-MUSIC-UI` 与 `HIST-MUSIC`。当前服务与播放行为由 [配置](../src/data/music.ts) 和 [架构](./ARCHITECTURE.md#客户端生命周期与外部资源) 维护。
 
 `src/components/reading/ArticleImageZoom.astro` 保留 `BASE-PURE` 的图片放大契约和样式，但以锁定的 `BASE-MEDIUM-ZOOM` 本地 `dist/pure` 入口替换其运行时 CDN。该库本身不提供 `destroy()`，所以本项目只在每个浏览器文档建立一个共享实例；当前文章在进入时 `attach()`，在 `astro:before-preparation`、`astro:before-swap` 与元素断开时关闭并 `detach()`，避免 ClientRouter 跨页留下遮罩或累积全局监听器。
 
@@ -367,11 +351,13 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 
 页面 profile 为：`standard`（PKU + 点击粒子）、`reading`（全关）、`links`（花瓣 + 点击粒子）、`about`（PKU + 点击粒子 + TNXG 小人）。所有未单列的普通页面使用 `standard`。`prefers-reduced-motion`、页面隐藏、离开、ClientRouter 切换和设备条件变化都会释放效果实例；恢复条件满足后按当前 profile 重建。
 
-## 7. 完整模块分配闭环
+## 7. 首次接入的模块来源对照
+
+下表保存初次接入时的来源与必要适配，具体版本沿用前述来源 ID；现行行为见架构说明。
 
 | 最终模块                                      | 原网站/上游直接部分                                             | 历史项目直接部分                      | 本项目自行开发或略调                                          |
 | --------------------------------------------- | --------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------- |
-| Header、Footer、主题、文章阅读、TOC、搜索外壳 | `BASE-ARTHALS` / `BASE-PURE` / `BASE-FOOTER`                    | 无                                    | Astro 6 类型、目标配置、导航顺序、外链安全属性和个人信息略调   |
+| Header、Footer、主题、文章阅读、TOC、搜索外壳 | `BASE-ARTHALS` / `BASE-PURE` / `BASE-FOOTER`                    | 无                                    | Astro 6 类型、目标配置、导航顺序、外链安全属性和个人信息略调  |
 | Blog 列表/详情/无图卡片                       | `BASE-ARTHALS`                                                  | 无                                    | schema 兼容、候选允许空集合；视觉不重做                       |
 | Blog 文章图片放大                             | `BASE-PURE` 交互/样式契约，`BASE-MEDIUM-ZOOM` 本地 pure runtime | 无                                    | 每文 attach/detach、导航前关闭、无 CDN                        |
 | Blog 版权区与二维码                           | `BASE-PURE` 版权区 UI，`BASE-QRCODEJS` 本地 runtime             | 无                                    | custom element 生命周期、同源延迟加载、无 CDN                 |
@@ -381,7 +367,7 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 | 最近 Blog/Traces 双栏                         | 无                                                              | 历史 Home 查询和布局                  | 各取 3 条、Blog 左/Trace 右及响应式略调                       |
 | Blog Timeline                                 | `INNEI-IDEA` 只供思路                                           | `HIST-TIMELINE`                       | 改为 Blog-only，无独立路由                                    |
 | `/` 视频入口                                  | `XYX-TYPING` 动画参数                                           | `HIST-ENTRANCE`                       | 每次访问播放、replace 导航、noindex/canonical、文案和本地媒体 |
-| 全局音乐                                      | `XYX-MUSIC-UI` 可分离视觉、参考站 APlayer/MetingJS 契约          | `HIST-MUSIC` 生命周期                  | `#nav-music` 视觉壳、公共网易云歌单、持久单例、详情紧凑控制   |
+| 全局音乐                                      | `XYX-MUSIC-UI` 可分离视觉、参考站 APlayer/MetingJS 契约         | `HIST-MUSIC` 生命周期                 | `#nav-music` 视觉壳、公共网易云歌单、持久单例、详情紧凑控制   |
 | Links 花瓣                                    | `GEORGE-SAKURA` 原算法                                          | `HIST-GEORGE-HOST` 生命周期设计参考   | 本地 iframe 宿主、Links-only、DPR/reduced-motion 适配         |
 | 点击粒子                                      | `GEORGE-CLICK` 原算法与依赖                                     | `HIST-GEORGE-HOST` 过滤/生命周期参考  | 本地 iframe 宿主、空白区域过滤、profile 和销毁                |
 | PKU 全局背景                                  | `PKU-*` 原三层算法                                              | `HIST-BACKDROP` 生命周期设计参考      | `VisualEffectsHost`、隔离执行、补第一层和 profile 映射        |
@@ -392,40 +378,15 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 | 图片顺序/随机/哈希回退                        | 无                                                              | Saying 随机逻辑可复用                 | 自行开发可测试纯函数                                          |
 | CI、资源门禁和 Pages                          | `BASE-PAGES` 官方方案                                           | 无                                    | 固定 Node/Bun、frozen lock、手动部署和无 schedule             |
 
-## 8. 实现阶段提取门禁
+## 图标制作源文件
 
-每个台账条目进入开发前必须依次完成：
+`FAVICON-MASTER`：2026-10-06 的本地图标制作素材记录，来源目录为 `E:\code\release-prep-quarantine-20260902-021422\.tmp-favicon-c-preview`。下表保留母版与底图的文件身份和当次核验哈希，原始素材按该来源位置追溯。
 
-1. 校验来源 commit、URL 或历史快照身份没有变化。
-2. 只提取该条目需要的最小文件或代码段。
-3. 非例外的外部脚本和素材复制到本地；不保留未审查的生产热链。
-4. 对本地副本记录相对路径、SHA-256 和来源台账 ID。
-5. 在代码文件头或邻近注释记录来源 URL、commit/版本、复用类型和必要差异。
-6. 运行该模块测试、页面生命周期测试、外部请求扫描和视觉对照。
-7. 来源变化时先更新本台账，再更新代码。
+| 文件                      | 原文件名                                    | 迁入时 SHA-256                                                     |
+| ------------------------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| `master.png`              | `outline-edge-brown-union-conservative.png` | `7cc7e7854b22a7ea1f05a1b445af0244647f3682e617b66c66d618413d4099b0` |
+| `base-before-outline.png` | `feet-restored-v3.png`                      | `ba2f1d67de77f3d625947f9797652ac06fe5f171226079f987358baf24dc3e8d` |
 
-不得从网页源码复制与目标效果无关的分析脚本、广告、评论、统计、API 配置、密钥或用户数据。
+母版与底图均为 1024×1024 透明 PNG，当次制作使用描边处理、Lanczos3 缩放及 ICO 编码；正式图标位置见 [开发指南](./DEVELOPMENT.md#图标)，当次像素核验结论见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。
 
-## 9. 当前已落地与尚未提取
-
-已经实际落地：
-
-- `BASE-ARTHALS` Fork、远端和冻结标签。
-- `BASE-PURE` / `BASE-ASTRO` 目标依赖和 lockfile。
-- `BASE-SIGNATURE` 本地组件。
-- `BASE-PAGES` CI 与手动部署工作流。
-- 历史项目的只读恢复快照。
-- 所有外部来源的版本、URL 或视觉校准边界。
-- Phase 1 的三类内容模型、静态路由、锁定六项主导航和测试内容。
-- Phase 2 的 LargeSkull 锁定图、Hero/波浪、统一卡片策略、随机 Saying、双栏与 Blog Timeline。
-- Phase 3 的可重复根入口、本地视频/Typed.js、持久公共网易云音乐壳、详情紧凑模式、局部生命周期清理、本地二维码与图片放大运行时。
-- Phase 3 的生产构建、三套静态契约检查、实际 Chrome 点击回归和同源网络扫描。
-- Phase 4 的 PKU 三层、George 点击粒子、Links 花瓣、本地化原始 vendor 脚本和统一 `VisualEffectsHost` 生命周期。
-- Phase 4 的 SHA/产物静态核验、profile 策略测试、生产预览中的桌面/移动/减少动画/多次 ClientRouter 路由回归及同源网络扫描。
-- Phase 5 的 SkyWT 居住地完整历史模块（本地资源、MapLibre 惰性运行时、Globe/定位/地图回退和 ClientRouter 清理）。
-- Phase 5 的 HanLife 53 周 GitHub 热力图（公开 HTML 解析、6 小时缓存和非声明性中性骨架回退）。
-- Phase 5 的本地 TNXG 小人素材、当前滚动公式、About-only 响应式与生命周期外壳；About Saying 入口已随 Phase 2 的 Saying 路由落地。
-- Phase 5 的静态 SHA/产物检查和专业模块纯函数回归；浏览器回归结果随本阶段提交记录。
-- Phase 6 的 `BASE-FOOTER` 本地安全适配、noindex/sitemap/RSS 修复、生产产物审计、严格发布门禁和移动端目录浏览器回归。
-
-最终个人位置、头像、文案和真实内容的本轮决定已按 owner 工作单落地（93 个历史内容不恢复）；未来新增内容仍按发布清单逐项确认。在严格发布门禁通过且用户另行确认上线前，不得启用自动部署或将测试产物发布到 Pages。
+来源提取、注释与验证要求统一见 [来源维护](./DEVELOPMENT.md#故障处理与来源维护)。首版阶段进展见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md#首版实施进展记录)。

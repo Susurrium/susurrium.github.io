@@ -3,7 +3,7 @@
 This file records assets that are not covered by the repository's Apache-2.0
 code license. It is an audit aid, not a substitute for retaining the underlying
 license or permission evidence. The owner confirmation for the current
-candidate is recorded in `docs/OWNER_CONFIRMATION_RECORD.zh-CN.md`; a future
+candidate is recorded in the [2026-09-02 owner record](./archive/OWNER_CONFIRMATION_RECORD.zh-CN.md); a future
 asset marked `PENDING` must not be deployed until its rights are confirmed.
 
 ## Fonts
@@ -39,7 +39,7 @@ asset marked `PENDING` must not be deployed until its rights are confirmed.
 ## External services and links
 
 The candidate keeps explicit runtime exceptions documented in
-`docs/SOURCE_LEDGER.md` (CARTO/OSM maps, Waline, public music, Umami,
+[source ledger](./SOURCE_LEDGER.md) (CARTO/OSM maps, Waline, public music, Umami,
 CodeTime, and manually reviewed friend avatars). External links are content,
 not a license grant. `public/links.json` is a manually reviewed snapshot and
 must not be mutated automatically during deployment.
