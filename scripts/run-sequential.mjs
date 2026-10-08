@@ -18,6 +18,7 @@ const sequences = {
   build: buildSequence,
   ci: [
     [bun, ['run', 'preflight']],
+    [node, ['scripts/check-docs.mjs']],
     [bun, ['run', 'lint:check']],
     // Do not execute `bun run build` here. On Windows that adds a nested Bun
     // launcher above this synchronous runner and can intermittently leave the

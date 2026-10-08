@@ -31,7 +31,7 @@
 最喜欢的游戏的~~那个夏天的~~ow。
 ```
 
-实现文件 [`src/data/profile.ts`](../src/data/profile.ts) 保留所有可见文字，并将
+实现文件 [`src/data/profile.ts`](../../src/data/profile.ts) 保留所有可见文字，并将
 `~~...~~` 转成 `<del>...</del>`。Home 的
 `src/components/home/ProfileIntro.astro` 和 `/about` 页面都从这一个数据源渲染，
 所以不存在两份简介各自漂移的问题。旧短版和历史长版均不恢复。

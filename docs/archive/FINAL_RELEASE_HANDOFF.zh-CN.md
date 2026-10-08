@@ -1,6 +1,6 @@
 # 最终内容替换与 GitHub Pages 发布交接
 
-> 适用仓库：`Susurrium/susurrium.github.io`｜当前内容基线为 1 篇 Blog、5 篇 Saying，Trace 可为空。2026-09-26 收尾见 [发布候选记录](./RELEASE_20260926.zh-CN.md)；实际发布版本以成功的 Pages 部署记录为准。站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)。
+> 历史交接记录：适用仓库为 `Susurrium/susurrium.github.io`，2026-09-26 候选包含 1 篇 Blog、5 篇 Saying，Trace 为空。收尾见 [发布候选记录](./RELEASE_20260926.zh-CN.md)。现行内容维护、媒体约束和发布流程统一见 [开发文档](../DEVELOPMENT.md)；站长已确认的资料和边界见 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)。
 
 这份清单沿用现有站点结构。历史 93 个内容不恢复的决定仍保留；本次改进已有代码和当前内容的渲染，不恢复历史快照。具体技术变更与验证见 [项目加固记录](./PROJECT_HARDENING.zh-CN.md)。后续内容按用户明确的编辑与发布要求进入验证流程。
 
@@ -9,7 +9,7 @@
 | 类别      | 需要的最终资料                                                             | 唯一入口                                                                                                            |
 | --------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 站点身份  | 站名、作者名、简介、语言、Logo、favicon、社交链接、备案/页脚和友链申请资料 | `src/site.config.ts`                                                                                                |
-| About 文案 | 站长确认的四段简介（含删除线语义）                                         | `src/data/profile.ts`（决定记录见 `docs/OWNER_CONFIRMATION_RECORD.zh-CN.md`）                                    |
+| About 文案 | 站长确认的四段简介（含删除线语义）                                         | `src/data/profile.ts`（决定记录见 [站长确认记录](./OWNER_CONFIRMATION_RECORD.zh-CN.md)）                                    |
 | 入口页    | 视频、poster、Typed 文案                                                   | `public/media/` 与 `src/data/entrance.ts`                                                                           |
 | Home 图库 | 六张 Hero 图、Saying 装饰图、无图 Trace 的回退图                           | `public/images/home-media/` 与 `src/data/home-media.ts`（旧锁定图留在 `public/images/largeskull/` 供回归/回滚）       |
 | 音乐      | 公共网易云歌单、APlayer/MetingJS 播放器参数与临时歌单 ID                    | `src/data/music.ts` 与 `src/components/MusicPlayer.astro`                                                          |
@@ -19,7 +19,7 @@
 
 `src/site.config.ts` 已切换到当前站点身份（`Susurrium`）。后续若要更换最终身份资料，不要只改首页标题：配置中的 `theme.title`、`author`、`description`、`logo`、`footer`、`integ.links.applyTip` 需要一起更新，并重新运行构建与严格门禁。
 
-Home 图库已按当前生产基线清单完成一次本地化：源目录为 `E:\UserData\Desktop\blog_image`，54 张图片均已转为 `public/images/home-media/*.webp` 并登记在 `src/data/home-media.ts`。当前 Hero 顺序为 `1381117 → 43935854 → 949729 → 725406 → 986446 → 556375`；Saying 使用 34 张、Trace 无图回退使用 20 张。站长已在 owner 工作单确认当前媒体范围；来源/许可证据仍按 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) 留档。
+Home 图库已按交接时的生产基线清单完成一次本地化：源目录为 `E:\UserData\Desktop\blog_image`，54 张图片均已转为 `public/images/home-media/*.webp` 并登记在 `src/data/home-media.ts`。当时 Hero 顺序为 `1381117 → 43935854 → 949729 → 725406 → 986446 → 556375`；Saying 使用 34 张、Trace 无图回退使用 20 张。站长已在 owner 工作单确认该媒体范围；来源/许可证据仍按 [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md) 留档。
 
 ## 2. 内容与卡片规则
 
@@ -29,9 +29,9 @@ Home 图库已按当前生产基线清单完成一次本地化：源目录为 `E
 | ------ | ---------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Blog   | `src/content/blog/`    | `title`、`description`、`publishDate` | 默认 `text` 无图文字卡；只有需要时再加 `heroImage`。只进入 RSS、Blog 标签与 Blog 时间线。                                                  |
 | Trace  | `src/content/traces/`  | `title`、`publishDate`                | 原始 `cover` 优先，设置时同时写 `coverAlt`；备用图由归档统一分配并在 Home/标签/详情复用。需要永久固定图片的条目应显式提供 cover。 |
-| Saying | `src/content/sayings/` | `text`                              | 可选 `originalText`、`author`、`source`；不记录日期、不设置 `sourceUrl`。不进主导航；Home 随机展示，About 提供完整归档入口。卡片只使用 Media 装饰图，不把图片误当作短句内容题图。 |
+| Saying | `src/content/sayings/` | `text`                              | 可选 `originalText`、`author`、`source`、HTTP/HTTPS `sourceUrl` 和 `tags`；不记录日期。不进主导航；Home 随机展示，About 提供完整归档入口。卡片使用 Media 装饰图。 |
 
-每个 collection 的完整 schema 都在 `src/content.config.ts`。保留 `draft: true` 可在本地预览而不生成最终路由；发布前确认不再把需要公开的内容留在草稿状态。
+每个 collection 的完整 schema 都在 `src/content.config.ts`。普通列表和详情页在开发服务器与生产构建中均过滤 `draft: true`；需要通过这些页面预览时，应将对应条目设为 `draft: false`，并在提交前核对发布意图。内容层的 preview 模式需要调用方显式启用。
 
 题图、正文图片、头像、音频和封面默认应放入仓库内的 `public/` 或由 Astro 静态资源管线处理。最终内容中的远程正文图片、音频、视频、iframe、脚本和样式必须逐项检查：严格门禁会列出精确 URL 及出现页面，不能用“整域名白名单”一并放行。当前已确认并保留的运行时例外是 CARTO 地图样式、公共网易云 Meting 播放器脚本/API、生产 Umami 脚本、CodeTime 徽章 endpoint、启用的 Waline 服务、构建期 GitHub 贡献数据，以及 `public/links.json` 中现有友链头像；普通正文超链接不属于媒体资源扫描，已确认的 CARTO 地图样式也不受文章媒体规则限制。
 
@@ -81,4 +81,4 @@ bun run release:gate
 4. workflow 保持手动触发，仅允许 main；上传前必须完成 `ci`、严格 `release:gate` 和三项浏览器回归，检查后上传同一份产物。合并 main 后，由站长或其明确授权的执行者手动运行 `Deploy to GitHub Pages`。
 5. 在真实 `https://susurrium.github.io/` 验证入口重放、`/home`、文章详情、深层路由、404、RSS、sitemap、canonical、音乐点击播放和移动端效果。
 
-发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./archive/IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](./DEVELOPMENT.md)、[准备状态](./archive/PREPARATION_STATUS.md)、[视觉基线](./VISUAL_BASELINE.md) 与 [来源台账](./SOURCE_LEDGER.md)。
+发布前的实现依据、来源和已完成的回归证据分别见 [完整实施方案](./IMPLEMENTATION_PLAN.zh-CN.md)、[开发流程](../DEVELOPMENT.md)、[准备状态](./PREPARATION_STATUS.md)、[历史视觉采集](./REFERENCE_HISTORY_20261008.md#2026-09-02-视觉采集) 与 [来源台账](../SOURCE_LEDGER.md)。

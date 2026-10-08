@@ -218,7 +218,7 @@ blob `c608280867e605c138b3370cf1bf882f526d254e`（SHA-256：`18acdde27e25b4b47b3
 
 ### 7.4 站长决定已记录
 
-上述问题已由站长在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](../OWNER_CONFIRMATION_RECORD.zh-CN.md)
+上述问题已由站长在 [OWNER_CONFIRMATION_RECORD.zh-CN.md](./OWNER_CONFIRMATION_RECORD.zh-CN.md)
 和外部工作单中逐项回答：About=`KEEP_CUSTOM`；学校、院系、current、`2025-09`=`KEEP`；
 双学位、旧教育、助教经历及其链接=`REJECT`；93 个历史内容=`ALL_REJECT`；媒体/链接/字体
 范围=`OWNER_CONFIRMED`；Residence=`CITY`。后续若新增或改变公开资料，必须建立新的逐项

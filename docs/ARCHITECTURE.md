@@ -1,6 +1,6 @@
-# 统一内容数据层实施规范
+# 架构说明
 
-本文描述 Blog、Trace、Saying 统一数据层的当前实现，包括 2026-09-08 项目加固后的发布策略、路径、图片、RSS 和构建期查询边界。后续新增内容类型或页面时，应复用这些契约，并让文档与代码同步更新。
+本文解释内容、页面、媒体和客户端交互的设计契约。操作与检查方法见 [开发指南](./DEVELOPMENT.md)，作者字段用法见 [内容指南](./CONTENT.md)。修改实现时同步核对设计要求、当前代码与行为验证，具体差异按已明确需求处理。
 
 ## 1. 目标与范围
 
@@ -27,7 +27,7 @@
 | Trace    | `trace`  | `/traces/*`  | 发布时间倒序                                 |
 | Saying   | `saying` | `/sayings/*` | 稳定 `id` 正序                               |
 
-已纳入统一层的页面包括 Home、Blog 列表、标签页、归档页、Trace 列表、Saying 列表、三类详情页和 RSS。`docs` collection 仍是独立内容类型，不在本次 Blog/Trace/Saying 统一范围内。
+已纳入统一层的页面包括 Home、Blog 列表、标签页、归档页、Trace 列表、Saying 列表、三类详情页和 RSS。`docs` collection 独立定义在 schema 中，对应当前尚未提供的 `src/content/docs/`；根目录 `docs/` 保存工程文档。
 
 ### 1.3 明确不做的事情
 
@@ -58,18 +58,14 @@
 
 统一层采用单向数据流：
 
-```text
-Astro collections
-       ↓ 仅 catalog.ts 读取
-Source Adapter（adapters.ts）
-       ↓
-ContentCatalog / ContentRecord（内容语义）
-       ↓ query + page builder
-PageData → sections → groups → PageItem（页面组合）
-       ↓ projection
-StandardCardData / MediaCardData（视觉输入）
-       ↓ render boundary 必要时 hydrate
-现有视觉组件与详情布局
+```mermaid
+flowchart TD
+  collections["Astro collections"] -->|"catalog.ts 读取"| adapter["Source Adapter：adapters.ts"]
+  adapter --> catalog["ContentCatalog / ContentRecord"]
+  catalog -->|"query + page builder"| page["PageData"]
+  page --> sections["sections"] --> groups["groups"] --> items["PageItem"]
+  items -->|"渲染边界 hydrate 与 projection"| cards["StandardCardData / MediaCardData"]
+  cards --> views["视觉组件与详情布局"]
 ```
 
 四层的职责必须保持分离：
@@ -91,23 +87,7 @@ StandardCardData / MediaCardData（视觉输入）
 type ContentRecord = BlogRecord | TraceRecord | SayingRecord
 ```
 
-所有记录共有以下字段：
-
-```ts
-interface ContentRecordBase {
-  key: string // `${kind}:${id}`，跨页面稳定
-  kind: 'blog' | 'trace' | 'saying'
-  id: string // collection id，同时用于详情 slug
-  href: string
-  title: string // 内容语义主标题；Saying 为 quote text
-  cardTitle: string // 卡片显示标题
-  description?: string
-  publishedAt?: Date
-  updatedAt?: Date
-  tags: readonly string[]
-  draft: boolean
-}
-```
+完整类型见 [types.ts](../src/lib/content-layer/types.ts)。公共记录以 `${kind}:${id}` 为跨页面稳定 key，`id` 对应 collection ID 与详情路径；`title` 表达内容主标题，`cardTitle` 表达卡片标题。日期允许缺省，以适应无日期的 Saying。标签与草稿状态在内容层统一处理。
 
 类型专属字段只放在对应的分支中：
 
@@ -121,17 +101,7 @@ interface ContentRecordBase {
 
 `loadContentCatalog()` 是所有公开内容查询的入口，默认 `mode: 'published'`，因此公共页面不会显示 draft。只有明确的 preview 调用才可以包含 draft。同一构建上下文按 `published/preview` 分别缓存目录，读取失败会清除对应缓存；这只优化构建，不改变内容结果。
 
-```ts
-interface ContentCatalog {
-  mode: 'published' | 'preview'
-  all: readonly ContentRecord[]
-  byKind: {
-    blog: readonly BlogRecord[]
-    trace: readonly TraceRecord[]
-    saying: readonly SayingRecord[]
-  }
-}
-```
+Catalog 保存 mode、全体记录和按 kind 分类的记录；结构定义见 [types.ts](../src/lib/content-layer/types.ts)，读取与缓存见 [catalog.ts](../src/lib/content-layer/catalog.ts)。
 
 `LoadedContentCatalog` 另外保存 `sources.byKind`，以及两张以 `${kind}:${id}` 为键的 Map：
 
@@ -161,34 +131,7 @@ Blog 的本地 `heroImage.src` 是 Astro `ImageMetadata`，不是整个 `heroIma
 
 页面可以给 section 和 group 起不同的业务名称，但不能改变外层结构：
 
-```ts
-interface PageData {
-  page: {
-    kind: PageKind
-    route: string
-  }
-  sections: readonly PageSection[]
-}
-
-interface PageSection {
-  key: string
-  meaning: string
-  title?: string
-  groups: readonly PageGroup[]
-}
-
-interface PageGroup {
-  key: string
-  meaning: string
-  items: readonly PageItem[]
-}
-
-interface PageItem {
-  key: string
-  contentKey: string
-  placement: CardPlacement
-}
-```
+`PageData.page` 保存页面类型与路由；`sections`、`groups` 各自保存稳定 key 与 meaning，表达当前页面的组织语义。每个 `PageItem` 只保存自身 key、contentKey 与 placement。完整类型和构造器分别见 [types.ts](../src/lib/content-layer/types.ts) 与 [page-data.ts](../src/lib/content-layer/page-data.ts)。
 
 `PageItem` 是页面树中的轻量引用。需要渲染时，`hydratePageItem()` 才在构建期边界回查 `ContentRecord`、必要的 raw Astro entry，并生成 `StandardCardData`；因此 `ResolvedPageItem`/`RenderablePageItem` 属于渲染输入，不属于 `PageData` 本体。
 
@@ -223,18 +166,7 @@ interface PageItem {
 
 如果 Blog、Trace、Saying 在某种页面中需要完全相同的视觉，则它们都先投影为同一个：
 
-```ts
-interface StandardCardData {
-  contentId: string
-  contentType: ContentKind
-  date?: Date
-  description?: string
-  footerText: string
-  href: string
-  image?: ContentImageInput
-  title: string
-}
-```
+`StandardCardData` 保存内容身份、标题、链接、页脚文字和可选的日期、摘要、图片。具体定义及投影见 [types.ts](../src/lib/content-layer/types.ts) 与 [card-data.ts](../src/lib/content-layer/card-data.ts)。
 
 然后由一个 `TextCard` 渲染（旧调用通过 `TextCardCompat` 兼容门面转入同一实现）。组件只认识这组稳定字段，不认识 Blog frontmatter、Trace schema 或 Saying schema。因此新增第四种内容类型时，只需新增适配器和 `toStandardCardData()` 的映射，不需要复制一份同样的卡片。Blog 需要阅读时间时，只有 `ContentCard` 在 render boundary 将该元信息交给同一文本卡片 renderer；这不是第二套视觉实现。
 
@@ -242,13 +174,13 @@ interface StandardCardData {
 
 视觉不同就保留不同的组件/适配器：
 
-```text
-BlogTextCardAdapter（Blog 的增强文本卡片）
-TraceCard → MediaCard（有内容图/回退图）
-SayingCard → MediaCard（装饰图与 Saying 署名）
-```
+| 适配组件              | 渲染组件    | 输入职责                   |
+| --------------------- | ----------- | -------------------------- |
+| `BlogTextCardAdapter` | `TextCard`  | 补充 Blog 阅读时间等元信息 |
+| `TraceCard`           | `MediaCard` | 内容图片或备用图           |
+| `SayingCard`          | `MediaCard` | 装饰图与 Saying 署名       |
 
-这不是重复数据层，而是不同的视觉策略。TraceCard 和 SayingCard 不再读取各自 frontmatter，只接收 `MediaCardData`；真正共用的是 `MediaCard` 视觉原语。
+TraceCard 和 SayingCard 接收 `MediaCardData`，共用 `MediaCard` 视觉原语；各自的 frontmatter 由内容层适配。
 
 ### 6.3 Blog 卡片的受控例外
 
@@ -281,14 +213,12 @@ Blog 的 `BlogTextCardAdapter` 仍接收原始 Blog entry，是因为它需要 A
 
 Blog、Trace、Saying 的主归档都使用同一套分页流程，但保留各自的页面外观和排序规则：
 
-```text
-站点配置 contentPagination.<kind>
-        ↓
-buildCollectionStaticPaths()
-        ↓ 先构造完整 PageData，再由 Astro paginate() 切页
-Page<PageItem>（data/currentPage/total/prev-next URL）
-        ↓
-各类型归档页的专属卡片布局 + 共享 Paginator
+```mermaid
+flowchart TD
+  config["contentPagination.kind"] --> builder["buildCollectionStaticPaths()"]
+  builder --> data["完整 PageData"]
+  data -->|"Astro paginate()"| page["Page&lt;PageItem&gt;：数据、页码、总数、前后页 URL"]
+  page --> archive["各类型归档布局与共享 Paginator"]
 ```
 
 - 分页器组件由 `astro-pure` 提供，站点只负责把 Astro 的 `page.url.prev/next` 转换成统一的 `← Previous` / `Next →` 按钮；类型差异只出现在无障碍标签中。
@@ -326,25 +256,24 @@ RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying �
 
 ## 8. 代码组织与新增内容类型流程
 
-当前统一层目录：
+统一层位于 `src/lib/content-layer/`：
 
-```text
-src/lib/content-layer/
-├── types.ts       # ContentRecord、PageData、卡片输入契约
-├── adapters.ts    # collection entry → ContentRecord
-├── catalog.ts     # 唯一 getCollection 边界、published/preview、source 回查
-├── queries.ts     # 纯排序、筛选策略
-├── page-data.ts   # PageData 树和卡片投影
-├── card-data.ts   # 视觉族 view model 和投影
-├── reading-data.ts # 详情页头/尾的标准数据投影
-├── reading-policy.ts # 页面级阅读能力开关和语义布局解析
-├── hydration.ts   # 渲染边界回挂 raw source
-├── policy.ts       # baseline/uniform/custom 能力和视觉策略
-├── registry.ts     # 内容类型、路由、能力和默认 profile 注册表
-├── tags.ts         # 按内容类型隔离的标签查询和静态路径
-├── pagination.ts    # 主归档/标签页的共享分页构造与 Paginator props
-└── index.ts       # 公共出口
-```
+| 文件                | 职责                                                    |
+| ------------------- | ------------------------------------------------------- |
+| `types.ts`          | ContentRecord、PageData、卡片输入契约                   |
+| `adapters.ts`       | 将 collection entry 转换为 ContentRecord                |
+| `catalog.ts`        | 唯一 getCollection 边界、published/preview、source 回查 |
+| `queries.ts`        | 纯排序和筛选策略                                        |
+| `page-data.ts`      | PageData 树和卡片投影                                   |
+| `card-data.ts`      | 视觉输入及其投影                                        |
+| `reading-data.ts`   | 详情页头、页尾的标准数据投影                            |
+| `reading-policy.ts` | 页面级阅读能力开关和语义布局解析                        |
+| `hydration.ts`      | 渲染边界回查原始内容                                    |
+| `policy.ts`         | baseline/uniform/custom 能力和视觉策略                  |
+| `registry.ts`       | 内容类型、路由、能力和默认 profile 注册表               |
+| `tags.ts`           | 按内容类型隔离的标签查询和静态路径                      |
+| `pagination.ts`     | 主归档、标签页的共享分页构造与 Paginator props          |
+| `index.ts`          | 公共出口                                                |
 
 新增内容类型时按以下顺序处理：
 
@@ -466,23 +395,7 @@ surface 是构建期功能策略，与卡片视觉选择分开：
 
 ## 9. 验收标准
 
-每次修改内容层或卡片契约都必须通过：
-
-```text
-bun run check
-bun run test:phase2
-bun run test:content-layer
-bun test test/content-hardening.test.ts
-bun run verify:phase1
-bun run verify:phase2
-bun run verify:phase3
-bun run test:phase4
-bun run verify:phase4
-bun run test:phase5
-bun run verify:phase5
-bun run verify:phase6
-bun run check:assets
-```
+修改内容层或卡片契约时，按 [验证指南](./DEVELOPMENT.md#验证) 执行内容策略、内容加固、相关阶段契约、构建与资源检查；发布时执行完整检查与浏览器回归。
 
 生产构建必须成功，并重点检查：
 
@@ -505,4 +418,64 @@ bun run check:assets
 - 不在 `PageData` 中保存 `CollectionEntry`、`Content` 组件或不可序列化的正文渲染对象。
 - 不以统一数据层为理由扩大视觉变更范围；数据正确性、HTML 语义和已授权的配置行为应正常修复并验证。
 
-这套边界的实际收益是：内容 schema 可以继续独立演进，页面组合可以表达不同含义，而同一视觉组件只实现一次；同时通过 source adapter、PageData 和 render boundary 把“内容是什么”“页面怎么组织”“视觉怎么显示”三个变化轴真正解耦。
+## 卡片与媒体
+
+归档桌面卡片只有“图片在左、斜边在右”和“图片在右、斜边在左”两种布局。已确认素材按可用方向拆成队列，从图片在左开始交替；短队列均匀重复，素材不会随位置翻转。图片身份、裁剪和方向一同保存于 assignment，Home 的随机选择只选择 Saying 身份。
+
+CardCropEditor 的正式预览复用 MediaCard／CardMediaFrame，编辑框读取实际媒体框比例，统一 object-fit、object-position、缩放和 transform-origin。Saying／Trace 的完整集合映射负责跨页面一致性；裁剪操作及 Home、手机场景边界见 [工作台](./MEDIA_WORKBENCH.md#场景边界)。
+
+Hero 使用独立 HeroMediaFrame，无卡片斜边；工作台等比缩放真实 Home 舞台，原图的编辑身份与响应式派生图片保持一致。固定媒体由一个滚动控制器计算可见高度，以 clip-path 连续裁剪，完全越界后隐藏；反向滚动不切换固定与流式定位。几何逻辑见 [hero-visibility.ts](../src/lib/home/hero-visibility.ts)。
+
+## 客户端生命周期与外部资源
+
+| 模块            | 契约                                                                                              | 实现入口                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 主题            | light/dark/system 分离，手选不被系统变化覆盖；存储不可用时按既定行为处理                          | [theme.ts](../src/lib/client/theme.ts)                                                     |
+| 音乐            | 首次点击才加载 APlayer 和 Meting 数据；持久单例跨路由保留，订阅去重；失败显示重试与歌单链接       | [music.ts](../src/lib/client/music.ts)、[MusicPlayer](../src/components/MusicPlayer.astro) |
+| 地图            | 本地 ESM 主模块、shared、worker、CSS 整套加载；接近视口时初始化，离开清理；任务身份隔离取消与重开 | [residence-map.ts](../src/scripts/residence-map.ts)                                        |
+| Waline          | 保存实例、断连 destroy，浏览量目标按组件管理；补丁只处理自身 reaction 请求取消                    | [waline 组件](../src/components/waline/)                                                   |
+| 图片缩放        | 一个文档共享 medium-zoom 实例，当前文章 attach，导航前关闭并 detach                               | [ArticleImageZoom](../src/components/reading/ArticleImageZoom.astro)                       |
+| 二维码          | 本地按需 runtime，custom element 管理展开、复制和断连                                             | [ContentCopyright](../src/components/reading/ContentCopyright.astro)                       |
+| View Transition | 仅消费已完成 DOM 交换后的已知可恢复 ready 拒绝，其他异常正常传播                                  | [guard](../src/components/ViewTransitionRejectionGuard.astro)                              |
+| 贡献记录        | 构建期公开 GitHub HTML、进程内缓存；缺失数据标未知，整体失败显示中性骨架，不伪造贡献              | [github-contributions.ts](../src/data/github-contributions.ts)                             |
+
+根路径入口每次直达重新播放，以 `location.replace()` 进入 `/home`；入口不索引并保持 canonical 约定。视频、poster、Typed.js 同源加载，键盘、页面可见性和播放就绪状态受生命周期管理。
+
+效果宿主在短期同源 iframe 内运行固定 vendor 算法，移除 iframe 清理 canvas、RAF、定时器和监听器。父页面只转发允许的空白点击，排除链接、按钮、表单、播放器、导航、选中文字和交互卡片。
+
+| Profile  | 效果                     |
+| -------- | ------------------------ |
+| standard | PKU 背景与点击粒子       |
+| reading  | 关闭装饰效果             |
+| links    | 花瓣与点击粒子           |
+| about    | 背景、点击粒子及右侧小人 |
+
+PKU 层在宽度小于 768px、粗指针或减少动画时关闭。页面隐藏、路由切换和设备条件变化释放实例，条件恢复时重建。About 小人限定至少 1440px；滚动、bfcache 与减少动画变化遵守清理契约。原始算法参数与来源身份保留于 [来源台账](./SOURCE_LEDGER.md)，具体实现见 [effects](../src/components/effects/)。
+
+外部服务限定已登记的 CARTO/OSM、公共音乐、Umami、CodeTime、Waline、构建期 GitHub 数据与友链头像。Geolocation 由浏览器在用户打开 Globe 后授权；普通正文超链接与可加载媒体分别处理。资源判定以 [resource-audit](../scripts/lib/resource-audit.mjs) 和 [发布检查](../scripts/verify-phase6.mjs) 为实现依据。
+
+## 视觉与交互约定
+
+| 区域           | 当前设计约定                                                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 页面外壳       | 保持共享 Header/Footer、字体、主题和响应式；主导航 Home、Blog、Traces、Projects、About、Links，Logo 指向 `/home`              |
+| Home           | 六张 Hero、四层波浪、随机 Saying、简介、最近 Blog/Trace 双栏、Blog 时间线、教育、居住地和贡献记录；入口使用 ahead 按钮        |
+| 空状态         | 无公开 Saying 或所选年份 Blog 时隐藏对应 Home 区域；归档保留可读空状态；时间线选择 Asia/Shanghai 不晚于当前年的最新有文章年份 |
+| 阅读           | 保持正文、目录、缩放、背景和紧凑音乐；首图投影参数统一见本页阅读能力章节                                                      |
+| 标签与搜索     | 类型内标签独立；归档预览最多六个标签并提供索引；Pagefind 面板按类型与标签联合筛选，保存 URL 状态                              |
+| 卡片语义       | 列表子项使用 li，主链接不嵌套标签链接，标题等级按 placement；真实图片保留非装饰 alt                                           |
+| About 与 Links | About 提供 Saying 入口和专属小人；Links 使用花瓣，Friend Circle 不渲染、不请求                                                |
+| 页面能力       | Blog 默认版权/分享卡片，Trace/Saying 默认关闭；内容策略及显式页面覆盖决定其他能力                                             |
+
+这些约定与类型、surface、页面能力共同生效。修改视觉需求时核对受影响契约与相应验证，不把历史截图的所有偶然差异变成永久约束。对照方法见 [视觉复核](./DEVELOPMENT.md#视觉复核)。
+
+## 命名与兼容
+
+- 业务名称表达内容语义：ContentKind 为 blog/trace/saying，ContentPresentation 为 text/media-content/media-decorative；通用类型与策略不以参考项目命名。
+- 展示名称表达职责：TextCard、BlogTextCardAdapter、MediaCard、HeroGallery、GitHubContributionHeatmap，以及 ambientBackdrop、ambient-canvas、petalRuntime、clickBurstRuntime。CSS、data 属性、消息名称遵循同一职责。
+- 来源 ID、URL、固定 vendor 路径、哈希文件名、来源注释和真实人物/项目保留准确来源名称。旧代码词语需按含义逐项审阅，不全局替换 PKU、SkyWT、source 或 legacy。
+- 历史展示值只在 [compatibility/content-presentation.ts](../src/lib/compatibility/content-presentation.ts) 归一化，之后流通 canonical union；未知输入使用调用方声明的安全默认。旧兼容组件委托正式 renderer，不能扩展第二套视觉实现。
+- 命名变更不同时更改文章 slug、路由、collection 或内容字段。存在合理外部引用可能的公开资源 URL 保持兼容，新名称与旧资源的移除分开审阅。
+- generated 文件通过对应生成器维护。新增命名修改前检查残留旧名称，其含义应为来源、固定资源、明确兼容或真实内容。
+
+历史改名对照见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md#历史命名对照)。

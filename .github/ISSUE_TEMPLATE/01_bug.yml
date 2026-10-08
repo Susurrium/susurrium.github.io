@@ -8,8 +8,8 @@ body:
         ##  Quick Checklist
         Thank you for taking the time to file a bug report! Please fill out this form as completely as possible.
 
-        ✅ I am testing the repository's pinned `astro-pure@1.4.6` dependency.
-        ✅ I am using Node.js `>=22.12.0` and Bun `1.4.0` from the repository baseline.
+        ✅ I installed the dependencies pinned by `package.json` and `bun.lock` using `bun install --frozen-lockfile`.
+        ✅ My Node.js version matches `.node-version`, and my Bun version matches `packageManager` in `package.json`.
   - type: textarea
     id: environment-auto-check
     attributes:
