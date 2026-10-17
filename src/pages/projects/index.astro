@@ -30,36 +30,92 @@ const headings = [
   <ProjectSection
     projects={[
       {
-        name: 'PkuHoleStudio',
+        name: 'Susurrium Blog',
         description:
-          '本地优先的北大树洞客户端，支持在线浏览、本地资料库、全文搜索、归档迁移与可选 AI 研究。',
+          '基于 Astro 的个人博客，用于写作、生活记录与引文收藏，提供全文搜索和媒体裁剪。',
         links: [
-          { type: 'github', href: 'https://github.com/Susurrium/PkuHoleStudio' },
-          { type: 'release', href: 'https://github.com/Susurrium/PkuHoleStudio/releases/latest' },
+          { type: 'site', label: '访问博客', href: 'https://susurrium.github.io/home/' },
+          {
+            type: 'github',
+            label: 'GitHub',
+            href: 'https://github.com/Susurrium/susurrium.github.io'
+          },
           {
             type: 'doc',
-            href: 'https://github.com/Susurrium/PkuHoleStudio/blob/main/docs/technical-reference.md'
+            label: '开发记录',
+            href: 'https://susurrium.github.io/blog/susurrium-blog-development/'
+          }
+        ]
+      },
+      {
+        name: 'OKF Workspace',
+        description:
+          '基于 Obsidian 的个人工作空间，管理资料、任务与项目，支持内嵌 Codex 会话。',
+        links: [
+          { type: 'github', label: 'GitHub', href: 'https://github.com/Susurrium/okf-workspace' },
+          {
+            type: 'release',
+            label: '下载与安装',
+            href: 'https://github.com/Susurrium/okf-workspace/releases/latest'
+          },
+          {
+            type: 'doc',
+            label: '使用指南',
+            href: 'https://github.com/Susurrium/okf-workspace/blob/main/docs/USER-GUIDE.md'
           }
         ]
       },
       {
         name: 'PkuHoleToolkit',
-        description: '运行在树洞官网中的用户脚本，用于本地备份、ZIP 导出和换号迁移。',
+        description:
+          '北大树洞备份与迁移工具，导出帖子、评论和图片，支持向新账号迁移关注。',
         links: [
-          { type: 'github', href: 'https://github.com/Susurrium/PkuHoleToolkit' },
-          { type: 'release', href: 'https://github.com/Susurrium/PkuHoleToolkit/releases/latest' },
+          { type: 'github', label: 'GitHub', href: 'https://github.com/Susurrium/PkuHoleToolkit' },
+          {
+            type: 'release',
+            label: '安装与更新',
+            href: 'https://github.com/Susurrium/PkuHoleToolkit/releases/latest'
+          },
           {
             type: 'doc',
-            href: 'https://github.com/Susurrium/PkuHoleToolkit/blob/main/BETA_TEST_CHECKLIST.md'
+            label: '使用说明',
+            href: 'https://github.com/Susurrium/PkuHoleToolkit/blob/main/README.md#安装与首次使用'
+          }
+        ]
+      },
+      {
+        name: 'PkuHoleStudio',
+        description:
+          '北大树洞客户端，支持浏览发帖、24 小时热榜、本地归档、全文搜索与可选 AI 研究。',
+        links: [
+          { type: 'github', label: 'GitHub', href: 'https://github.com/Susurrium/PkuHoleStudio' },
+          {
+            type: 'release',
+            label: '下载程序',
+            href: 'https://github.com/Susurrium/PkuHoleStudio/releases/latest'
+          },
+          {
+            type: 'doc',
+            label: '使用说明',
+            href: 'https://github.com/Susurrium/PkuHoleStudio/blob/main/README.md#安装与使用'
           }
         ]
       },
       {
         name: 'Signature Generator',
-        description: '在浏览器中记录签名笔顺与墨迹区域，预览并导出黑色或渐变动态 SVG。',
+        description:
+          '将签名图片制作成书写动画，标注笔顺与墨迹，调整速度和配色，导出动态 SVG。',
         links: [
-          { type: 'site', href: 'https://susurrium.github.io/signature-generator/' },
-          { type: 'github', href: 'https://github.com/Susurrium/signature-generator' }
+          {
+            type: 'site',
+            label: '在线使用',
+            href: 'https://susurrium.github.io/signature-generator/'
+          },
+          {
+            type: 'github',
+            label: 'GitHub',
+            href: 'https://github.com/Susurrium/signature-generator'
+          }
         ]
       }
     ]}
