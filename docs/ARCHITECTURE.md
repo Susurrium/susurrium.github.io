@@ -483,7 +483,7 @@ PKU 层在宽度小于 768px、粗指针或减少动画时关闭。页面隐藏�
 
 `src/pages/projects/index.astro` 按展示顺序维护项目名称、完整描述和入口；每个入口必须提供 `type`、`label` 和 `href`，第一个入口同时作为标题目的地。`ProjectSection.astro` 在 `sm` 断点起使用两列，窄屏使用单列。标题最多显示一行，描述内层最多显示两行，完整文字保留在 DOM 中；`sm` 起描述外层固定为 3rem，窄屏不额外固定描述高度。底部入口仅显示原有尺寸的图标和圆形背景，保持原有内边距与横向间距，空间不足时允许换行。`label` 用于包含项目名的可访问名称，图标对辅助技术隐藏；标题和入口均提供可见键盘焦点。桌面图标入口保持单行时，跨行卡片高度及入口相对底边的位置应一致。
 
-Support 的 `Sponsorship.astro` 为两种支付方式使用宽度上限 15rem 的相同正方形卡片；空间不足时缩小，桌面并排居中，窄屏纵向居中。`summary` 填满卡片并通过 Grid 居中，二维码使用 `object-fit: contain` 保留完整图片与白边，遮罩以整个展示框定位。悬停、键盘聚焦和原生 `details` 点击展开均显示二维码，减少动画偏好下关闭过渡。项目公开范围及具体入口的用户决定见 [Projects 展示决定](./archive/PROJECTS_PUBLIC_DISPLAY_20261017.zh-CN.md)。
+Support 的 `Sponsorship.astro` 为两种支付方式使用宽度上限 15rem 的相同正方形卡片；空间不足时缩小，桌面并排居中，窄屏纵向居中。`summary` 填满卡片并通过 Grid 居中，二维码使用 `object-fit: contain` 保留完整图片与白边，遮罩以整个展示框定位。悬停、键盘聚焦和原生 `details` 点击展开均显示二维码，减少动画偏好下关闭过渡。项目公开范围及具体入口的用户决定见 [Projects 发布记录](./archive/PROJECTS_RELEASE_20261017.zh-CN.md)。
 
 ## 命名与兼容
 
