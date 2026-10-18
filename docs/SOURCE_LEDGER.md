@@ -393,6 +393,18 @@ George 花瓣在 Links 原样保留 50 个 sprite 花瓣；点击效果按原 `t
 | 图片顺序/随机/哈希回退                        | 无                                                              | Saying 随机逻辑可复用                 | 自行开发可测试纯函数                                          |
 | CI、资源门禁和 Pages                          | `BASE-PAGES` 官方方案                                           | 无                                    | 固定 Node/Bun、frozen lock、手动部署和无 schedule             |
 
+## CLab 配额截图
+
+`BLOG-CLAB-QUOTA`：2026-10-18，用户在本文写作对话中提供 [CLab 控制台](https://clab.pku.edu.cn/)配额截图，并明确表示“这个图可以加进去”，授权将该图作为 Obsidian 多设备同步文章的随文说明素材。
+
+- 本地文件：[`src/content/blog/obsidian-clab-tailscale-livesync/clab-quota.png`](../src/content/blog/obsidian-clab-tailscale-livesync/clab-quota.png)。
+- 来源文件名：`codex-clipboard-581b4adf-22fc-426d-9448-643130a0c0f3.png`，由用户直接提供；图片未裁剪、未修改，保留原始 PNG 字节。
+- 尺寸与大小：1494 × 1162，51,184 bytes。
+- SHA-256：`fc43fb9c72f4d200784276c312fba6efea542978c71c82b55e821070455b82ca`；源文件与仓库内副本一致。
+- 使用范围：仅作为该文章中的配额界面说明，图中显示的是已用资源与总配额；当前额度以读者自己的控制台为准。
+- 内容依据：CLab 由北京大学学生 Linux 俱乐部提供维护、北大学生可登录使用、需要北大校园网或北大 VPN 接入、医学部网络无法直接访问，均由用户在本次对话中补充。[俱乐部官网](https://lcpu.dev/)已读取，其项目列表包含 CLab 云计算平台；当前环境未能读取 CLab 官网和入门文档正文，未将这两个链接的可访问性记为已验证。
+- 关联文章：用户指定上一篇[《北医网络配置方案》](https://susurrium.github.io/blog/campus-network-coexistence/)作为北大 VPN 与代理共存配置的参考。线上页面本次未能读取，已核对 `origin/main` 中 `src/content/blog/campus-network-coexistence/index.md` 的全文，其中包含 iSecSP 接入、DNS、分流和路由配置。
+
 ## 图标制作源文件
 
 `FAVICON-MASTER`：2026-10-06 从 `E:\code\release-prep-quarantine-20260902-021422\.tmp-favicon-c-preview` 原样迁入，当前制作源文件位于 `src/assets/favicon/`。下表保留母版与底图的文件身份和迁入哈希。

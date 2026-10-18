@@ -49,6 +49,12 @@ boundaries are recorded in [the source ledger](./SOURCE_LEDGER.md#mermaid-图表
   owner marker image. The candidate deliberately exposes only city-level
   coordinates (`publicPrecision: 'city'`); the owner confirmed this precision
   and the current media scope on 2026-09-02.
+- `src/content/blog/obsidian-clab-tailscale-livesync/clab-quota.png` is an
+  owner-provided screenshot of the CLab quota interface. The owner explicitly
+  authorized its use in this article on 2026-10-18 (`OWNER_CONFIRMED`). It is
+  retained without image edits; source identity and SHA-256 are recorded in
+  [the source ledger](./SOURCE_LEDGER.md#clab-配额截图). This confirmation applies
+  to this screenshot's use in the article.
 
 ## External services and links
 
