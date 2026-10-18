@@ -1,5 +1,6 @@
 // @ts-check
 
+import { fileURLToPath } from 'node:url'
 import { rehypeHeadingIds, unified } from '@astrojs/markdown-remark'
 import mdx from '@astrojs/mdx'
 import sitemap from '@astrojs/sitemap'
@@ -13,6 +14,7 @@ import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
 
+import mermaidIntegration from './src/integrations/mermaid.ts'
 import searchIndex from './src/integrations/search-index.ts'
 // Others
 // import { visualizer } from 'rollup-plugin-visualizer'
@@ -20,6 +22,7 @@ import searchIndex from './src/integrations/search-index.ts'
 // Local integrations
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
+import rehypeMermaidSource from './src/plugins/rehype-mermaid-source.ts'
 import remarkRemoveDuplicateTitleHeading from './src/plugins/remark-remove-duplicate-title-heading.ts'
 // Shiki
 import {
@@ -78,6 +81,7 @@ export default defineConfig({
     // mdx(),
     mdx({ optimize: true }),
     pure,
+    mermaidIntegration(),
     searchIndex(config.integ.pagefind)
     // (await import('@playform/compress')).default({
     //   SVG: false,
@@ -95,9 +99,11 @@ export default defineConfig({
   server: { host: true },
   // Markdown Options
   markdown: {
+    syntaxHighlight: { type: 'shiki', excludeLangs: ['mermaid'] },
     processor: unified({
       remarkPlugins: [remarkMath, remarkAlert, remarkRemoveDuplicateTitleHeading],
       rehypePlugins: [
+        rehypeMermaidSource,
         [rehypeKatex, { strict: false }],
         rehypeHeadingIds,
         [
@@ -134,7 +140,7 @@ export default defineConfig({
     // locked Chromium session files on Windows and must not be watched.
     server: {
       watch: {
-        ignored: ['**/artifacts/**']
+        ignored: [fileURLToPath(new URL('./artifacts/**', import.meta.url)).replaceAll('\\', '/')]
       }
     },
     plugins: [
