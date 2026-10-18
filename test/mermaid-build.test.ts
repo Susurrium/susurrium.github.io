@@ -101,7 +101,11 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       'uno.config.ts',
       'patches'
     ])
-      await cp(resolve(project, path), resolve(root, path), { recursive: true })
+      await cp(resolve(project, path), resolve(root, path), {
+        recursive: true,
+        // 图表资源数量由本测试的样本决定，不随正式文章变化。
+        filter: (source) => source !== resolve(project, 'src/content')
+      })
     const installed = run(root, process.execPath, ['install', '--offline', '--frozen-lockfile'])
     expect(await installed.done, installed.output()).toBe(0)
     const samples = [
@@ -150,11 +154,18 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
     ]
     const sourceFor = (sample: (typeof samples)[number]) =>
       `---\n${sample.kind === 'sayings' ? `text: ${sample.title}` : `title: ${sample.title}\ndescription: Mermaid 集成验证\npublishDate: 2026-10-18`}\ndraft: ${sample.draft}\n---\n\n${sample.extension === 'mdx' ? '{1 + 1}\n\n' : ''}## 图表\n\n\`\`\`mermaid\n${sample.graph.split('\n')[0]}\naccTitle: ${sample.title}\naccDescr: 解释图中的中文节点与关系\n${sample.graph.split('\n').slice(1).join('\n')}\n\`\`\`\n\n[查看随记](/traces/mermaid-build-trace)\n\n\`\`\`js\nconst ordinary = 1\n\`\`\`\n\n公式 $x^2$。\n`
-    for (const sample of samples)
+    for (const sample of samples) {
+      await mkdir(resolve(root, 'src/content', sample.kind), { recursive: true })
       await writeFile(
         resolve(root, 'src/content', sample.kind, `${sample.id}.${sample.extension}`),
         sourceFor(sample)
       )
+    }
+    // 保留普通引文，验证删除图表后同一集合中的其他内容仍然可用。
+    await writeFile(
+      resolve(root, 'src/content/sayings/mermaid-build-plain.md'),
+      '---\ntext: 保留的普通引文\ndraft: false\n---\n\n没有图表的引文正文。\n'
+    )
     const built = run(root, 'node', ['node_modules/astro/bin/astro.mjs', 'build'])
     const status = await built.done
     await writeFile(resolve(root, 'build.log'), built.output())
@@ -342,6 +353,9 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
     expect(
       (await readdir(resolve(output, '_diagrams'))).filter((name) => name.endsWith('.svg')).length
     ).toBe(6)
+    expect(
+      await readFile(resolve(output, 'sayings/mermaid-build-plain/index.html'), 'utf8')
+    ).toContain('保留的普通引文')
     completed = true
   } finally {
     if (service) {

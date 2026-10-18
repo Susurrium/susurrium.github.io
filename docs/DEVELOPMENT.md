@@ -47,7 +47,7 @@ bun test ./test/mermaid.test.ts
 bun test ./test/mermaid-build.test.ts
 ```
 
-前者验证真实渲染、常用类型、缓存恢复、错误定位及 RSS；后者在 `artifacts/mermaid-build-tests/` 隔离站点中验证 Markdown/MDX、草稿过滤、重复构建、主题、站内导航、打印、无 JavaScript 与开发更新。失败保留夹具与日志，成功清理隔离站点；相关图表截图保存在 `artifacts/mermaid-verification/`。
+前者验证真实渲染、常用类型、缓存恢复、错误定位及 RSS；后者在 `artifacts/mermaid-build-tests/` 隔离站点中使用独立内容样本，验证 Markdown/MDX、草稿过滤、重复构建、主题、站内导航、打印、无 JavaScript 与开发更新。媒体隔离构建通过 `MERMAID_BROWSER_PATH` 复用项目安装的 Chromium。失败保留夹具与日志，成功清理隔离站点；相关图表截图保存在 `artifacts/mermaid-verification/`。
 
 ## 配置导航
 
@@ -172,7 +172,7 @@ bun run verify:mermaid:browser
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
-- Mermaid browser 扫描全部公开正文，检查图表资源、主题、窄屏和打印；没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
+- Mermaid browser 扫描全部公开正文，按主题将图表滚入视口并等待图片加载，检查图表资源、主题、窄屏和打印；没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
 
 脚本从真实构建发现详情、搜索词和目录分支，缺失分支明确记录。CI 与 Pages 复用同一份待发布产物，不注入测试文章。专项行为要求见 [架构说明](./ARCHITECTURE.md)。
 
