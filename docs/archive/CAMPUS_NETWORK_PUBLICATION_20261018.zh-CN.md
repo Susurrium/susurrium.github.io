@@ -6,7 +6,7 @@
 
 用户在完成文章、标题、摘要和结尾审阅后，明确要求“正式部署”。本次授权覆盖将《北医网络配置方案》按仓库流程提交到 main、部署 GitHub Pages，并通过 PR 将生产基线同步到 develop。
 
-文章文件为 [campus-network-coexistence/index.md](../../src/content/blog/campus-network-coexistence/index.md)，公开路径为 `/blog/campus-network-coexistence`。
+文章文件为 `src/content/blog/campus-network-coexistence/index.md`，公开地址为[北医网络配置方案](https://susurrium.github.io/blog/campus-network-coexistence)。
 
 本篇使用用户提供的网络配置记录和后续补充作为个人实践素材。正文中的校园网络名称、SSH 别名、服务器地址、路由参数及测量结果作为案例保留；用户已审阅并要求发布当前正文。账号授权示例使用 `your-account@example.com`，登录用户名和密钥路径使用示例值，文章不包含实际密码、私钥、代理订阅或 API Key。
 
