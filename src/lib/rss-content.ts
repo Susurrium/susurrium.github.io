@@ -6,6 +6,8 @@ import rehypeStringify from 'rehype-stringify'
 import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 
+import { renderMermaidHtml } from './mermaid/server.mjs'
+
 export interface FeedContentOptions {
   readonly permalink: URL
   /** Astro's physical source path, independent of its public slug. */
@@ -82,7 +84,7 @@ const mathTags = [
 const feedSchema = {
   ...defaultSchema,
   clobberPrefix: '',
-  tagNames: [...(defaultSchema.tagNames ?? []), ...mathTags],
+  tagNames: [...(defaultSchema.tagNames ?? []), 'figure', 'figcaption', ...mathTags],
   attributes: {
     ...defaultSchema.attributes,
     ...Object.fromEntries(
@@ -114,7 +116,8 @@ export async function prepareFeedContent(
   html: string,
   options: FeedContentOptions
 ): Promise<string> {
-  const tree = unified().use(rehypeParse, { fragment: true }).parse(html) as Root
+  const rendered = await renderMermaidHtml(html, { feed: true, permalink: options.permalink })
+  const tree = unified().use(rehypeParse, { fragment: true }).parse(rendered) as Root
   const pending: Promise<void>[] = []
   visit(tree, 'element', (node: Element, index, parent) => {
     const classes = node.properties.className

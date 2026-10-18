@@ -254,6 +254,18 @@ Saying 使用 `buildSayingImageAssignmentMap()`，在完整的稳定 ID 顺序�
 
 RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying 不伪造日期。`rss` 开关控制条目收录，站点级 `/rss.xml` 入口保留，即使最终没有条目也输出有效空 feed。
 
+### 7.4 Mermaid 正文编译与资源交付
+
+`rehype-mermaid-source.ts` 在 Shiki 排除 `mermaid` 后，将围栏转换为携带源码、物理文件路径和行号的临时 figure。编译阶段保留源码；文章实际渲染后，由 `src/middleware/mermaid.ts` 处理 HTML，RSS 则通过 `prepareFeedContent()` 调用同一服务。草稿不会因为内容同步而生成可发布图表。
+
+`src/lib/mermaid/server.mjs` 使用 `rehype-mermaid` 的 SVG/PNG 策略，在受限 Chromium 上生成浅色 SVG、深色 SVG 和 RSS PNG。解析与布局使用 Mermaid；本项目负责字体、缓存、图表容器与资源输出。Noto Sans SC 以必要的 WOFF2 子集嵌入 SVG，构建测量和图片显示使用相同字体。浏览器渲染过程禁止外部请求，缺字、语法错误和渲染错误提供明确诊断。
+
+最终 figure 包含两张图表、可访问替代文本、图注、原生源码折叠区和现有复制按钮契约。`data-theme` 与 CSS 选择明暗图片；宽图横向滚动，打印使用浅色图片。源码与操作区排除 Pagefind 索引，图注提供可搜索说明。图表不加入正文图片缩放选择器。
+
+`src/integrations/mermaid.ts` 注册页面中间件和开发期同源图片服务，并在 Pagefind 之前收集最终 HTML/RSS 中的资源引用，将必要文件复制到 `dist/_diagrams/`。不扫描缓存目录直接发布，因此草稿缓存和历史缓存不会扩大公开范围。RSS 将图表投影为 PNG、图注和原文链接后继续执行既有清洗。
+
+缓存保存于 `artifacts/mermaid-cache/`，键包含源码、依赖版本、字体与渲染配置及规则版本；文件有独立 SHA-256 校验。公开图表始终可由正文重新生成，缺失资源阻止完成构建。生命周期保持普通正文图片行为，Mermaid 和 Playwright 不进入客户端代码。
+
 ## 8. 代码组织与新增内容类型流程
 
 统一层位于 `src/lib/content-layer/`：

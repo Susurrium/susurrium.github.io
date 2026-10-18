@@ -26,6 +26,29 @@ Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build
 
 依赖精确版本、完整性和兼容补丁分别由 `package.json`、`bun.lock`、`patches/` 维护。升级需审阅补丁并完成相关检查；不使用 `latest`，不保留仅写入 `node_modules` 的修复。新增依赖说明用途、浏览器开销和外部请求。
 
+### Mermaid 运行环境
+
+Mermaid 使用 `rehype-mermaid`、`mermaid-isomorphic`、Playwright 和 Chromium 在开发或构建环境中生成图表。依赖版本通过 `package.json` 与 `bun.lock` 固定。安装依赖后执行：
+
+```powershell
+bun run setup:mermaid
+```
+
+Linux CI 使用 `bun run setup:mermaid --with-deps` 安装对应 Chromium 及系统依赖。浏览器默认存放在 `artifacts/mermaid-browsers/`，临时文件在 `artifacts/runtime-tmp/`；需要复用其他已安装的同版本浏览器目录时设置 `MERMAID_BROWSER_PATH`。浏览器是开发与构建依赖，不进入网页运行时。
+
+`bun run dev` 自动生成页面需要的图表，正文变更后更新对应资源。持久缓存位于 `artifacts/mermaid-cache/`，记录源码、渲染配置、字体、依赖版本与生成规则的哈希。缓存文件缺失或内容哈希不符时重新生成；缓存 JSON 损坏会明确失败。缓存不作为提交或发布输入。
+
+构建只复制实际公开 HTML 与 RSS 引用的图片到 `dist/_diagrams/`，并附带字体许可。源码仍由编译结果保留，清除缓存后可以重新生成；草稿和没有被发布页面引用的缓存不进入产物。正式构建前须停止占用 `dist/` 的预览。
+
+专项测试：
+
+```powershell
+bun test ./test/mermaid.test.ts
+bun test ./test/mermaid-build.test.ts
+```
+
+前者验证真实渲染、常用类型、缓存恢复、错误定位及 RSS；后者在 `artifacts/mermaid-build-tests/` 隔离站点中验证 Markdown/MDX、草稿过滤、重复构建、主题、站内导航、打印、无 JavaScript 与开发更新。失败保留夹具与日志，成功清理隔离站点；相关图表截图保存在 `artifacts/mermaid-verification/`。
+
 ## 配置导航
 
 | 对象                 | 修改位置                                                                                            | 核对范围                                                   |
@@ -57,11 +80,11 @@ Projects 的项目顺序、完整描述、入口 URL 与可访问标签维护在
 
 公共素材来源登记在 [来源台账](./SOURCE_LEDGER.md)，使用条件见 [第三方说明](./THIRD_PARTY_NOTICES.md)。正式页面默认使用同源素材；新增外部正文媒体按精确 URL 审阅，现有服务例外不扩大到同域其他资源。
 
-| 派生素材 | 候选宽度 | 目录与清单 |
-| --- | --- | --- |
-| Hero | 768、1280、1920px | `public/images/home-hero/`、`src/data/hero-images.json` |
-| 卡片 | 480、960、1920px | `public/images/card-media/`、`src/data/card-images.json` |
-| About 装饰人物 | 240、480、960px | `public/media/effects/responsive/`、`src/data/companion-images.json` |
+| 派生素材       | 候选宽度          | 目录与清单                                                           |
+| -------------- | ----------------- | -------------------------------------------------------------------- |
+| Hero           | 768、1280、1920px | `public/images/home-hero/`、`src/data/hero-images.json`              |
+| 卡片           | 480、960、1920px  | `public/images/card-media/`、`src/data/card-images.json`             |
+| About 装饰人物 | 240、480、960px   | `public/media/effects/responsive/`、`src/data/companion-images.json` |
 
 小图保持实际宽度，派生 WebP 质量为 86，源文件保留原始字节。替换 `public/media/effects/tracer-companion.webp` 后同样执行生成与核验命令。历史 LargeSkull 参考图位于 `test/fixtures/reference-images/largeskull/`，Phase 2 核验原始哈希并确认它们不进入发布目录。
 
@@ -143,11 +166,13 @@ Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构�
 bun run verify:phase6:browser
 bun run verify:home-hero
 bun run verify:browser:lifecycle
+bun run verify:mermaid:browser
 ```
 
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
+- Mermaid browser 扫描全部公开正文，检查图表资源、主题、窄屏和打印；没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
 
 脚本从真实构建发现详情、搜索词和目录分支，缺失分支明确记录。CI 与 Pages 复用同一份待发布产物，不注入测试文章。专项行为要求见 [架构说明](./ARCHITECTURE.md)。
 
@@ -201,7 +226,7 @@ git switch -c codex/<topic>
 
 1. 确认目标 PR 和 `main` 的 CI 成功，候选内容与素材已经审阅。
 2. Pages 发布源使用 GitHub Actions；运行 `Deploy to GitHub Pages`，选择 `main`。
-3. 工作流对同一产物执行完整 CI、严格发布检查和三项浏览器回归，再上传部署；失败时修正候选并重新验证。
+3. 工作流对同一产物执行完整 CI、严格发布检查和浏览器回归，再上传部署；失败时修正候选并重新验证。
 4. 检查线上 `/`、`/home`、详情、标签、归档、搜索、404、RSS、sitemap、canonical、移动端、暗色与关键第三方交互。
 
 保持手动发布和无 schedule。未来只有用户明确要求自动发布时，才在保留手动入口的同时增加 main push 触发，并先启用相应分支保护；不增加 PR 或定时部署触发。
