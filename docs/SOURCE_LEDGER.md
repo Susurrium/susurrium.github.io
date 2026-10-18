@@ -10,6 +10,21 @@
 
 生产站默认不热链参考站资源。已确认的例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、CodeTime 徽章、Waline、构建期 GitHub 贡献数据和现有友链头像；这些服务/路径在门禁中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
 
+## Mermaid 图表依赖
+
+2026-10-18 用户确认支持 Blog、Trace、Saying 的 Markdown/MDX Mermaid 围栏，采用构建期生成同源 SVG、主题适配、源码复制、RSS PNG、开发预览和完整验证；当时确认的开发范围不包含提交、推送、合并或上线。
+
+同日，用户进一步明确授权“提交推送并部署”。本次发布通过工作分支到 develop、develop 到 main 的 PR 和检查完成，并从 main 手动触发 Pages 部署。
+
+- 方案依据：[Pure Issue #77 中 zhuozhiyongde 的接入说明](https://github.com/cworld1/astro-theme-pure/issues/77#issuecomment-3222085974)，使用 Shiki 语言排除和 `rehype-mermaid`。项目没有复制该讨论中的 CDN 客户端实现。
+- `rehype-mermaid@3.0.0`、`mermaid-isomorphic@3.1.0`：作者 Remco Haszing，MIT；[渲染插件](https://github.com/remcohaszing/rehype-mermaid)、[服务端渲染器](https://github.com/remcohaszing/mermaid-isomorphic)。直接调用固定依赖，不复制实现。
+- `mermaid@11.17.2`：MIT；[Mermaid 项目](https://github.com/mermaid-js/mermaid)。负责语法与布局。
+- `playwright@1.64.1`：Apache-2.0；[Playwright](https://github.com/microsoft/playwright)。Chromium 仅用于构建和测试，安装目录位于项目 `artifacts/`。
+- `subset-font@2.9.0`：BSD-3-Clause；[subset-font](https://github.com/papandreou/subset-font)。通过 HarfBuzz 生成必要字体子集。
+- `@fontsource/noto-sans-sc@5.3.1`：OFL-1.1，字体版权 Google Inc.；[Fontsource 字体包](https://github.com/fontsource/font-files/tree/main/fonts/google/noto-sans-sc)。字体从锁定的 npm 包读取，不请求远程字体；生成 SVG 内嵌子集，发布目录附带包内完整许可。
+
+精确完整性由 `bun.lock` 保存。本地适配位于 `src/plugins/rehype-mermaid-source.ts`、`src/lib/mermaid/server.mjs`、`src/integrations/mermaid.ts` 和 `src/middleware/mermaid.ts`。新增依赖均不进入浏览器 Mermaid 运行时；发布的图片与许可使用同源路径。
+
 ## 2. 复用类型
 
 | 类型       | 含义                                                                         |
