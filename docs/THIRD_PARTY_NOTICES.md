@@ -25,6 +25,20 @@ asset marked `PENDING` must not be deployed until its rights are confirmed.
 
 ## Images, video, and personal media
 
+Mermaid diagrams use Noto Sans SC from the pinned npm package
+`@fontsource/noto-sans-sc@5.3.1`, copyright Google Inc., under SIL Open Font
+License 1.1. The build embeds WOFF2 subsets in generated SVG files and includes
+the package's complete license at `dist/_diagrams/FONT-LICENSE.txt` whenever
+diagram assets are published. The font is used only for diagrams; its package
+and integrity are recorded in `bun.lock`.
+
+Diagram rendering uses `mermaid@11.17.2`, `rehype-mermaid@3.0.0` and
+`mermaid-isomorphic@3.1.0` (MIT), `playwright@1.64.1` (Apache-2.0), and
+`subset-font@2.9.0` (BSD-3-Clause). Their package license files remain with the
+installed dependencies. Chromium and these rendering libraries are build/test
+tools and are not shipped as browser scripts. Sources and local adaptation
+boundaries are recorded in [the source ledger](./SOURCE_LEDGER.md#mermaid-图表依赖).
+
 - `public/images/home-media/` (54 WebP), the entrance waterfall media, the
   tracer companion, current favicon/avatars, and the project QR images are
   owner-provided/currently selected assets. The owner confirmed the current
