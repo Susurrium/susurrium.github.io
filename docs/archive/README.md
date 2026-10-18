@@ -15,5 +15,6 @@
 | [参考与维护历史摘录](./REFERENCE_HISTORY_20261008.md) | 历史命名、素材审阅、视觉采集、审计调用和图标迁移结果 |
 | [Projects 发布记录](./PROJECTS_RELEASE_20261017.zh-CN.md) | 2026-10-17 最终公开展示、发布结果及原始确认记录入口 |
 | [北医网络配置方案发布授权](./CAMPUS_NETWORK_PUBLICATION_20261018.zh-CN.md) | 2026-10-18 文章公开内容、日期及正式部署授权范围 |
+| [Obsidian 多设备同步文章发布授权](./OBSIDIAN_LIVESYNC_PUBLICATION_20261019.zh-CN.md) | 2026-10-19 文章、CLab 截图、日期及正式部署授权范围 |
 
 [来源台账](../SOURCE_LEDGER.md)和[第三方素材说明](../THIRD_PARTY_NOTICES.md)维护来源及使用条件，并引用本目录中的原始决定。外部快照、bundle 和本地证据按记录的位置保存；归档不改变决定的适用范围。
