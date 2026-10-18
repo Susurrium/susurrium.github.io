@@ -14,6 +14,11 @@ async function runFixture(root: string, command: string, args: string[]) {
     (resolveBuild, reject) => {
       const child = spawn(command, args, {
         cwd: root,
+        env: {
+          ...process.env,
+          MERMAID_BROWSER_PATH:
+            process.env.MERMAID_BROWSER_PATH ?? resolve(project, 'artifacts/mermaid-browsers')
+        },
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true
       })
