@@ -31,12 +31,6 @@ if (!paths.length) {
     })
     for (const path of paths) {
       await page.goto(site + path)
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll('.mermaid-diagram img')].every(
-          (image) =>
-            !image.getBoundingClientRect().width || (image.complete && image.naturalWidth > 0)
-        )
-      )
       for (const theme of ['light', 'dark']) {
         for (
           let attempt = 0;
@@ -45,8 +39,14 @@ if (!paths.length) {
         )
           await page.locator('#toggleDarkMode').first().click()
         assert.equal(await page.locator('html').getAttribute('data-theme'), theme)
-        for (const image of await page.locator(`.mermaid-${theme}`).all())
+        for (const image of await page.locator(`.mermaid-${theme}`).all()) {
           assert(await image.isVisible())
+          await image.scrollIntoViewIfNeeded()
+          await page.waitForFunction(
+            (element) => element.complete && element.naturalWidth > 0,
+            await image.elementHandle()
+          )
+        }
       }
       await page.setViewportSize({ width: 390, height: 844 })
       assert(
