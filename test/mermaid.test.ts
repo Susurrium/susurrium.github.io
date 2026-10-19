@@ -152,11 +152,13 @@ test('常用类型由 Pele 和固定字体测量生成 SVG 与真实 PNG', async
   }
 }, 120000)
 
-test('没有文字标签的状态图生成真实 RSS PNG', async () => {
-  const result = await generateDiagram('stateDiagram-v2\n[*] --> [*]', { feed: true })
+testWithFixtures('没有文字标签的状态图从空缓存生成真实 RSS PNG', async () => {
+  const root = createTestDirectory('mermaid-no-text')
+  const result = await generateDiagram('stateDiagram-v2\n[*] --> [*]', { root, feed: true })
+  expect(result.cached).toBe(false)
   expect(result.fonts).toHaveLength(0)
   expect(result.svg.width).toBeGreaterThan(0)
-  const metadata = await sharp(await readDiagramAsset(result.feed!.name)).metadata()
+  const metadata = await sharp(await readDiagramAsset(result.feed!.name, root)).metadata()
   expect(metadata.format).toBe('png')
   expect(metadata.width).toBeGreaterThan(0)
 })
