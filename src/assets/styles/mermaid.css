@@ -1,12 +1,25 @@
 .prose .mermaid-diagram {
+  --pele-bg: hsl(var(--background));
+  --pele-fg: hsl(var(--foreground));
+  --pele-muted: hsl(var(--muted-foreground));
+  --pele-line: hsl(var(--muted-foreground));
+  --pele-surface: hsl(var(--muted));
+  --pele-surface-alt: hsl(var(--accent));
+  --pele-border: hsl(var(--border));
+  --pele-accent: hsl(var(--primary));
+  --pele-critical: #b4233b;
+  --pele-font: 'Diagram Noto';
+  --pele-font-mono: 'Diagram Noto';
   margin: 1.75rem 0;
   overflow: hidden;
   border: 1px solid hsl(var(--border));
   border-radius: 0.75rem;
-  background: #fff;
-  color: #202127;
+  background: var(--pele-bg);
+  color: var(--pele-fg);
 }
 .prose .mermaid-viewport {
+  display: block;
+  position: relative;
   max-width: 100%;
   overflow-x: auto;
   padding: 1rem;
@@ -15,24 +28,27 @@
   outline: 2px solid hsl(var(--ring));
   outline-offset: -2px;
 }
-.prose .mermaid-viewport img {
-  width: auto;
-  max-width: none;
+.prose .mermaid-viewport > svg {
+  display: block;
   height: auto;
   margin: 0 auto;
 }
-.prose .mermaid-dark {
-  display: none;
+.prose .mermaid-viewport:not(.mermaid-interactive) > svg {
+  max-width: none !important;
 }
-:root[data-theme='dark'] .prose .mermaid-diagram {
-  background: #101016;
-  color: #f5f5f5;
+.prose .mermaid-viewport > .pele-zoom {
+  font-family: inherit;
+  flex-direction: row !important;
 }
-:root[data-theme='dark'] .prose .mermaid-light {
-  display: none;
+.prose .mermaid-interactive {
+  padding-top: 3.5rem;
 }
-:root[data-theme='dark'] .prose .mermaid-dark {
-  display: block;
+.prose .mermaid-viewport .pele-zoom button {
+  width: 32px !important;
+  height: 32px !important;
+}
+.prose .mermaid-viewport .pele-zoom button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
 }
 .prose .mermaid-diagram figcaption {
   margin: 0;
@@ -57,19 +73,39 @@
   overflow-x: auto;
   white-space: pre;
 }
+.prose .mermaid-print {
+  display: none;
+}
 @media print {
   .prose .mermaid-diagram {
+    --pele-bg: #fff;
+    --pele-fg: #202127;
+    --pele-muted: #505966;
+    --pele-line: #505966;
+    --pele-surface: #edf4f8;
+    --pele-surface-alt: #f3eef9;
+    --pele-border: #52798e;
+    --pele-accent: #326a87;
     break-inside: avoid;
     background: #fff !important;
     color: #202127 !important;
   }
-  .prose .mermaid-dark,
+  .prose .pele-zoom,
   .prose .mermaid-source {
     display: none !important;
   }
-  .prose .mermaid-light {
+  .prose .mermaid-print {
+    display: block;
+    padding: 1rem;
+  }
+  .prose .mermaid-print > svg,
+  .prose .mermaid-viewport:not(.mermaid-interactive) > svg {
     display: block !important;
-    max-width: 100%;
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: 220mm;
+    margin: 0 auto !important;
   }
   .prose .mermaid-viewport {
     overflow: visible;

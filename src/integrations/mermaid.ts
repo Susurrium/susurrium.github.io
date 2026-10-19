@@ -2,9 +2,15 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { AstroIntegration } from 'astro'
+import { parse as parseCss, walk } from 'css-tree'
 import { parse } from 'node-html-parser'
 
-import { assetPrefix, diagramLicense, readDiagramAsset } from '../lib/mermaid/server.mjs'
+import {
+  assetPrefix,
+  diagramLibraryLicense,
+  diagramLicense,
+  readDiagramAsset
+} from '../lib/mermaid/server.mjs'
 
 export async function publishDiagramAssets(directory: string, root = process.cwd()) {
   const names = new Set<string>()
@@ -23,21 +29,28 @@ export async function publishDiagramAssets(directory: string, root = process.cwd
         document,
         ...document.querySelectorAll('content\\:encoded').map((node) => parse(node.text))
       ]
-      for (const tree of documents)
+      for (const tree of documents) {
         for (const image of tree.querySelectorAll('img[src]')) {
           const url = new URL(image.getAttribute('src')!, 'https://susurrium.github.io')
           if (url.pathname.startsWith(assetPrefix))
             names.add(url.pathname.slice(assetPrefix.length))
         }
+        for (const style of tree.querySelectorAll('.mermaid-diagram style'))
+          walk(parseCss(style.rawText), (node) => {
+            if (node.type === 'Url' && node.value.startsWith(assetPrefix))
+              names.add(node.value.slice(assetPrefix.length))
+          })
+      }
     }
   }
   await inspect(directory)
-  if (!names.size) return 0
   const output = resolve(directory, assetPrefix.slice(1))
   await mkdir(output, { recursive: true })
+  await writeFile(resolve(output, 'PELE-LICENSE.txt'), diagramLibraryLicense())
+  if (!names.size) return 0
   for (const name of names)
     await writeFile(resolve(output, name), await readDiagramAsset(name, root))
-  await writeFile(resolve(output, 'FONT-LICENSE.txt'), await diagramLicense())
+  await writeFile(resolve(output, 'FONT-LICENSE.txt'), diagramLicense())
   return names.size
 }
 
@@ -54,7 +67,7 @@ export default function mermaidIntegration(): AstroIntegration {
         })
         updateConfig({
           vite: {
-            ssr: { external: ['rehype-mermaid', 'mermaid-isomorphic', 'playwright', 'subset-font'] }
+            ssr: { external: ['fontkit', '@resvg/resvg-js', 'subset-font'] }
           }
         })
       },
@@ -66,15 +79,19 @@ export default function mermaidIntegration(): AstroIntegration {
             const name = path.slice(assetPrefix.length)
             const buffer =
               name === 'FONT-LICENSE.txt'
-                ? await diagramLicense()
-                : await readDiagramAsset(name, root)
+                ? diagramLicense()
+                : name === 'PELE-LICENSE.txt'
+                  ? diagramLibraryLicense()
+                  : await readDiagramAsset(name, root)
             response.setHeader(
               'Content-Type',
               name.endsWith('.svg')
                 ? 'image/svg+xml'
                 : name.endsWith('.png')
                   ? 'image/png'
-                  : 'text/plain; charset=utf-8'
+                  : name.endsWith('.woff2')
+                    ? 'font/woff2'
+                    : 'text/plain; charset=utf-8'
             )
             response.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
             response.end(buffer)
