@@ -239,7 +239,11 @@ export async function renderMermaidHtml(
     try {
       diagram = await generateDiagram(definition, { root, feed })
     } catch (error) {
-      const line = Number(figure.getAttribute('data-mermaid-line')) + Math.max(0, error.line ?? 0)
+      const leadingLines =
+        definition.slice(0, definition.length - definition.trimStart().length).split('\n').length -
+        1
+      const offset = error.line > 0 ? error.line + leadingLines : 0
+      const line = Number(figure.getAttribute('data-mermaid-line')) + offset
       throw new Error(
         `Mermaid ${figure.getAttribute('data-mermaid-file')}:${line}：${error.message}`,
         { cause: error }

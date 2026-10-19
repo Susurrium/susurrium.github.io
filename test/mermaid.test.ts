@@ -165,7 +165,10 @@ test('字体实际测量支持混合文本、粗体与 kerning，缺字明确失
 test('错误定位、资源拦截、源码与连线限制及缓存元数据错误', async () => {
   await expect(
     renderMermaidHtml(await compile('```mermaid\nflowchart TD\nA[未闭合\n```'))
-  ).rejects.toThrow('mermaid-article.md:')
+  ).rejects.toThrow('mermaid-article.md:4')
+  await expect(
+    renderMermaidHtml(await compile('```mermaid\n\n\nflowchart TD\nA[未闭合\n```'))
+  ).rejects.toThrow('mermaid-article.md:6')
   await expect(
     generateDiagram(
       'flowchart TD\nA@{ img: "https://example.invalid/private.png", label: "remote", h: 60 }'
