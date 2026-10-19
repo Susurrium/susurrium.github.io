@@ -152,6 +152,15 @@ test('常用类型由 Pele 和固定字体测量生成 SVG 与真实 PNG', async
   }
 }, 120000)
 
+test('没有文字标签的状态图生成真实 RSS PNG', async () => {
+  const result = await generateDiagram('stateDiagram-v2\n[*] --> [*]', { feed: true })
+  expect(result.fonts).toHaveLength(0)
+  expect(result.svg.width).toBeGreaterThan(0)
+  const metadata = await sharp(await readDiagramAsset(result.feed!.name)).metadata()
+  expect(metadata.format).toBe('png')
+  expect(metadata.width).toBeGreaterThan(0)
+})
+
 test('字体实际测量支持混合文本、粗体与 kerning，缺字明确失败', () => {
   const { measurer } = createDiagramMeasurer()
   expect(measurer.width('中文 Latin', 16, 0)).toBeGreaterThan(70)

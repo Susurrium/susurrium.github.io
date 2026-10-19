@@ -184,15 +184,18 @@ export async function generateDiagram(source, { root = process.cwd(), feed = fal
       .filter((font) => font.name.endsWith('.ttf'))
       .map((font) => resolve(directory, font.name))
     const family = result.fonts[0]?.family
-    if (!family) throw new Error('Mermaid 图表缺少字体')
-    const image = new Resvg(rasterSvg(sourceSvg, family), {
+    const hasText = readSvg(sourceSvg)
+      .svg.querySelectorAll('text')
+      .some((node) => node.text.trim())
+    if (hasText && !family) throw new Error('Mermaid 图表缺少字体')
+    const image = new Resvg(rasterSvg(sourceSvg, hasText ? family : fontFamily), {
       background: '#ffffff',
       font: {
         fontFiles,
         loadSystemFonts: false,
-        defaultFontFamily: family,
-        sansSerifFamily: family,
-        monospaceFamily: family
+        ...(hasText
+          ? { defaultFontFamily: family, sansSerifFamily: family, monospaceFamily: family }
+          : {})
       },
       fitTo: { mode: 'zoom', value: 2 }
     })
