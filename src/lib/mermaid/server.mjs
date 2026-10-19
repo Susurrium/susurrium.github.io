@@ -5,31 +5,46 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
-import { pathToFileURL } from 'node:url'
-import { generate, parse as parseCss, walk } from 'css-tree'
+import { Resvg } from '@resvg/resvg-js'
 import { parse as parseHtml } from 'node-html-parser'
+import { detectType, render } from 'pele'
 import rehypeStringify from 'rehype-stringify'
-import subsetFont from 'subset-font'
 import { unified } from 'unified'
 
+import {
+  createDiagramMeasurer,
+  diagramLicense,
+  fontFamily,
+  fontFingerprint,
+  fontStyles
+} from './fonts.mjs'
+import { instanceSvg, lightColors, rasterSvg, readSvg } from './svg.mjs'
+
+export { diagramLicense }
+export function diagramLibraryLicense() {
+  return readFileSync(resolve(dirname(require.resolve('pele/package.json')), 'LICENSE'))
+}
 const require = createRequire(import.meta.url)
 export const assetPrefix = '/_diagrams/'
-const revision = 1
+const revision = 3
 const inFlight = new Map()
-const fontCache = new Map()
-const printable = Array.from({ length: 95 }, (_, index) => String.fromCodePoint(index + 32)).join(
-  ''
-)
-const fontPath = require.resolve('@fontsource/noto-sans-sc/400.css')
-const licensePath = resolve(dirname(fontPath), 'LICENSE')
-const stylesheet = unified().use(rehypeStringify)
+const stylesheet = unified().use(rehypeStringify, { allowDangerousHtml: true })
+const resourceName = /^[a-f0-9]{64}(?:\.woff2|\.ttf|-diagram\.svg|-feed\.png)$/
+const digest = (value) => createHash('sha256').update(value).digest('hex')
+const renderOptions = {
+  fontFamily,
+  fontFamilyMono: fontFamily,
+  idPrefix: 'diagram',
+  autoDirection: false,
+  images: true,
+  links: false,
+  limit: 50000,
+  maxEdges: 500,
+  outputLimit: 4000000
+}
 
 export function cacheDirectory(root = process.cwd()) {
   return resolve(root, 'artifacts/mermaid-cache')
-}
-
-function digest(value) {
-  return createHash('sha256').update(value).digest('hex')
 }
 
 function packageVersion(name) {
@@ -46,62 +61,6 @@ function packageVersion(name) {
   }
 }
 
-function containsCodePoint(range, codePoint) {
-  const value = range.slice(2)
-  const [first, last = first] = value.split('-')
-  const lower = parseInt(first.replaceAll('?', '0'), 16)
-  const upper = parseInt(last.replaceAll('?', 'f'), 16)
-  return codePoint >= lower && codePoint <= upper
-}
-
-async function diagramFont(source) {
-  const text = printable + source
-  const points = [...new Set([...text].map((character) => character.codePointAt(0)))]
-  const ast = parseCss(await readFile(fontPath, 'utf8'))
-  const faces = []
-  walk(ast, {
-    visit: 'Atrule',
-    enter(node) {
-      if (node.name !== 'font-face') return
-      let path
-      let ranges = []
-      let rangeCss
-      walk(node, (child) => {
-        if (child.type !== 'Declaration') return
-        if (child.property === 'src')
-          walk(child.value, (entry) => {
-            if (entry.type === 'Url' && entry.value.endsWith('.woff2')) path = entry.value
-          })
-        if (child.property === 'unicode-range') {
-          rangeCss = generate(child.value)
-          walk(child.value, (entry) => {
-            if (entry.type === 'UnicodeRange') ranges.push(entry.value)
-          })
-        }
-      })
-      if (path && points.some((point) => ranges.some((range) => containsCodePoint(range, point))))
-        faces.push({ path, rangeCss, ranges })
-    }
-  })
-  // 对缺字尽早报错，避免由不同操作系统的备用字体改变图表布局。
-  for (const character of text) {
-    const point = character.codePointAt(0)
-    if (/\s/u.test(character) || point < 32) continue
-    if (!faces.some((face) => face.ranges.some((range) => containsCodePoint(range, point))))
-      throw new Error(`Mermaid 字体不包含字符 ${character} (U+${point.toString(16).toUpperCase()})`)
-  }
-  const css = []
-  for (const face of faces) {
-    const buffer = await subsetFont(await readFile(resolve(dirname(fontPath), face.path)), text, {
-      targetFormat: 'woff2'
-    })
-    css.push(
-      `@font-face{font-family:"Diagram Noto";font-style:normal;font-weight:400;font-display:block;src:url(data:font/woff2;base64,${buffer.toString('base64')}) format("woff2");unicode-range:${face.rangeCss}}`
-    )
-  }
-  return css.join('')
-}
-
 async function atomicWrite(path, data) {
   await mkdir(dirname(path), { recursive: true })
   const temporary = `${path}.${process.pid}.${randomUUID()}.pending`
@@ -109,200 +68,19 @@ async function atomicWrite(path, data) {
   await rename(temporary, path)
 }
 
-function mermaidConfig(dark, key) {
-  return {
-    startOnLoad: false,
-    securityLevel: 'strict',
-    suppressErrorRendering: true,
-    htmlLabels: false,
-    maxTextSize: 50000,
-    maxEdges: 500,
-    deterministicIds: true,
-    deterministicIDSeed: key,
-    fontFamily: 'Diagram Noto',
-    theme: 'base',
-    secure: [
-      'secure',
-      'securityLevel',
-      'startOnLoad',
-      'suppressErrorRendering',
-      'maxTextSize',
-      'maxEdges',
-      'theme',
-      'themeVariables',
-      'themeCSS',
-      'fontFamily',
-      'htmlLabels',
-      'dompurifyConfig'
-    ],
-    themeVariables: {
-      darkMode: dark,
-      background: dark ? '#101016' : '#ffffff',
-      primaryColor: dark ? '#202f3b' : '#edf4f8',
-      primaryTextColor: dark ? '#f5f5f5' : '#202127',
-      primaryBorderColor: dark ? '#a6d4e3' : '#52798e',
-      lineColor: dark ? '#d2d7df' : '#505966',
-      secondaryColor: dark ? '#303044' : '#f3eef9',
-      tertiaryColor: dark ? '#25372d' : '#eef6ed',
-      fontFamily: 'Diagram Noto',
-      fontSize: '16px'
-    }
+async function validAsset(asset, root) {
+  if (!asset || !resourceName.test(asset.name)) throw new Error('Mermaid 缓存资源名称无效')
+  try {
+    return digest(await readDiagramAsset(asset.name, root)) === asset.hash
+  } catch (error) {
+    if (error.code === 'ENOENT') return false
+    throw error
   }
 }
 
-async function renderAssets(source, key, css, directory) {
-  const temporary = resolve('artifacts/runtime-tmp')
-  await mkdir(temporary, { recursive: true })
-  Object.assign(process.env, { TMPDIR: temporary, TMP: temporary, TEMP: temporary })
-  process.env.PLAYWRIGHT_BROWSERS_PATH =
-    process.env.MERMAID_BROWSER_PATH ?? resolve('artifacts/mermaid-browsers')
-  const [{ default: rehypeMermaid }, { chromium }] = await Promise.all([
-    import('rehype-mermaid'),
-    import('playwright')
-  ])
-  const blocked = new Set()
-  const localResources = [
-    'mermaid-isomorphic',
-    'mermaid',
-    'katex/dist/katex.css',
-    '@fortawesome/fontawesome-free/css/all.css'
-  ].map((name) => pathToFileURL(resolve(dirname(require.resolve(name)), '..')).href + '/')
-  const browserType = {
-    async launch(options) {
-      const browser = await chromium.launch(options)
-      const newContext = browser.newContext.bind(browser)
-      browser.newContext = async (...args) => {
-        const context = await newContext(...args)
-        await context.route('**/*', (route) => {
-          const url = route.request().url()
-          if (url.startsWith('data:') || localResources.some((prefix) => url.startsWith(prefix)))
-            return route.continue()
-          blocked.add(url)
-          return route.abort('blockedbyclient')
-        })
-        return context
-      }
-      return browser
-    }
-  }
-  const render = async (variant) => {
-    /** @type {import('hast').Root} */
-    const tree = {
-      type: 'root',
-      children: [
-        {
-          type: 'element',
-          tagName: 'pre',
-          properties: { className: ['mermaid'] },
-          children: [{ type: 'text', value: source }]
-        }
-      ]
-    }
-    await unified()
-      .use(rehypeMermaid, {
-        strategy: variant === 'feed' ? 'img-png' : 'img-svg',
-        browserType,
-        css: `data:text/css;base64,${Buffer.from(css).toString('base64')}`,
-        prefix: `diagram-${key}-${variant}`,
-        mermaidConfig: mermaidConfig(variant === 'dark', key)
-      })
-      .run(tree)
-    const img = tree.children[0]
-    if (img.tagName !== 'img' || !img.properties.src) throw new Error('Mermaid 没有生成图片')
-    const response = await globalThis.fetch(img.properties.src)
-    let buffer = Buffer.from(await response.arrayBuffer())
-    if (variant !== 'feed') {
-      const svg = parseHtml(buffer.toString())
-      const element = svg.querySelector('svg')
-      if (!element) throw new Error('Mermaid 没有生成 SVG 根节点')
-      element.insertAdjacentHTML('afterbegin', `<style>${css}</style>`)
-      buffer = Buffer.from(svg.toString())
-    }
-    const name = `${key}-${variant}.${variant === 'feed' ? 'png' : 'svg'}`
-    await atomicWrite(resolve(directory, name), buffer)
-    return {
-      name,
-      bytes: buffer.length,
-      hash: digest(buffer),
-      width: Number(img.properties.width),
-      height: Number(img.properties.height),
-      title: String(img.properties.title ?? ''),
-      description: String(img.properties.alt ?? '')
-    }
-  }
-  const results = await Promise.allSettled(['light', 'dark', 'feed'].map(render))
-  if (blocked.size) throw new Error(`Mermaid 禁止请求外部资源：${[...blocked].join(', ')}`)
-  const failed = results.find((result) => result.status === 'rejected')
-  if (failed) throw failed.reason
-  const assets = Object.fromEntries(
-    results.map((result, index) => [['light', 'dark', 'feed'][index], result.value])
-  )
-  for (const asset of Object.values(assets))
-    if (!(asset.width > 0 && asset.height > 0 && Number.isFinite(asset.width + asset.height)))
-      throw new Error('Mermaid 图片尺寸无效')
-  return { key, assets }
-}
-
-export async function generateDiagram(source, { root = process.cwd() } = {}) {
-  source = source.trim()
-  if (!source.trim() || source.length > 50000) throw new Error('Mermaid 源码必须为 1–50000 个字符')
-  const versions = [
-    'rehype-mermaid',
-    'mermaid-isomorphic',
-    'mermaid',
-    'playwright',
-    'subset-font',
-    '@fontsource/noto-sans-sc'
-  ].map(packageVersion)
-  if (!fontCache.has(source)) {
-    const pending = diagramFont(source)
-    fontCache.set(source, pending)
-    pending.catch(() => fontCache.delete(source))
-    if (fontCache.size > 128) fontCache.delete(fontCache.keys().next().value)
-  }
-  const css = await fontCache.get(source)
-  const key = digest(
-    JSON.stringify({
-      revision,
-      source,
-      versions,
-      platform: process.platform,
-      architecture: process.arch,
-      css,
-      config: mermaidConfig(false, '')
-    })
-  )
-  const directory = cacheDirectory(root)
-  const id = `${directory}/${key}`
+async function shared(id, run) {
   if (inFlight.has(id)) return inFlight.get(id)
-  const task = (async () => {
-    const metadataPath = resolve(directory, `${key}.json`)
-    let metadata
-    try {
-      metadata = JSON.parse(await readFile(metadataPath, 'utf8'))
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error
-    }
-    if (metadata) {
-      let valid =
-        metadata.key === key &&
-        ['light', 'dark', 'feed'].every((variant) => metadata.assets?.[variant])
-      for (const asset of Object.values(metadata.assets ?? {})) {
-        if (!/^[a-f0-9]{64}-(light\.svg|dark\.svg|feed\.png)$/.test(asset.name))
-          throw new Error('Mermaid 缓存资源名称无效')
-        try {
-          if (digest(await readFile(resolve(directory, asset.name))) !== asset.hash) valid = false
-        } catch (error) {
-          if (error.code !== 'ENOENT') throw error
-          valid = false
-        }
-      }
-      if (valid) return { ...metadata, cached: true }
-    }
-    const result = await renderAssets(source, key, css, directory)
-    await atomicWrite(metadataPath, JSON.stringify(result))
-    return { ...result, cached: false }
-  })()
+  const task = run()
   inFlight.set(id, task)
   try {
     return await task
@@ -311,95 +89,236 @@ export async function generateDiagram(source, { root = process.cwd() } = {}) {
   }
 }
 
+export async function generateDiagram(source, { root = process.cwd(), feed = false } = {}) {
+  source = source.trim()
+  if (!source || source.length > 50000) throw new Error('Mermaid 源码必须为 1–50000 个字符')
+  const now = detectType(source) === 'gantt' ? new Date().toISOString().slice(0, 10) : null
+  const versions = [
+    'pele',
+    'fontkit',
+    'color',
+    'subset-font',
+    '@resvg/resvg-js',
+    '@fontsource/noto-sans-sc'
+  ].map(packageVersion)
+  const key = digest(
+    JSON.stringify({
+      revision,
+      source,
+      versions,
+      renderOptions,
+      lightColors,
+      font: fontFingerprint(),
+      now,
+      platform: process.platform,
+      architecture: process.arch
+    })
+  )
+  const directory = cacheDirectory(root)
+  const metadataPath = resolve(directory, `${key}.json`)
+  const result = await shared(metadataPath, async () => {
+    let metadata
+    try {
+      metadata = JSON.parse(await readFile(metadataPath, 'utf8'))
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
+    if (
+      metadata !== undefined &&
+      (!metadata || metadata.key !== key || !metadata.svg || !Array.isArray(metadata.fonts))
+    )
+      throw new Error('Mermaid 缓存元数据无效')
+    if (metadata?.key === key && metadata.svg && Array.isArray(metadata.fonts)) {
+      const valid = await Promise.all(
+        [metadata.svg, ...metadata.fonts].map((asset) => validAsset(asset, root))
+      )
+      if (valid.every(Boolean)) return { ...metadata, cached: true }
+    }
+    const fonts = createDiagramMeasurer()
+    // 保留 image 节点供校验明确拒绝，避免静默丢失作者内容。
+    const rendered = render(source, {
+      measurer: fonts.measurer,
+      ...renderOptions,
+      now: now ? new Date(`${now}T00:00:00Z`) : undefined,
+      icons: () => {
+        throw new Error('Mermaid 不支持自定义图标')
+      }
+    })
+    const { svg } = readSvg(rendered.svg)
+    if (!(
+      rendered.width > 0 &&
+      rendered.height > 0 &&
+      Number.isFinite(rendered.width + rendered.height)
+    ))
+      throw new Error('Mermaid 图片尺寸无效')
+    const fontAssets = await fonts.assets()
+    for (const asset of fontAssets) await atomicWrite(resolve(directory, asset.name), asset.buffer)
+    const buffer = Buffer.from(rendered.svg)
+    const asset = {
+      name: `${key}-diagram.svg`,
+      hash: digest(buffer),
+      bytes: buffer.length,
+      width: rendered.width,
+      height: rendered.height,
+      title: svg.querySelector('title')?.text ?? '',
+      description: svg.querySelector('desc')?.text ?? ''
+    }
+    await atomicWrite(resolve(directory, asset.name), buffer)
+    const generated = {
+      key,
+      svg: asset,
+      fonts: fontAssets.map((asset) => {
+        const item = { ...asset }
+        delete item.buffer
+        return item
+      })
+    }
+    await atomicWrite(metadataPath, JSON.stringify(generated))
+    return { ...generated, cached: false }
+  })
+  if (!feed) return result
+  return shared(`${metadataPath}/feed`, async () => {
+    if (result.feed && (await validAsset(result.feed, root))) return result
+    const sourceSvg = (await readDiagramAsset(result.svg.name, root)).toString()
+    const fontFiles = result.fonts
+      .filter((font) => font.name.endsWith('.ttf'))
+      .map((font) => resolve(directory, font.name))
+    const family = result.fonts[0]?.family
+    const hasText = readSvg(sourceSvg)
+      .svg.querySelectorAll('text')
+      .some((node) => node.text.trim())
+    if (hasText && !family) throw new Error('Mermaid 图表缺少字体')
+    const image = new Resvg(rasterSvg(sourceSvg, hasText ? family : fontFamily), {
+      background: '#ffffff',
+      font: {
+        fontFiles,
+        loadSystemFonts: false,
+        ...(hasText
+          ? { defaultFontFamily: family, sansSerifFamily: family, monospaceFamily: family }
+          : {})
+      },
+      fitTo: { mode: 'zoom', value: 2 }
+    })
+    if (image.imagesToResolve().length) throw new Error('Mermaid 禁止请求外部资源')
+    const png = image.render()
+    const buffer = png.asPng()
+    const asset = {
+      name: `${key}-feed.png`,
+      hash: digest(buffer),
+      bytes: buffer.length,
+      width: png.width,
+      height: png.height
+    }
+    await atomicWrite(resolve(directory, asset.name), buffer)
+    const generated = { ...result, feed: asset }
+    delete generated.cached
+    await atomicWrite(metadataPath, JSON.stringify(generated))
+    return { ...generated, cached: result.cached, feedCached: false }
+  })
+}
+
 function html(node) {
   return stylesheet.stringify({ type: 'root', children: [node] })
 }
-
 function element(tagName, properties = {}, children = []) {
   return { type: 'element', tagName, properties, children }
 }
 const text = (value) => ({ type: 'text', value })
 
-/** @param {string} source @param {{root?: string, feed?: boolean, permalink?: URL}} [options] */
+/** @param {string} source @param {{root?: string, feed?: boolean, permalink?: URL, pageKey?: string}} [options] */
 export async function renderMermaidHtml(
   source,
-  { root = process.cwd(), feed = false, permalink } = {}
+  { root = process.cwd(), feed = false, permalink, pageKey = '' } = {}
 ) {
   if (!source.includes('data-mermaid-source')) return source
+  if (feed && !permalink) throw new Error('Mermaid RSS 缺少原文链接')
   const document = parseHtml(source, { blockTextElements: { script: true, style: true } })
+  let index = 0
   for (const figure of document.querySelectorAll('figure[data-mermaid-source]')) {
     const code = figure.querySelector('pre code')
     if (!code) throw new Error('Mermaid 图表缺少源码')
     const definition = code.text
     let diagram
     try {
-      diagram = await generateDiagram(definition, { root })
+      diagram = await generateDiagram(definition, { root, feed })
     } catch (error) {
+      const leadingLines =
+        definition.slice(0, definition.length - definition.trimStart().length).split('\n').length -
+        1
+      const offset = error.line > 0 ? error.line + leadingLines : 0
+      const line = Number(figure.getAttribute('data-mermaid-line')) + offset
       throw new Error(
-        `Mermaid ${figure.getAttribute('data-mermaid-file')}:${figure.getAttribute('data-mermaid-line')}：${error.message}`,
+        `Mermaid ${figure.getAttribute('data-mermaid-file')}:${line}：${error.message}`,
         { cause: error }
       )
     }
-    const { light, dark, feed: png } = diagram.assets
-    const title = light.title || 'Mermaid 图表'
-    const description = light.description
-    const image = (asset, className) =>
-      element('img', {
-        src: assetPrefix + asset.name,
-        width: Math.ceil(asset.width),
-        height: Math.ceil(asset.height),
-        style: `width:${Math.ceil(asset.width)}px`,
-        alt: description ? `${title}：${description}` : title,
-        className,
-        loading: 'lazy',
-        decoding: 'async'
-      })
+    const title = diagram.svg.title || 'Mermaid 图表'
+    const description = diagram.svg.description
     const caption = element('figcaption', {}, [
       text(title),
       ...(description ? [text(`：${description}`)] : [])
     ])
     if (feed) {
+      const png = diagram.feed
       figure.replaceWith(
         html(
           element('figure', {}, [
-            image(png),
+            element('img', {
+              src: assetPrefix + png.name,
+              width: Math.ceil(diagram.svg.width),
+              height: Math.ceil(diagram.svg.height),
+              alt: description ? `${title}：${description}` : title,
+              loading: 'lazy',
+              decoding: 'async'
+            }),
             caption,
             element('p', {}, [element('a', { href: String(permalink) }, [text('阅读原文')])])
           ])
         )
       )
     } else {
+      const prefix = `diagram-${digest(`${pageKey}:${index++}:${diagram.key}`).slice(0, 20)}`
+      const svg = instanceSvg((await readDiagramAsset(diagram.svg.name, root)).toString(), prefix)
+      const sourceBlock = element(
+        'details',
+        { className: ['mermaid-source'], 'data-pagefind-ignore': 'all' },
+        [
+          element('summary', {}, [text('查看源码')]),
+          element(
+            'button',
+            {
+              type: 'button',
+              'data-copy-code': '',
+              'data-code': definition,
+              'aria-label': '复制代码'
+            },
+            [text('复制源码')]
+          ),
+          element('pre', {}, [element('code', {}, [text(definition)])])
+        ]
+      )
       figure.replaceWith(
         html(
           element(
             'figure',
             { className: ['mermaid-diagram'], 'data-mermaid-diagram': diagram.key },
             [
+              element('style', { 'data-pagefind-ignore': 'all' }, [
+                text(fontStyles(diagram.fonts, assetPrefix))
+              ]),
               element(
-                'div',
+                'mermaid-viewport',
                 {
                   className: ['mermaid-viewport'],
                   tabIndex: 0,
                   role: 'region',
-                  'aria-label': `${title}，可横向滚动`
+                  'aria-label': `${title}，可缩放与滚动`,
+                  'data-pagefind-ignore': 'all'
                 },
-                [image(light, ['mermaid-light']), image(dark, ['mermaid-dark'])]
+                [{ type: 'raw', value: svg }]
               ),
               caption,
-              element('details', { className: ['mermaid-source'], 'data-pagefind-ignore': 'all' }, [
-                element('summary', {}, [text('查看源码')]),
-                element(
-                  'button',
-                  {
-                    type: 'button',
-                    'data-copy-code': '',
-                    'data-code': definition,
-                    'aria-label': '复制代码'
-                  },
-                  [text('复制源码')]
-                ),
-                element('pre', {}, [element('code', {}, [text(definition)])])
-              ])
+              sourceBlock
             ]
           )
         )
@@ -410,11 +329,6 @@ export async function renderMermaidHtml(
 }
 
 export async function readDiagramAsset(name, root = process.cwd()) {
-  if (!/^[a-f0-9]{64}-(light\.svg|dark\.svg|feed\.png)$/.test(name))
-    throw new Error(`Mermaid 资源名称无效：${name}`)
+  if (!resourceName.test(name)) throw new Error(`Mermaid 资源名称无效：${name}`)
   return readFile(resolve(cacheDirectory(root), name))
-}
-
-export async function diagramLicense() {
-  return readFile(licensePath)
 }

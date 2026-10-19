@@ -28,17 +28,19 @@ Windows 推荐直接 Node 入口；其他环境可运行等价的 `bun run build
 
 ### Mermaid 运行环境
 
-Mermaid 使用 `rehype-mermaid`、`mermaid-isomorphic`、Playwright 和 Chromium 在开发或构建环境中生成图表。依赖版本通过 `package.json` 与 `bun.lock` 固定。安装依赖后执行：
+Mermaid 围栏使用 Pele 在开发或构建环境中生成内联 SVG，fontkit 测量固定字体，subset-font 生成字体子集，resvg-js 按需生成 RSS PNG。依赖版本通过 `package.json` 与 `bun.lock` 固定。正常开发与构建不需要浏览器。运行完整测试前安装 Playwright Chromium：
 
 ```powershell
-bun run setup:mermaid
+bun run setup:browser
 ```
 
-Linux CI 使用 `bun run setup:mermaid --with-deps` 安装对应 Chromium 及系统依赖。浏览器默认存放在 `artifacts/mermaid-browsers/`，临时文件在 `artifacts/runtime-tmp/`；需要复用其他已安装的同版本浏览器目录时设置 `MERMAID_BROWSER_PATH`。浏览器是开发与构建依赖，不进入网页运行时。
+Linux CI 使用 `bun run setup:browser --with-deps` 安装测试所需 Chromium 与系统依赖。浏览器默认存放在 `artifacts/playwright-browsers/`，临时文件在 `artifacts/runtime-tmp/`；测试时设置 `PLAYWRIGHT_BROWSERS_PATH` 为该绝对目录。也可通过该变量复用同版本浏览器。Chromium 仅用于测试，不进入图表生成流程或网页运行时。
+
+公开教程中的 `bun run setup:mermaid` 保留为浏览器测试安装命令的兼容入口。
 
 `bun run dev` 自动生成页面需要的图表，正文变更后更新对应资源。持久缓存位于 `artifacts/mermaid-cache/`，记录源码、渲染配置、字体、依赖版本与生成规则的哈希。缓存文件缺失或内容哈希不符时重新生成；缓存 JSON 损坏会明确失败。缓存不作为提交或发布输入。
 
-构建只复制实际公开 HTML 与 RSS 引用的图片到 `dist/_diagrams/`，并附带字体许可。源码仍由编译结果保留，清除缓存后可以重新生成；草稿和没有被发布页面引用的缓存不进入产物。正式构建前须停止占用 `dist/` 的预览。
+构建只复制实际公开 HTML 与 RSS 引用的 WOFF2 和 PNG 到 `dist/_diagrams/`，并附带字体与 Pele/Lucide 许可。内部 SVG 缓存与 SFNT 不发布。源码仍由编译结果保留，清除缓存后可以重新生成；草稿和没有被发布页面引用的缓存不进入产物。正式构建前须停止占用 `dist/` 的预览。
 
 专项测试：
 
@@ -47,7 +49,7 @@ bun test ./test/mermaid.test.ts
 bun test ./test/mermaid-build.test.ts
 ```
 
-前者验证真实渲染、常用类型、缓存恢复、错误定位及 RSS；后者在 `artifacts/mermaid-build-tests/` 隔离站点中使用独立内容样本，验证 Markdown/MDX、草稿过滤、重复构建、主题、站内导航、打印、无 JavaScript 与开发更新。媒体隔离构建通过 `MERMAID_BROWSER_PATH` 复用项目安装的 Chromium。失败保留夹具与日志，成功清理隔离站点；相关图表截图保存在 `artifacts/mermaid-verification/`。
+前者验证 Pele、固定字体、真实 PNG、常用类型、实例 ID、缓存恢复、资源拦截、错误定位与 RSS；后者在 `artifacts/mermaid-build-tests/` 隔离站点中使用独立内容样本，验证 Markdown/MDX、草稿过滤、重复构建、主题、站内导航、缩放、打印、无 JavaScript 与开发更新。失败保留夹具与日志，成功清理隔离站点；相关图表截图保存在 `artifacts/mermaid-verification/`。
 
 ## 配置导航
 
@@ -172,7 +174,7 @@ bun run verify:mermaid:browser
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
-- Mermaid browser 扫描全部公开正文，按主题将图表滚入视口并等待图片加载，检查图表资源、主题、窄屏和打印；没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
+- Mermaid browser 扫描全部公开正文，检查 SVG、字体、实例 ID、明暗主题、手机缩放与打印恢复，并检查客户端未包含图表渲染器。设置 `MERMAID_EVIDENCE_DIR` 为 `artifacts/` 下目录可采集各图桌面明暗和手机截图，供检查文字、连线和配色。没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
 
 脚本从真实构建发现详情、搜索词和目录分支，缺失分支明确记录。CI 与 Pages 复用同一份待发布产物，不注入测试文章。专项行为要求见 [架构说明](./ARCHITECTURE.md)。
 

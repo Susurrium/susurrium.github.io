@@ -1,0 +1,108 @@
+<script>
+  import { enableZoom, type Zoom } from 'pele/core'
+
+  class MermaidViewport extends HTMLElement {
+    #zoom?: Zoom
+    #listeners?: AbortController
+    #beforePrint?: { style: string; wrapper: HTMLDivElement; svg: SVGSVGElement }
+
+    connectedCallback() {
+      this.#release()
+      const svg = this.querySelector('svg')
+      if (!svg) return
+      const renderStyle = svg.getAttribute('style') ?? ''
+      const listeners = new AbortController()
+      this.#listeners = listeners
+      const { signal } = listeners
+      const connect = () => {
+        if (
+          !this.isConnected ||
+          signal.aborted ||
+          this.#zoom ||
+          this.#beforePrint ||
+          window.matchMedia('print').matches
+        )
+          return
+        this.classList.add('mermaid-interactive')
+        this.#zoom = enableZoom(this, {
+          always: true,
+          labels: { zoomIn: '放大图表', zoomOut: '缩小图表', reset: '重置缩放' }
+        })
+      }
+      void document.fonts.ready.then(connect)
+      const preparePrint = () => {
+        if (this.#beforePrint) return
+        const wrapper = document.createElement('div')
+        wrapper.className = 'mermaid-print'
+        wrapper.setAttribute('data-pagefind-ignore', 'all')
+        const copy = svg.cloneNode(true) as SVGSVGElement
+        copy.setAttribute(
+          'viewBox',
+          `0 0 ${svg.getAttribute('width')} ${svg.getAttribute('height')}`
+        )
+        copy.setAttribute('style', renderStyle)
+        wrapper.append(copy)
+        this.#beforePrint = { style: this.getAttribute('style') ?? '', wrapper, svg }
+        // 固定阅读实例的尺寸，保留缩放库的观察器与平移状态；打印副本独立排版。
+        const width = this.clientWidth
+        const height = this.clientHeight
+        Object.assign(this.style, {
+          position: 'fixed',
+          left: '-100000px',
+          top: '0',
+          width: `${width}px`,
+          height: `${height}px`,
+          maxWidth: 'none',
+          visibility: 'hidden',
+          boxSizing: 'border-box'
+        })
+        svg.remove()
+        this.after(wrapper)
+      }
+      const restorePrint = () => {
+        requestAnimationFrame(() => {
+          if (!signal.aborted && !window.matchMedia('print').matches) {
+            this.#endPrint()
+            void document.fonts.ready.then(connect)
+          }
+        })
+      }
+      window.addEventListener('beforeprint', preparePrint, { signal })
+      window.addEventListener('afterprint', restorePrint, { signal })
+      window.matchMedia('print').addEventListener(
+        'change',
+        (event) => {
+          if (event.matches) preparePrint()
+          else restorePrint()
+        },
+        { signal }
+      )
+      document.addEventListener('astro:before-swap', () => this.#release(), { signal })
+      if (window.matchMedia('print').matches) preparePrint()
+    }
+
+    disconnectedCallback() {
+      this.#release()
+    }
+
+    #endPrint() {
+      const saved = this.#beforePrint
+      if (!saved) return
+      this.prepend(saved.svg)
+      this.setAttribute('style', saved.style)
+      saved.wrapper.remove()
+      this.#beforePrint = undefined
+    }
+
+    #release() {
+      this.#listeners?.abort()
+      this.#listeners = undefined
+      this.#endPrint()
+      this.#zoom?.destroy()
+      this.#zoom = undefined
+      this.classList.remove('mermaid-interactive')
+    }
+  }
+  if (!customElements.get('mermaid-viewport'))
+    customElements.define('mermaid-viewport', MermaidViewport)
+</script>

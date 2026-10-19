@@ -22,6 +22,7 @@ import ContentLayout from '@/layouts/ContentLayout.astro'
 import ArticleImageZoom from '@/components/reading/ArticleImageZoom.astro'
 import ReadingBackground from '@/components/reading/capabilities/ReadingBackground.astro'
 import ReadingOpeningMediaRuntime from '@/components/reading/capabilities/ReadingOpeningMediaRuntime.astro'
+import MermaidRuntime from '@/components/reading/MermaidRuntime.astro'
 import Signature from '@/components/shared/Signature.astro'
 import { integ, siteFeatures } from '@/site-config'
 
@@ -55,6 +56,7 @@ const {
 ---
 
 <ReadingOpeningMediaRuntime />
+<MermaidRuntime />
 
 <ContentLayout
   {back}
