@@ -102,6 +102,7 @@
     "@fontsource/noto-sans-sc": "5.3.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@resvg/resvg-js": "2.6.2",
+    "@types/css-tree": "2.3.10",
     "@types/hast": "3.0.5",
     "@types/mdast": "4.0.4",
     "@types/node": "24.13.3",

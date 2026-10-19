@@ -38,6 +38,7 @@
 - `pele@1.6.0`：kepano / Obsidian，MIT；[源码](https://github.com/obsidianmd/pele)、[API](https://pele.run/api)、[兼容性](https://pele.run/compatibility)、[安全说明](https://pele.run/security)。直接调用 `render()` 与 `pele/core` 的 `enableZoom()`，不复制实现。网页仅交付缩放代码；布局和语法解析留在服务端。缩放重置图标来自包内 Lucide v1.14.0，ISC，完整许可随 `PELE-LICENSE.txt` 发布。
 - `fontkit@2.0.4`：MIT；[源码及接口](https://github.com/foliojs/fontkit)。读取固定字体、检查字形并测量 shaping 后的 advance width。
 - `color@4.2.3`：MIT；[源码及接口](https://github.com/Qix-/color)。与 css-tree 一同将 PNG 中的颜色变量及 sRGB 混色转换为明确颜色值。
+- `css-tree@3.2.1` 与 `@types/css-tree@2.3.10`：MIT；[CSS 解析器](https://github.com/csstree/csstree)、[类型声明](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/css-tree)。用于字体清单、SVG 样式与资源引用的 AST 处理，类型声明作为直接开发依赖维护。
 - `@resvg/resvg-js@2.6.2`：MPL-2.0；[源码](https://github.com/yisibl/resvg-js)。仅在服务端转换 RSS PNG，禁用系统字体并加载缓存 SFNT。直接调用依赖，不修改库源码，不向网页分发其二进制文件。
 - `subset-font@2.9.0` 和 `@fontsource/noto-sans-sc@5.3.1` 沿用上述来源。400/700 字重生成同源 WOFF2 子集及内部 SFNT，字体许可随公开资源发布。字体字节参与缓存键。
 - `playwright@1.64.1` 仅用于浏览器测试，安装入口为 `scripts/setup-browser.mjs`。
