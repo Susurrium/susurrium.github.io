@@ -196,7 +196,7 @@ Fork 的 GitHub CLI 操作显式指定 `--repo Susurrium/susurrium.github.io`，
 
 ### 独立内容发布
 
-只修改兼容当前 `main` 的正文、元数据和随文媒体时：
+只修改兼容当前 `main` 的正文、元数据、随文媒体及必要日期维护记录时：
 
 ```powershell
 git fetch origin
@@ -205,7 +205,7 @@ git pull --ff-only origin main
 git switch -c codex/content-<topic>
 ```
 
-按 [内容指南](./CONTENT.md) 完成编辑与预览。运行完整 CI（包含新构建），成功后执行 `bun run release:gate` 和 `bun run links:check:dry`。审阅内容、素材及公开范围后，只暂存相关文件，提交、推送，创建工作分支到 `main` 的 PR。等待 `validate`、`browser-regression` 成功后合并。
+按 [内容指南](./CONTENT.md) 完成编辑与预览，并在正式构建前完成 [日期维护](./CONTENT.md#日期与标签)，核对实际日期字段、草稿状态及相关记录。运行完整 CI（包含新构建），成功后执行 `bun run release:gate` 和 `bun run links:check:dry`，确认最新产物中相关卡片、详情及适用 RSS 的日期符合预期。审阅内容、素材及公开范围后，只暂存相关文件与本次必要的日期维护记录，提交、推送，创建工作分支到 `main` 的 PR。等待 `validate`、`browser-regression` 成功后合并。
 
 按下面的 Pages 流程部署，之后通过 `main → develop` PR 同步生产基线。需要未发布 schema、模板、组件、站点配置或样式的内容，先按网站功能流程发布依赖代码。
 
