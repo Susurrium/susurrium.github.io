@@ -258,13 +258,13 @@ RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying �
 
 `rehype-mermaid-source.ts` 在 Shiki 排除 `mermaid` 后，将围栏转换为携带源码、物理文件路径和行号的临时 figure。编译阶段保留源码；文章实际渲染后，由 `src/middleware/mermaid.ts` 处理 HTML，RSS 则通过 `prepareFeedContent()` 调用同一服务。草稿不会因为内容同步而生成可发布图表。
 
-`src/lib/mermaid/server.mjs` 使用 `rehype-mermaid` 的 SVG/PNG 策略，在受限 Chromium 上生成浅色 SVG、深色 SVG 和 RSS PNG。解析与布局使用 Mermaid；本项目负责字体、缓存、图表容器与资源输出。Noto Sans SC 以必要的 WOFF2 子集嵌入 SVG，构建测量和图片显示使用相同字体。浏览器渲染过程禁止外部请求，缺字、语法错误和渲染错误提供明确诊断。
+`src/lib/mermaid/server.mjs` 使用固定的 Pele 版本生成内联 SVG，保留正文显式方向。`fonts.mjs` 用 fontkit 按固定 Noto Sans SC 的 400/700 字重测量实际文本，按连续字体片段执行 shaping；subset-font 生成同源 WOFF2 子集与内部 SFNT 字体。网页和 PNG 使用同一字体来源，缺字明确失败。`svg.mjs` 校验 SVG 元素、属性和样式资源引用，并为页面内每个实例生成独立 ID。图内图片、自定义图标和链接交互关闭，源码 50000 字符、连线 500 条、输出 4000000 字符的限制在服务端执行。
 
-最终 figure 包含两张图表、可访问替代文本、图注、原生源码折叠区和现有复制按钮契约。`data-theme` 与 CSS 选择明暗图片；宽图横向滚动，打印使用浅色图片。源码与操作区排除 Pagefind 索引，图注提供可搜索说明。图表不加入正文图片缩放选择器。
+最终 figure 包含一份 SVG、字体声明、图注、原生源码折叠区和现有复制按钮契约。Pele 颜色变量映射网站主题，颜色切换不重新布局。`MermaidRuntime.astro` 通过 `pele/core` 的 `enableZoom()` 增强缩放、平移和键盘操作，离开页面时销毁实例；客户端不包含图表解析与布局实现。关闭 JavaScript 时保留 SVG 和宽图滚动。打印使用完整浅色图表，隐藏源码与操作区，结束后恢复阅读状态。SVG、源码与操作区排除 Pagefind，图注提供可搜索说明。
 
-`src/integrations/mermaid.ts` 注册页面中间件和开发期同源图片服务，并在 Pagefind 之前收集最终 HTML/RSS 中的资源引用，将必要文件复制到 `dist/_diagrams/`。不扫描缓存目录直接发布，因此草稿缓存和历史缓存不会扩大公开范围。RSS 将图表投影为 PNG、图注和原文链接后继续执行既有清洗。
+`src/integrations/mermaid.ts` 注册页面中间件和开发期同源资源服务，在 Pagefind 之前收集最终 HTML/RSS 引用的字体与 PNG，复制到 `dist/_diagrams/`，附带字体和 Pele/Lucide 许可。内部 SVG 缓存和 SFNT 不进入发布产物。RSS 按需调用 resvg-js，通过 css-tree 和 color 将 CSS 变量及 sRGB 混色解析为明确浅色，禁用系统字体并加载固定 SFNT 字体，生成 2 倍分辨率 PNG，再与图注、原文链接一同执行既有清洗。PNG 按页面中的逻辑尺寸显示。
 
-缓存保存于 `artifacts/mermaid-cache/`，键包含源码、依赖版本、字体与渲染配置及规则版本；文件有独立 SHA-256 校验。公开图表始终可由正文重新生成，缺失资源阻止完成构建。生命周期保持普通正文图片行为，Mermaid 和 Playwright 不进入客户端代码。
+缓存保存于 `artifacts/mermaid-cache/`，键包含源码、依赖版本、字体文件指纹、规则版本和平台；修改固定渲染规则时推进规则版本。Gantt 的参考日期按构建环境 UTC 日固定并参与缓存键。资源有独立 SHA-256 校验，缺失或损坏时重新生成，缓存 JSON 损坏明确失败；同进程请求合并，写入采用原子替换。只发布实际引用资源，草稿缓存和历史缓存不会扩大公开范围。图表生成不依赖 Chromium；Playwright 仅用于浏览器测试。
 
 ## 8. 代码组织与新增内容类型流程
 
