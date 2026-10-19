@@ -10,18 +10,14 @@ const temporary = resolve('artifacts/runtime-tmp')
 mkdirSync(temporary, { recursive: true })
 const result = spawnSync(
   process.execPath,
-  [
-    cli,
-    'install',
-    ...(process.argv.includes('--with-deps') ? ['--with-deps'] : []),
-    'chromium'
-  ],
+  [cli, 'install', ...(process.argv.includes('--with-deps') ? ['--with-deps'] : []), 'chromium'],
   {
     stdio: 'inherit',
     windowsHide: true,
     env: {
       ...process.env,
-      PLAYWRIGHT_BROWSERS_PATH: resolve('artifacts/mermaid-browsers'),
+      PLAYWRIGHT_BROWSERS_PATH:
+        process.env.PLAYWRIGHT_BROWSERS_PATH ?? resolve('artifacts/playwright-browsers'),
       TMPDIR: temporary,
       TMP: temporary,
       TEMP: temporary

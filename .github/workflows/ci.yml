@@ -40,12 +40,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Set up Mermaid renderer
-        run: bun run setup:mermaid --with-deps
+      - name: Set up browser regression runtime
+        run: bun run setup:browser --with-deps
 
       - name: Validate
         env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/artifacts/mermaid-browsers
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/artifacts/playwright-browsers
         run: bun run ci
 
       - name: Upload validated production artifact
