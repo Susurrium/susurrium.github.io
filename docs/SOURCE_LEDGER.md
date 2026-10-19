@@ -33,6 +33,8 @@
 
 同日，用户进一步明确授权“提交推送”，执行范围为提交本次开发变更并推送工作分支。
 
+随后，用户明确要求“发布部署”，授权通过工作分支到 develop、develop 到 main 的 PR 合并，按需要同步生产基线，并从 main 手动部署 GitHub Pages，核验线上结果。
+
 - `pele@1.6.0`：kepano / Obsidian，MIT；[源码](https://github.com/obsidianmd/pele)、[API](https://pele.run/api)、[兼容性](https://pele.run/compatibility)、[安全说明](https://pele.run/security)。直接调用 `render()` 与 `pele/core` 的 `enableZoom()`，不复制实现。网页仅交付缩放代码；布局和语法解析留在服务端。缩放重置图标来自包内 Lucide v1.14.0，ISC，完整许可随 `PELE-LICENSE.txt` 发布。
 - `fontkit@2.0.4`：MIT；[源码及接口](https://github.com/foliojs/fontkit)。读取固定字体、检查字形并测量 shaping 后的 advance width。
 - `color@4.2.3`：MIT；[源码及接口](https://github.com/Qix-/color)。与 css-tree 一同将 PNG 中的颜色变量及 sRGB 混色转换为明确颜色值。
