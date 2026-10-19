@@ -15,7 +15,14 @@
       this.#listeners = listeners
       const { signal } = listeners
       const connect = () => {
-        if (!this.isConnected || signal.aborted) return
+        if (
+          !this.isConnected ||
+          signal.aborted ||
+          this.#zoom ||
+          this.#beforePrint ||
+          window.matchMedia('print').matches
+        )
+          return
         this.classList.add('mermaid-interactive')
         this.#zoom = enableZoom(this, {
           always: true,
@@ -54,7 +61,10 @@
       }
       const restorePrint = () => {
         requestAnimationFrame(() => {
-          if (!signal.aborted && !window.matchMedia('print').matches) this.#endPrint()
+          if (!signal.aborted && !window.matchMedia('print').matches) {
+            this.#endPrint()
+            void document.fonts.ready.then(connect)
+          }
         })
       }
       window.addEventListener('beforeprint', preparePrint, { signal })
@@ -68,6 +78,7 @@
         { signal }
       )
       document.addEventListener('astro:before-swap', () => this.#release(), { signal })
+      if (window.matchMedia('print').matches) preparePrint()
     }
 
     disconnectedCallback() {

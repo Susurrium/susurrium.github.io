@@ -374,6 +374,8 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
         .locator('.mermaid-diagram')
         .screenshot({ path: resolve(evidence, 'mobile-wide-dark.png') })
       await page.goBack()
+      await page.waitForURL('**/blog/mermaid-build-markdown')
+      await page.locator('.mermaid-interactive > svg').waitFor()
       await page.locator('.mermaid-diagram').waitFor()
       await page.emulateMedia({ media: 'print' })
       await page.locator('.mermaid-print > svg').waitFor({ state: 'visible' })
@@ -386,6 +388,17 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       expect(await noScriptPage.locator('.mermaid-viewport > svg').isVisible()).toBe(true)
       expect(await noScriptPage.locator('.pele-zoom').count()).toBe(0)
       await noScript.close()
+      const printEntry = await browser.newContext()
+      const printPage = await printEntry.newPage()
+      await printPage.emulateMedia({ media: 'print' })
+      await printPage.goto(base + '/blog/mermaid-build-mdx')
+      await printPage.locator('.mermaid-print > svg').waitFor({ state: 'visible' })
+      expect(await printPage.locator('.mermaid-interactive').count()).toBe(0)
+      await printPage.emulateMedia({ media: 'screen' })
+      await printPage.locator('.mermaid-interactive > svg').waitFor({ state: 'visible' })
+      expect(await printPage.locator('.mermaid-print').count()).toBe(0)
+      expect(await printPage.getByRole('button', { name: '放大图表' }).isVisible()).toBe(true)
+      await printEntry.close()
       const touch = await browser.newContext({
         viewport: { width: 390, height: 844 },
         hasTouch: true,
