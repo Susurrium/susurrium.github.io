@@ -12,6 +12,8 @@
 
 ## Mermaid 图表依赖
 
+### 2026-10-18 初始接入记录
+
 2026-10-18 用户确认支持 Blog、Trace、Saying 的 Markdown/MDX Mermaid 围栏，采用构建期生成同源 SVG、主题适配、源码复制、RSS PNG、开发预览和完整验证；当时确认的开发范围不包含提交、推送、合并或上线。
 
 同日，用户进一步明确授权“提交推送并部署”。本次发布通过工作分支到 develop、develop 到 main 的 PR 和检查完成，并从 main 手动触发 Pages 部署。
@@ -24,6 +26,24 @@
 - `@fontsource/noto-sans-sc@5.3.1`：OFL-1.1，字体版权 Google Inc.；[Fontsource 字体包](https://github.com/fontsource/font-files/tree/main/fonts/google/noto-sans-sc)。字体从锁定的 npm 包读取，不请求远程字体；生成 SVG 内嵌子集，发布目录附带包内完整许可。
 
 精确完整性由 `bun.lock` 保存。本地适配位于 `src/plugins/rehype-mermaid-source.ts`、`src/lib/mermaid/server.mjs`、`src/integrations/mermaid.ts` 和 `src/middleware/mermaid.ts`。新增依赖均不进入浏览器 Mermaid 运行时；发布的图片与许可使用同源路径。
+
+### 2026-10-20 Pele 渲染
+
+用户确认按当前对话的开发方案替换渲染流程，范围包含固定字体测量、构建期内联 SVG、主题、缩放平移、RSS PNG、缓存、资源交付和完整验证。本次开发授权不包含提交、推送、合并或部署。
+
+同日，用户进一步明确授权“提交推送”，执行范围为提交本次开发变更并推送工作分支。
+
+随后，用户明确要求“发布部署”，授权通过工作分支到 develop、develop 到 main 的 PR 合并，按需要同步生产基线，并从 main 手动部署 GitHub Pages，核验线上结果。
+
+- `pele@1.6.0`：kepano / Obsidian，MIT；[源码](https://github.com/obsidianmd/pele)、[API](https://pele.run/api)、[兼容性](https://pele.run/compatibility)、[安全说明](https://pele.run/security)。直接调用 `render()` 与 `pele/core` 的 `enableZoom()`，不复制实现。网页仅交付缩放代码；布局和语法解析留在服务端。缩放重置图标来自包内 Lucide v1.14.0，ISC，完整许可随 `PELE-LICENSE.txt` 发布。
+- `fontkit@2.0.4`：MIT；[源码及接口](https://github.com/foliojs/fontkit)。读取固定字体、检查字形并测量 shaping 后的 advance width。
+- `color@4.2.3`：MIT；[源码及接口](https://github.com/Qix-/color)。与 css-tree 一同将 PNG 中的颜色变量及 sRGB 混色转换为明确颜色值。
+- `css-tree@3.2.1` 与 `@types/css-tree@2.3.10`：MIT；[CSS 解析器](https://github.com/csstree/csstree)、[类型声明](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/css-tree)。用于字体清单、SVG 样式与资源引用的 AST 处理，类型声明作为直接开发依赖维护。
+- `@resvg/resvg-js@2.6.2`：MPL-2.0；[源码](https://github.com/yisibl/resvg-js)。仅在服务端转换 RSS PNG，禁用系统字体并加载缓存 SFNT。直接调用依赖，不修改库源码，不向网页分发其二进制文件。
+- `subset-font@2.9.0` 和 `@fontsource/noto-sans-sc@5.3.1` 沿用上述来源。400/700 字重生成同源 WOFF2 子集及内部 SFNT，字体许可随公开资源发布。字体字节参与缓存键。
+- `playwright@1.64.1` 仅用于浏览器测试，安装入口为 `scripts/setup-browser.mjs`。
+
+实现集中在 `src/lib/mermaid/`、正文编译插件、中间件、集成和 `src/components/reading/MermaidRuntime.astro`。精确依赖与完整性由 `package.json`、`bun.lock` 维护。
 
 ## 2. 复用类型
 

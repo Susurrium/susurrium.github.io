@@ -16,10 +16,21 @@ import { createServer } from 'node:net'
 import { resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from 'bun:test'
+import { parse as parseCss, walk } from 'css-tree'
 import { parse } from 'node-html-parser'
 
 const project = fileURLToPath(new URL('../', import.meta.url))
-const browserPath = resolve(project, 'artifacts/mermaid-browsers')
+const browserPath =
+  process.env.PLAYWRIGHT_BROWSERS_PATH ?? resolve(project, 'artifacts/playwright-browsers')
+
+function fontUrls(html: string) {
+  const urls: string[] = []
+  for (const style of parse(html).querySelectorAll('.mermaid-diagram style'))
+    walk(parseCss(style.rawText), (node) => {
+      if (node.type === 'Url') urls.push(node.value)
+    })
+  return urls
+}
 
 function run(root: string, command: string, args: string[]) {
   const log = resolve(root, 'commands.log')
@@ -29,7 +40,6 @@ function run(root: string, command: string, args: string[]) {
     windowsHide: true,
     env: {
       ...process.env,
-      MERMAID_BROWSER_PATH: browserPath,
       ASTRO_PREVIEW_BACKGROUND: '1',
       ASTRO_DEV_BACKGROUND: '1'
     },
@@ -172,17 +182,17 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
     expect(status, built.output()).toBe(0)
     const output = resolve(root, 'dist')
     const assets = await readdir(resolve(output, '_diagrams'))
-    expect(assets.filter((name) => name.endsWith('.svg')).length).toBe(8)
+    expect(assets.filter((name) => name.endsWith('.svg') || name.endsWith('.ttf')).length).toBe(0)
+    expect(assets.some((name) => name.endsWith('.woff2'))).toBe(true)
     expect(assets.filter((name) => name.endsWith('.png')).length).toBe(2)
-    for (const name of assets.filter((name) => name.endsWith('.svg')))
-      expect(await readFile(resolve(output, '_diagrams', name), 'utf8')).not.toContain(
-        '草稿保密内容'
-      )
+    const cacheMetadata = await readdir(resolve(root, 'artifacts/mermaid-cache'))
+    expect(cacheMetadata.filter((name) => name.endsWith('.json')).length).toBe(4)
     const firstPath = resolve(output, 'blog/mermaid-build-markdown/index.html')
     const firstHtml = await readFile(firstPath, 'utf8')
     expect(firstHtml).toContain('data-mermaid-diagram')
     expect(firstHtml).not.toContain('data-mermaid-source')
     expect(firstHtml).toContain('data-copy-code')
+    expect(firstHtml).not.toContain('草稿保密内容')
     const mdxHtml = await readFile(resolve(output, 'blog/mermaid-build-mdx/index.html'), 'utf8')
     expect(mdxHtml).toContain('data-mermaid-diagram')
     expect(mdxHtml).not.toContain('{1 + 1}')
@@ -191,11 +201,13 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
     expect(rss).toContain('-feed.png')
     expect(rss).not.toContain('草稿图表禁止发布')
     // 已编译正文继续从源码标记恢复被删除的缓存文件。
-    const firstImage = parse(firstHtml).querySelector('.mermaid-light')!.getAttribute('src')!
-    await unlink(resolve(root, 'artifacts/mermaid-cache', firstImage.split('/').at(-1)!))
+    const firstKey = parse(firstHtml)
+      .querySelector('[data-mermaid-diagram]')!
+      .getAttribute('data-mermaid-diagram')!
+    await unlink(resolve(root, 'artifacts/mermaid-cache', `${firstKey}-diagram.svg`))
     const rebuilt = run(root, 'node', ['node_modules/astro/bin/astro.mjs', 'build'])
     expect(await rebuilt.done, rebuilt.output()).toBe(0)
-    expect(await readFile(firstPath, 'utf8')).toContain(firstImage)
+    expect(await readFile(firstPath, 'utf8')).toContain(firstKey)
 
     const port = await freePort()
     const base = `http://127.0.0.1:${port}`
@@ -221,13 +233,13 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
         if (request.resourceType() === 'script') requests.push(request.url())
       })
       await page.goto(base + '/blog/mermaid-build-markdown')
-      await page.locator('.mermaid-light').waitFor({ state: 'visible' })
-      await page.waitForFunction(() =>
-        [...document.querySelectorAll<HTMLImageElement>('.mermaid-diagram img')].every(
-          (image) =>
-            !image.getBoundingClientRect().width || (image.complete && image.naturalWidth > 0)
-        )
-      )
+      await page.locator('.mermaid-interactive > svg').waitFor({ state: 'visible' })
+      await page.evaluate(() => document.fonts.ready)
+      for (const url of fontUrls(firstHtml)) expect((await fetch(base + url)).status).toBe(200)
+      const lightFill = await page
+        .locator('.pele-node rect')
+        .first()
+        .evaluate((node) => getComputedStyle(node).fill)
       const evidence = resolve(project, 'artifacts/mermaid-verification')
       await mkdir(evidence, { recursive: true })
       await page
@@ -239,8 +251,13 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
         attempt++
       )
         await page.locator('#toggleDarkMode').first().click()
-      expect(await page.locator('.mermaid-dark').isVisible()).toBe(true)
-      expect(await page.locator('.mermaid-light').isVisible()).toBe(false)
+      expect(await page.locator('.mermaid-viewport > svg').count()).toBe(1)
+      expect(
+        await page
+          .locator('.pele-node rect')
+          .first()
+          .evaluate((node) => getComputedStyle(node).fill)
+      ).not.toBe(lightFill)
       await page
         .locator('.mermaid-diagram')
         .screenshot({ path: resolve(evidence, 'desktop-dark.png') })
@@ -269,40 +286,147 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       expect(await page.locator('html').getAttribute('data-theme')).toBe('dark')
       await page.emulateMedia({ colorScheme: 'light' })
       await page.waitForFunction(() => document.documentElement.dataset.theme === 'light')
-      expect(await page.locator('.mermaid-light').isVisible()).toBe(true)
+      expect(await page.locator('.mermaid-viewport > svg').isVisible()).toBe(true)
       for (
         let attempt = 0;
         attempt < 3 && (await page.locator('html').getAttribute('data-theme')) !== 'dark';
         attempt++
       )
         await page.locator('#toggleDarkMode').first().click()
+      const retiredViewport = await page.locator('.mermaid-viewport').elementHandle()
       await page.getByText('查看随记', { exact: true }).click()
       await page.waitForURL('**/traces/mermaid-build-trace')
+      expect(
+        await retiredViewport!.evaluate(
+          (element) => !element.isConnected && !element.querySelector('.pele-zoom')
+        )
+      ).toBe(true)
       await page.setViewportSize({ width: 390, height: 844 })
       await page.locator('.mermaid-diagram').waitFor()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true
       )
+      await page.getByRole('button', { name: '放大图表' }).waitFor({ state: 'visible' })
       expect(
         await page
-          .locator('.mermaid-viewport')
-          .evaluate((element) => element.scrollWidth > element.clientWidth)
+          .locator('.pele-zoom')
+          .evaluate(
+            (element) =>
+              element.getBoundingClientRect().bottom <=
+              element.parentElement!.querySelector('svg')!.getBoundingClientRect().top
+          )
       ).toBe(true)
+      const originalViewBox = await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')
+      await page.getByRole('button', { name: '放大图表' }).click()
+      const scaledViewBox = await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')
+      const bounds = (await page.locator('.mermaid-viewport > svg').boundingBox())!
+      await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(bounds.x + bounds.width / 2 + 20, bounds.y + bounds.height / 2, {
+        steps: 4
+      })
+      await page.mouse.up()
+      const pannedViewBox = await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')
+      expect(pannedViewBox).not.toBe(scaledViewBox)
+      await page.keyboard.down('Control')
+      await page.mouse.wheel(0, -120)
+      await page.keyboard.up('Control')
+      await page.waitForFunction(
+        (before) =>
+          document.querySelector('.mermaid-viewport > svg')?.getAttribute('viewBox') !== before,
+        pannedViewBox
+      )
+      const zoomedViewBox = await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')
+      expect(zoomedViewBox).not.toBe(originalViewBox)
+      await page.emulateMedia({ media: 'print' })
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      )
+      await page.waitForFunction(
+        (viewBox) =>
+          document.querySelector('.mermaid-print > svg')?.getAttribute('viewBox') === viewBox,
+        originalViewBox
+      )
+      expect(await page.locator('.mermaid-print > svg').getAttribute('viewBox')).toBe(
+        originalViewBox
+      )
+      expect(await page.locator('.pele-zoom').isVisible()).toBe(false)
+      await page.emulateMedia({ media: 'screen' })
+      await page.waitForFunction(
+        (viewBox) =>
+          document.querySelector('.mermaid-viewport > svg')?.getAttribute('viewBox') === viewBox,
+        zoomedViewBox
+      )
+      expect(await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')).toBe(
+        zoomedViewBox
+      )
+      await page.getByRole('button', { name: '重置缩放' }).click()
+      expect(await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')).toBe(
+        originalViewBox
+      )
+      await page.locator('.mermaid-viewport > svg').focus()
+      await page.keyboard.press('+')
+      expect(await page.locator('.mermaid-viewport > svg').getAttribute('viewBox')).not.toBe(
+        originalViewBox
+      )
+      await page.keyboard.press('0')
       await page
         .locator('.mermaid-diagram')
         .screenshot({ path: resolve(evidence, 'mobile-wide-dark.png') })
       await page.goBack()
+      await page.waitForURL('**/blog/mermaid-build-markdown')
+      await page.locator('.mermaid-interactive > svg').waitFor()
       await page.locator('.mermaid-diagram').waitFor()
       await page.emulateMedia({ media: 'print' })
-      expect(await page.locator('.mermaid-light').isVisible()).toBe(true)
-      expect(await page.locator('.mermaid-dark').isVisible()).toBe(false)
+      await page.locator('.mermaid-print > svg').waitFor({ state: 'visible' })
+      expect(await page.locator('.mermaid-diagram svg.pele').isVisible()).toBe(true)
       expect(await page.locator('.mermaid-source').isVisible()).toBe(false)
       expect(requests.some((url) => /(?:mermaid|playwright).*\.m?js/.test(url))).toBe(false)
       const noScript = await browser.newContext({ javaScriptEnabled: false })
       const noScriptPage = await noScript.newPage()
       await noScriptPage.goto(base + '/blog/mermaid-build-mdx')
-      expect(await noScriptPage.locator('.mermaid-light').isVisible()).toBe(true)
+      expect(await noScriptPage.locator('.mermaid-viewport > svg').isVisible()).toBe(true)
+      expect(await noScriptPage.locator('.pele-zoom').count()).toBe(0)
       await noScript.close()
+      const printEntry = await browser.newContext()
+      const printPage = await printEntry.newPage()
+      await printPage.emulateMedia({ media: 'print' })
+      await printPage.goto(base + '/blog/mermaid-build-mdx')
+      await printPage.locator('.mermaid-print > svg').waitFor({ state: 'visible' })
+      expect(await printPage.locator('.mermaid-interactive').count()).toBe(0)
+      await printPage.emulateMedia({ media: 'screen' })
+      await printPage.locator('.mermaid-interactive > svg').waitFor({ state: 'visible' })
+      expect(await printPage.locator('.mermaid-print').count()).toBe(0)
+      expect(await printPage.getByRole('button', { name: '放大图表' }).isVisible()).toBe(true)
+      await printEntry.close()
+      const touch = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true
+      })
+      const touchPage = await touch.newPage()
+      await touchPage.goto(base + '/traces/mermaid-build-trace')
+      await touchPage.getByRole('button', { name: '放大图表' }).waitFor()
+      await touchPage.getByRole('button', { name: '放大图表' }).click()
+      const touchSvg = touchPage.locator('.mermaid-viewport > svg')
+      await touchSvg.scrollIntoViewIfNeeded()
+      const touchBefore = await touchSvg.getAttribute('viewBox')
+      const box = (await touchSvg.boundingBox())!
+      const cdp = await touch.newCDPSession(touchPage)
+      const points = (distance: number) => [
+        { id: 1, x: box.x + box.width * (0.5 - distance), y: box.y + box.height / 2 },
+        { id: 2, x: box.x + box.width * (0.5 + distance), y: box.y + box.height / 2 }
+      ]
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points(0.15) })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points(0.3) })
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await touchPage.waitForFunction(
+        (before) =>
+          document.querySelector('.mermaid-viewport > svg')?.getAttribute('viewBox') !== before,
+        touchBefore
+      )
+      expect(await touchSvg.getAttribute('viewBox')).not.toBe(touchBefore)
+      await touch.close()
       await context.close()
     } finally {
       await browser.close()
@@ -318,9 +442,13 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       String(port)
     ])
     const before = await (await waitFor(base + '/blog/mermaid-build-markdown')).text()
-    const beforeImage = parse(before).querySelector('.mermaid-light')!.getAttribute('src')!
+    const beforeImage = fontUrls(before)[0]
     expect((await fetch(base + beforeImage)).status).toBe(200)
-    const changed = { ...samples[0], title: '更新后的流程图' }
+    const changed = {
+      ...samples[0],
+      title: '更新后的流程图',
+      graph: 'flowchart LR\nA[修改后的中文节点] --> B[验证更新]'
+    }
     await writeFile(resolve(root, 'src/content/blog/mermaid-build-markdown.md'), sourceFor(changed))
     let updated = ''
     for (let attempt = 0; attempt < 60; attempt++) {
@@ -329,7 +457,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       await new Promise((accept) => setTimeout(accept, 250))
     }
     expect(updated).toContain('更新后的流程图')
-    const afterImage = parse(updated).querySelector('.mermaid-light')!.getAttribute('src')!
+    const afterImage = fontUrls(updated)[0]
     expect(afterImage).not.toBe(beforeImage)
     expect((await fetch(base + afterImage)).status).toBe(200)
     service.child.kill()
@@ -351,8 +479,14 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
     const removed = run(root, 'node', ['node_modules/astro/bin/astro.mjs', 'build'])
     expect(await removed.done, removed.output()).toBe(0)
     expect(
-      (await readdir(resolve(output, '_diagrams'))).filter((name) => name.endsWith('.svg')).length
-    ).toBe(6)
+      (await readdir(resolve(output, '_diagrams'))).filter((name) => name.endsWith('.png')).length
+    ).toBe(2)
+    const removedFonts = new Set(
+      fontUrls(await readFile(resolve(output, 'blog/mermaid-build-markdown/index.html'), 'utf8'))
+    )
+    for (const url of removedFonts)
+      expect(await readdir(resolve(output, '_diagrams'))).toContain(url.split('/').at(-1)!)
+    expect(await readdir(resolve(output, 'sayings'))).not.toContain('mermaid-build-saying')
     expect(
       await readFile(resolve(output, 'sayings/mermaid-build-plain/index.html'), 'utf8')
     ).toContain('保留的普通引文')
