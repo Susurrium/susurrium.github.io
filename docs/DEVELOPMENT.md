@@ -167,12 +167,14 @@ Windows 完整检查使用 `node scripts/run-sequential.mjs ci`。CI 内联构�
 ```powershell
 bun run verify:phase6:browser
 bun run verify:home-hero
+bun run verify:home-saying
 bun run verify:browser:lifecycle
 bun run verify:mermaid:browser
 ```
 
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
+- Home Saying 在桌面与手机尺寸下逐条选择候选并刷新，核对实际 `currentSrc`、响应式候选和裁剪缩放对应的 `sizes`，检查站内返回 Home 及无响应式候选时的属性清理。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
 - Mermaid browser 扫描全部公开正文，检查 SVG、字体、实例 ID、明暗主题、手机缩放与打印恢复，并检查客户端未包含图表渲染器。设置 `MERMAID_EVIDENCE_DIR` 为 `artifacts/` 下目录可采集各图桌面明暗和手机截图，供检查文字、连线和配色。没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
 

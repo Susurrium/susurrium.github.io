@@ -240,6 +240,8 @@ flowchart TD
 
 Saying 使用 `buildSayingImageAssignmentMap()`，在完整的稳定 ID 顺序上生成装饰图片映射，并在 Home、归档、标签和详情之间复用。正文图片与这些卡片裁剪决策相互独立。
 
+Home 在每次刷新或重新进入时随机选择 Saying，允许连续选中同一条。候选数据在构建时携带配图的响应式 `srcset` 与按裁剪缩放计算的 `sizes`，计算规则与 `CardMediaFrame` 共用 `cardImageOptions()`。客户端切换配图时同步更新 `src`、`srcset` 和 `sizes`；无响应式候选时清除旧属性。浏览器回归核对实际 `currentSrc`，覆盖桌面、手机、刷新和站内返回 Home。
+
 ### 7.3 RSS 的正文复用和资源地址
 
 `src/pages/rss.xml.ts` 先根据 `rss` surface 筛选 catalog，调用 Astro `render(entry)`，再由 Astro Container 渲染正文；Container 注册 MDX renderer。RSS 不再从 `post.body` 运行一套缺少站点插件的 Markdown 解析器，因此 GFM 表格、提示块、数学公式和 MDX 表达式使用与阅读页相同的编译结果。

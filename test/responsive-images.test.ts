@@ -8,6 +8,7 @@ import {
   publicImagePath,
   verifyResponsiveImages
 } from '../scripts/lib/responsive-images.mjs'
+import { cardImageOptions } from '../src/lib/media/card-image'
 import { readingImageOptions } from '../src/lib/media/reading-image'
 import { createTestDirectory, testWithFixtures as test } from './helpers/fixtures.mjs'
 
@@ -130,4 +131,15 @@ test('reading cover and backdrop share bounded widths and preserve small image d
   expect(readingImageOptions(image).widths).toEqual([480, 768, 1024, 1280])
   expect(readingImageOptions({ ...image, width: 200 }).widths).toEqual([200])
   expect(() => readingImageOptions({ ...image, width: 0 })).toThrow('valid image dimensions')
+})
+
+test('card responsive options follow the selected source and account for crop zoom', () => {
+  const source = '/images/home-media/43935854_p0_master1200.webp'
+  expect(cardImageOptions(source, 1.25)).toEqual({
+    srcset:
+      '/images/card-media/43935854_p0_master1200-480.webp 480w, /images/card-media/43935854_p0_master1200-960.webp 960w, /images/card-media/43935854_p0_master1200-1200.webp 1200w',
+    sizes: '(max-width: 767px) calc(100vw * 1.25), 800px'
+  })
+  expect(cardImageOptions('/images/social-card.webp')).toEqual({})
+  expect(cardImageOptions(undefined)).toEqual({})
 })
