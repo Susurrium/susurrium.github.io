@@ -10,6 +10,7 @@ import type { CardCutSide } from '@/data/home-media'
 import { resolveMediaImage } from '@/lib/content-layer/page-data'
 import { isContentSurfaceEnabled } from '@/lib/content-layer/policy'
 import type { RenderablePageItem, SayingRecord } from '@/lib/content-layer/types'
+import { cardImageOptions } from '@/lib/media/card-image'
 
 import { Button } from 'astro-pure/user'
 import ContentCard from '@/components/cards/ContentCard.astro'
@@ -23,7 +24,7 @@ type SayingCatalogItem = {
   footer: string
   href: string
   id: string
-  image: ReturnType<typeof resolveMediaImage>
+  image: ReturnType<typeof resolveMediaImage> & ReturnType<typeof cardImageOptions>
   cutSide: CardCutSide
   text: string
 }
@@ -39,7 +40,7 @@ const catalog: SayingCatalogItem[] = sayingItems.map((item) => {
     footer: item.card.footerText,
     href: item.card.href,
     id: item.record.id,
-    image,
+    image: { ...image, ...cardImageOptions(image.src, image.crop?.transform.zoom) },
     cutSide: getCardCutSide(image),
     text: item.record.title
   }
@@ -106,6 +107,8 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
       }
       source: string
       src?: string
+      srcset?: string
+      sizes?: string
     }
     text: string
   }
@@ -254,6 +257,11 @@ const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
 
       const image = card.querySelector<HTMLImageElement>('[data-card-image]')
       if (image && selected.image.src) {
+        // 与选中配图同步响应式候选，避免浏览器继续加载上一张图片。
+        if (selected.image.sizes) image.sizes = selected.image.sizes
+        else image.removeAttribute('sizes')
+        if (selected.image.srcset) image.srcset = selected.image.srcset
+        else image.removeAttribute('srcset')
         image.src = selected.image.src
         image.alt = selected.image.alt
         image.setAttribute('data-image-key', selected.image.key ?? '')
