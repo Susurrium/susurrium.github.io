@@ -13,7 +13,6 @@
  * `mask` input remains for frame-less media blocks, but it cannot contradict
  * a supplied diagonal frame.
  */
-import cardImages from '@/data/card-images.json'
 import {
   CARD_CROP_FRAME_RATIO,
   DEFAULT_CARD_CROP_TRANSFORM,
@@ -22,6 +21,7 @@ import {
   type CardCropFrame,
   type CardCropTransform
 } from '@/lib/card-crop/types'
+import { cardImageOptions } from '@/lib/media/card-image'
 
 export type CardMediaMask = 'left' | 'right' | 'none'
 
@@ -71,11 +71,7 @@ const {
 } = Astro.props as Props
 
 const normalizedTransform = normalizeCropTransform(transform)
-const candidate =
-  src && responsive ? (cardImages as Record<string, { srcset: string }>)[src] : undefined
-const imageSizes = candidate
-  ? `(max-width: 767px) calc(100vw * ${normalizedTransform.zoom}), ${Math.ceil(640 * normalizedTransform.zoom)}px`
-  : undefined
+const imageOptions = responsive ? cardImageOptions(src, normalizedTransform.zoom) : {}
 const position = `${normalizedTransform.x}% ${normalizedTransform.y}%`
 const frameRatio = aspectRatio ?? CARD_CROP_FRAME_RATIO
 const effectiveMask: CardMediaMask = frame ? (frame === 'diagonal-left' ? 'left' : 'right') : mask
@@ -118,8 +114,8 @@ const mediaStyle = [
         height={height}
         loading={loading}
         src={src}
-        srcset={candidate?.srcset}
-        sizes={imageSizes}
+        srcset={imageOptions.srcset}
+        sizes={imageOptions.sizes}
         width={width}
       />
     ) : (
