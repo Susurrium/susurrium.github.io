@@ -14,6 +14,8 @@
 
 2026-10-20，用户提供“亭外日录”的名称、简介、站点地址 `https://akutagawa.cn/` 与头像地址 `https://akutagawa.cn/avatar.png`，明确要求增加友链。该条目维护在 `public/links.json` 的普通友链分组，头像按所提供的精确 URL 加载。
 
+同日，用户进一步授权提交推送，并明确要求“正式发布部署”，范围包含通过 PR 合并至 `develop` 和 `main`、同步生产基线、手动部署 GitHub Pages 及核验线上结果。
+
 ## Mermaid 图表依赖
 
 ### 2026-10-18 初始接入记录
