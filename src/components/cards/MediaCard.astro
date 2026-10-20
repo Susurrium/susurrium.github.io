@@ -54,6 +54,8 @@ interface Props {
   headingLevel?: HeadingLevel
   href?: string
   image?: ResolvedCardImage
+  preview?: string
+  imageLoading?: 'eager' | 'lazy'
   /** `contain` is available to the crop-review tool for difficult assets. */
   imageFit?: 'cover' | 'contain'
   imageSource?: ImageSource
@@ -80,6 +82,8 @@ const {
   headingLevel = 3,
   href,
   image,
+  preview,
+  imageLoading = 'lazy',
   imageClass,
   responsive = true,
   imageFit = 'cover',
@@ -165,6 +169,8 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
         imageClass={`media-card__image${imageClass ? ` ${imageClass}` : ''}`}
         mask={cutSide}
         src={image?.src}
+        preview={preview}
+        loading={imageLoading}
         responsive={responsive}
         transform={runtimeCrop?.transform}
         width={640}

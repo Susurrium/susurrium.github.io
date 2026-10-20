@@ -39,12 +39,16 @@ interface LegacyProps {
   headingLevel?: HeadingLevel
   index?: number
   presentation?: ContentPresentation | string
+  preview?: string
+  imageLoading?: 'eager' | 'lazy'
 }
 
 interface ModelProps {
   as?: 'article' | 'li'
   class?: string
   item: RenderablePageItem
+  preview?: string
+  imageLoading?: 'eager' | 'lazy'
 }
 
 type Props = LegacyProps | ModelProps
@@ -109,6 +113,8 @@ const classNameValue = className
       headingLevel={item.placement.headingLevel}
       href={cardView.data.href}
       image={cardView.data.image}
+      preview={props.preview}
+      imageLoading={props.imageLoading}
       index={item.placement.index}
       presentation={item.placement.presentation}
       title={cardView.data.title}

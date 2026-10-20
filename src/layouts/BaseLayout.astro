@@ -2,6 +2,7 @@
 import { ClientRouter } from 'astro:transitions'
 import { effectProfiles, resolveEffectProfile, type EffectProfile } from '@/data/effects'
 import heroImages from '@/data/hero-images.json'
+import homeSayingRuntime from '@/scripts/home-saying.js?raw'
 
 import type { SiteMeta } from 'astro-pure/types'
 import BaseHead from '@/components/BaseHead.astro'
@@ -68,7 +69,24 @@ const hasPageBackground = Astro.slots.has('page-background')
       {ogImageWidth}
       {ogImageHeight}
       {title}
-    />
+    >
+      <Fragment slot='early-head'>
+        {
+          pageKind === 'home' && (
+            <link
+              rel='preload'
+              as='image'
+              href='/images/home-media/thumb-1920-1381117.webp'
+              imagesrcset={heroImages['/images/home-media/thumb-1920-1381117.webp'].srcset}
+              imagesizes='(max-width: 767px) max(100vw, 110vh), 100vw'
+              fetchpriority='high'
+            />
+          )
+        }
+        <slot name='head' />
+        <script is:inline data-home-saying-runtime set:html={homeSayingRuntime} />
+      </Fragment>
+    </BaseHead>
     <ThemeProvider />
     <Fragment set:html={`<script src="/theme-handoff.js" data-theme-role="write"></script>`} />
     <script is:inline>
@@ -124,18 +142,6 @@ const hasPageBackground = Astro.slots.has('page-background')
         visibility: visible;
       }
     </style>
-    {
-      pageKind === 'home' && (
-        <link
-          rel='preload'
-          as='image'
-          href='/images/home-media/thumb-1920-1381117.webp'
-          imagesrcset={heroImages['/images/home-media/thumb-1920-1381117.webp'].srcset}
-          imagesizes='(max-width: 767px) max(100vw, 110vh), 100vw'
-          fetchpriority='high'
-        />
-      )
-    }
   </head>
 
   <body

@@ -76,7 +76,7 @@ Projects 的项目顺序、完整描述、入口 URL 与可访问标签维护在
 
 1. 将准备好的 WebP 放入 `public/images/home-media/`。建议宽度不超过 1920px，小图保持实际尺寸；`public/` 文件不会被 Astro 自动优化。
 2. 更新 `src/data/home-media.ts` 中的资源池、用途和描述。Hero、Saying 装饰图、Trace 备用图各自维护。
-3. 更新公共图片后运行 `bun run generate:media-images`，生成 Hero、卡片与 About 装饰人物的派生图和清单。只更新 Hero 可运行 `bun run generate:hero-images`。用 `bun run verify:media-images` 核验源哈希、尺寸、比例、候选字节和引用；具体参数以 [生成脚本](../scripts/generate-hero-images.ts) 为准。
+3. 更新公共图片后运行 `bun run generate:media-images`，生成 Hero、卡片、About 装饰人物的派生图和清单，以及 Saying 轻量预览。只更新 Hero 可运行 `bun run generate:hero-images`；只生成 Saying 预览可运行 `bun run generate:media-images --saying-previews`。用 `bun run verify:media-images` 核验源哈希、尺寸、比例、候选字节、预览编码和引用；具体参数以 [生成脚本](../scripts/generate-hero-images.ts) 为准。
 4. 核对已有裁剪记录。同名图片替换会继续读取原配置，应在 [工作台](./MEDIA_WORKBENCH.md) 重新确认；旧候选只有在核对清单与引用后才能移除。
 5. 新构建后检查相关页面和资源预算，素材、图库清单、候选与裁剪配置一起审阅。
 
@@ -174,7 +174,7 @@ bun run verify:mermaid:browser
 
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
-- Home Saying 在桌面与手机尺寸下逐条选择候选并刷新，核对实际 `currentSrc`、响应式候选和裁剪缩放对应的 `sizes`，检查站内返回 Home 及无响应式候选时的属性清理。
+- Home Saying 覆盖桌面／手机及 DPR 1／2，逐条刷新并核对首次呈现身份、实际 `currentSrc`、响应式候选和预加载请求复用；阻断外部模块和完整图片验证可读文字与同图预览，检查图片加载前后的几何尺寸、慢网络与 CPU 降速、重复站内导航、空／单候选、无响应式候选、图片失败重试和禁用 JavaScript。结果默认写入 `artifacts/saying-verification/results.json`，可用 `SAYING_EVIDENCE_DIR` 指定本项目 `artifacts/` 内的输出目录。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
 - Mermaid browser 扫描全部公开正文，检查 SVG、字体、实例 ID、明暗主题、手机缩放与打印恢复，并检查客户端未包含图表渲染器。设置 `MERMAID_EVIDENCE_DIR` 为 `artifacts/` 下目录可采集各图桌面明暗和手机截图，供检查文字、连线和配色。没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
 
