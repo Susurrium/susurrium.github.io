@@ -1,0 +1,21 @@
+---
+import type { buildHomeSayingCatalog } from '@/lib/home/saying-catalog'
+
+interface Props {
+  catalog: ReturnType<typeof buildHomeSayingCatalog>
+}
+
+const { catalog } = Astro.props
+const serializedCatalog = JSON.stringify(catalog).replace(/</g, '\\u003c')
+---
+
+{
+  catalog.length > 0 && (
+    <script
+      is:inline
+      type='application/json'
+      data-random-saying-catalog
+      set:html={serializedCatalog}
+    />
+  )
+}

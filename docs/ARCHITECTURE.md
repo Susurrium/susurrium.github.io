@@ -240,7 +240,11 @@ flowchart TD
 
 Saying 使用 `buildSayingImageAssignmentMap()`，在完整的稳定 ID 顺序上生成装饰图片映射，并在 Home、归档、标签和详情之间复用。正文图片与这些卡片裁剪决策相互独立。
 
-Home 在每次刷新或重新进入时随机选择 Saying，允许连续选中同一条。候选数据在构建时携带配图的响应式 `srcset` 与按裁剪缩放计算的 `sizes`，计算规则与 `CardMediaFrame` 共用 `cardImageOptions()`。客户端切换配图时同步更新 `src`、`srcset` 和 `sizes`；无响应式候选时清除旧属性。浏览器回归核对实际 `currentSrc`，覆盖桌面、手机、刷新和站内返回 Home。
+Home 在每次刷新或重新进入时随机选择 Saying，允许连续选中同一条。`HomeSayingHead` 将候选索引输出到 head；无外部依赖的 `home-saying.js` 以内联脚本执行，在解析 head 时选定记录，并按 `cardImageOptions()` 的 `srcset`、`sizes` 提前请求该配图。正文把公共卡片组件输出放在惰性的 `template` 中，解析到展示区域时只装入选中的完整卡片，图文、裁剪和方向一起确定。禁用 JavaScript 时由 `noscript` 提供固定卡片。
+
+公共布局在 charset、viewport 声明之后安装内联控制器及一次导航监听，确保编码声明位于文档开头，响应式预加载使用正确视口。Hero 首图的高优先级预加载位于 Saying 初始化之前。`astro:before-swap` 在新文档中选择和装入卡片，同时由当前文档发起图片预加载；`astro:after-swap` 接管已选卡片及命中缓存的图片。同一次进入的选择保存在文档属性中，图片加载、脚本重执行和后续生命周期事件复用结果。候选索引仅随 Home 输出，其余页面只携带轻量控制器。
+
+首页 Saying 通过可选参数启用同图预览。预览清单由媒体脚本生成，原图哈希、尺寸、编码和生成参数均参与校验；48px WebP 以 data URL 随模板输出。预览与完整图复用 `CardMediaFrame` 的 fit、position、zoom、origin 和斜边，完整图解码后隐藏预览。预加载与完整图片均使用 low 优先级，保留 Hero 首图的 high 优先级。加载失败保留预览及文字，局部重试继续加载该配图。其他卡片调用默认不启用预览。浏览器回归从首次呈现开始核对身份、图片请求与几何尺寸，覆盖缓存、设备像素比、慢网络、外部模块延迟、站内导航和异常输入。
 
 ### 7.3 RSS 的正文复用和资源地址
 

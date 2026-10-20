@@ -184,6 +184,7 @@ const signatureSource = source('src/components/shared/Signature.astro')
 const siteConfigSource = source('src/site.config.ts')
 const readingPolicySource = source('src/lib/content-layer/reading-policy.ts')
 const randomSayingSource = source('src/components/home/RandomSayingCard.astro')
+const randomSayingRuntime = source('src/scripts/home-saying.js')
 const linksSource = source('src/pages/links/index.astro')
 const packageManifest = JSON.parse(source('package.json'))
 expect(musicData.includes('export const musicConfig'), 'music config exposes one provider contract')
@@ -310,10 +311,11 @@ expect(
   'Links keeps signature rendering reversible behind the site-wide switch'
 )
 expect(
-  randomSayingSource.includes("'astro:page-load'") &&
-    randomSayingSource.includes('AbortController') &&
-    randomSayingSource.includes('disconnectedCallback') &&
-    randomSayingSource.includes('#lastVisitKey'),
+  randomSayingSource.includes('data-saying-template') &&
+    randomSayingRuntime.includes("'astro:before-swap'") &&
+    randomSayingRuntime.includes("'astro:after-swap'") &&
+    randomSayingRuntime.includes('if (window.__susurriumSaying)') &&
+    randomSayingRuntime.includes('existingId'),
   'random Saying reselects once per Home visit without retaining stale listeners'
 )
 expect(

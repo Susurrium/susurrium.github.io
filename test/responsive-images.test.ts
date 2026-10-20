@@ -8,6 +8,7 @@ import {
   publicImagePath,
   verifyResponsiveImages
 } from '../scripts/lib/responsive-images.mjs'
+import { generateSayingPreviews, verifySayingPreviews } from '../scripts/lib/saying-previews.mjs'
 import { cardImageOptions } from '../src/lib/media/card-image'
 import { readingImageOptions } from '../src/lib/media/reading-image'
 import { createTestDirectory, testWithFixtures as test } from './helpers/fixtures.mjs'
@@ -142,4 +143,37 @@ test('card responsive options follow the selected source and account for crop zo
   })
   expect(cardImageOptions('/images/social-card.webp')).toEqual({})
   expect(cardImageOptions(undefined)).toEqual({})
+})
+
+test('Saying previews preserve sources, alpha and aspect ratio, and verify their encoded pixels', async () => {
+  const { root, source } = await fixture(500)
+  const before = await readFile(source)
+  const manifest = await generateSayingPreviews(root, ['/images/test.webp'], 'previews.json')
+  const record = manifest.images['/images/test.webp']
+  const decoded = Buffer.from(await (await fetch(record.dataUri)).arrayBuffer())
+  const metadata = await sharp(decoded).metadata()
+  expect(metadata.width).toBe(48)
+  expect(metadata.hasAlpha).toBe(true)
+  expect(Math.abs(metadata.height! - (600 * 48) / 500)).toBeLessThanOrEqual(1)
+  expect(decoded.length).toBe(record.bytes)
+  expect(await readFile(source)).toEqual(before)
+  expect(await verifySayingPreviews(root, ['/images/test.webp'], 'previews.json')).toBe(1)
+  record.dataUri = 'data:image/webp;base64,invalid'
+  await writeFile(resolve(root, 'previews.json'), JSON.stringify(manifest))
+  await expect(verifySayingPreviews(root, ['/images/test.webp'], 'previews.json')).rejects.toThrow(
+    'preview changed'
+  )
+})
+
+test('Saying preview checks reject changed sources and keep small originals at their native size', async () => {
+  const { root, source } = await fixture(20)
+  const manifest = await generateSayingPreviews(root, ['/images/test.webp'], 'previews.json')
+  expect(manifest.images['/images/test.webp'].width).toBe(20)
+  await expect(verifySayingPreviews(root, [], 'previews.json')).rejects.toThrow('catalogue')
+  await sharp({ create: { width: 20, height: 30, channels: 4, background: '#ff000080' } })
+    .webp()
+    .toFile(source)
+  await expect(verifySayingPreviews(root, ['/images/test.webp'], 'previews.json')).rejects.toThrow(
+    'preview changed'
+  )
 })
