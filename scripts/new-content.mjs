@@ -141,7 +141,7 @@ if (isMain(import.meta.url)) {
     })
     if (values.help)
       console.log(
-        'Usage: bun run new [--type blog|trace|saying] [--slug name] [--description text] [--language zh-CN] [--folder] [--mdx] [--publish] [--dry-run] <title or quote>\n默认创建草稿；--publish 才写 draft: false。'
+        'Usage: bun run new [--type blog|trace|saying] [--slug name] [--description text] [--language 中文|English] [--folder] [--mdx] [--publish] [--dry-run] <title or quote>\n默认创建草稿；--publish 才写 draft: false。'
       )
     else {
       if (values.publish && values.draft) throw new Error('--publish 和 --draft 不能同时使用。')
