@@ -17,7 +17,7 @@
 在仓库根目录执行：
 
 ```powershell
-bun run new --type blog --folder --language zh-CN "新的文章"
+bun run new --type blog --folder --language 中文 "新的文章"
 bun run new --type trace --folder "一段记录"
 bun run new --type saying --author "作者" --source "出处" "一句值得收藏的话"
 bun run new --type blog --mdx --dry-run "预览创建结果"
@@ -48,13 +48,15 @@ bun run new --type blog --mdx --dry-run "预览创建结果"
 title: 一次周末记录
 description: 记录这次出行中值得留下的片段。
 publishDate: 2026-10-08T15:00:00+08:00
-language: zh-CN
+language: 中文
 tags:
   - 生活
 draft: true
 ```
 
 Blog 必填标题、摘要和发布日期；标题最长 60 字符，摘要最长 160 字符。可选 `updatedDate`、`heroImage`、`language`、`comment`，评论默认开启。页面已输出主标题，正文从二级标题开始。
+
+`language` 保存页面直接显示的语言名称：中文文章填写 `中文`，英文文章填写 `English`。卡片与阅读页直接显示字段原值；按正文的主要叙述语言填写，中文正文中的英文术语和代码不改变文章语言。
 
 ### Trace
 

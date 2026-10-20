@@ -9,7 +9,7 @@ tags:
   - Tailscale
   - vpn
 
-language: zh-CN
+language: 中文
 draft: false
 ---
 

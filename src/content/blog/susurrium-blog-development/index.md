@@ -375,7 +375,7 @@ git switch -c codex/content-my-first-post
 在仓库根目录执行：
 
 ```powershell
-bun run new --type blog --folder --slug my-first-post --language zh-CN "我的第一篇文章"
+bun run new --type blog --folder --slug my-first-post --language 中文 "我的第一篇文章"
 ```
 
 命令创建独立文章目录和 `index.md`，默认写入 `draft: true`。Blog 至少需要标题、摘要和发布日期。
@@ -387,7 +387,7 @@ bun run new --type blog --folder --slug my-first-post --language zh-CN "我的�
 title: 我的第一篇文章
 description: 记录这次实践的背景、实现过程和结果。
 publishDate: 2026-10-18T15:00:00+08:00
-language: zh-CN
+language: 中文
 tags:
   - 开发
 draft: false

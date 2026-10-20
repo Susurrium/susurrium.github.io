@@ -4,11 +4,11 @@ description: 在 CLab 部署 CouchDB，通过 Tailscale 和 Self-hosted LiveSync
   多设备同步，记录加密验证、设备接入、备份恢复与日常维护。
 publishDate: 2026-10-18
 tags:
-  - Obsidian
-  - Tailscale
-  - 自托管
-  - 工程实践
-language: zh-CN
+  - obsidian
+  - 多设备同步
+  - tailscale
+  - clab
+language: 中文
 draft: false
 ---
 
