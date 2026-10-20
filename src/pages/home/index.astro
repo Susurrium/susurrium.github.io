@@ -6,6 +6,7 @@ import {
   isContentSurfaceEnabled,
   loadContentCatalog
 } from '@/lib/content-layer'
+import { buildHomeSayingCatalog, homeSayingItems } from '@/lib/home/saying-catalog'
 
 import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/BaseLayout.astro'
@@ -15,6 +16,7 @@ import EducationCard from '@/components/EducationCard.astro'
 import BlogTimeline from '@/components/home/BlogTimeline.astro'
 import GitHubContributionHeatmap from '@/components/home/GitHubContributionHeatmap.astro'
 import HeroGallery from '@/components/home/HeroGallery.astro'
+import HomeSayingHead from '@/components/home/HomeSayingHead.astro'
 import ProfileIntro from '@/components/home/ProfileIntro.astro'
 import RandomSayingCard from '@/components/home/RandomSayingCard.astro'
 import ResidenceCard from '@/components/home/ResidenceCard.astro'
@@ -25,6 +27,7 @@ const sayingItems = hydratePageItems(
   getPageItems(pageData, 'featured-saying', 'candidates'),
   contentCatalog
 )
+const sayingCatalog = buildHomeSayingCatalog(homeSayingItems(sayingItems))
 const recentBlogItems = hydratePageItems(
   getPageItems(pageData, 'recent-writing', 'blog'),
   contentCatalog
@@ -47,6 +50,7 @@ const meta = {
 ---
 
 <PageLayout {meta} pageKind='home'>
+  <HomeSayingHead slot='head' catalog={sayingCatalog} />
   <main class='home-page' data-page-kind='home'>
     <HeroGallery />
 

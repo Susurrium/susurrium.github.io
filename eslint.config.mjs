@@ -13,6 +13,10 @@ export default [
     files: ['scripts/**/*.{mjs,js,ts}', '*.config.{mjs,ts}'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } }
   },
+  {
+    files: ['src/scripts/home-saying.js'],
+    languageOptions: { globals: globals.browser }
+  },
   // Ignore files
   {
     ignores: ['public/scripts/*', '.astro/', 'src/env.d.ts']

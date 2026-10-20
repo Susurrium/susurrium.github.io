@@ -72,6 +72,7 @@
 - 主题控制器、播放器订阅/加载、评论和地图生命周期由站点维护，视觉来源不变。Meting2 runtime 不再加载，歌单数据仍来自原登记公共 API。
 - npm `@waline/client@3.15.2` 的实际入口 `dist/slim.js` 使用 `patches/@waline%2Fclient@3.15.2.patch` 修正 ArticleReaction watcher 的取消处理；仅处理自身请求的 AbortError，其他错误继续传播。发布包完整性和补丁由 `bun.lock` 固定。
 - Hero 的响应式 WebP 是既有原图的派生文件；`src/data/hero-images.json` 记录候选，不改变 crop 身份。字体 WOFF2 由既有字体转换，未更换字库；生成脚本见 `scripts/generate-fonts.py`。
+- Home Saying 的 48px WebP 预览来自既有 Saying 图库，清单为 `src/data/saying-previews.generated.json`，由 `scripts/generate-hero-images.ts` 调用 `scripts/lib/saying-previews.mjs` 生成和校验。预览复用原图的来源、裁剪和使用范围。
 - CI 浏览器任务复用已有产物，Pages 手动部署限制 main 并校验同一产物。
 
 | ID                 | 对象                | 精确来源                                                                                                       | 锁定证据                                                                                                                                                                        | 实施方式                                                                   |

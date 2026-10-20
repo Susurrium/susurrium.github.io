@@ -3,11 +3,15 @@ import { fileURLToPath } from 'node:url'
 
 import { heroSlides, sayingDecorativeImages, traceFallbackImages } from '../src/data/home-media'
 import { generateResponsiveImages, verifyResponsiveImages } from './lib/responsive-images.mjs'
+import { generateSayingPreviews, verifySayingPreviews } from './lib/saying-previews.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const args = process.argv.slice(2)
-if (args.some((arg) => !['--hero', '--check'].includes(arg)))
-  throw new Error('Usage: generate-hero-images.ts [--hero] [--check]')
+if (
+  args.some((arg) => !['--hero', '--check', '--saying-previews'].includes(arg)) ||
+  (args.includes('--hero') && args.includes('--saying-previews'))
+)
+  throw new Error('Usage: generate-hero-images.ts [--hero | --saying-previews] [--check]')
 const profiles = [
   {
     sources: heroSlides.map((slide) => slide.src),
@@ -30,7 +34,11 @@ const profiles = [
     widths: [240, 480, 960]
   }
 ]
-for (const profile of args.includes('--hero') ? profiles.slice(0, 1) : profiles) {
+for (const profile of args.includes('--saying-previews')
+  ? []
+  : args.includes('--hero')
+    ? profiles.slice(0, 1)
+    : profiles) {
   if (args.includes('--check')) {
     const count = await verifyResponsiveImages(
       root,
@@ -51,5 +59,17 @@ for (const profile of args.includes('--hero') ? profiles.slice(0, 1) : profiles)
     console.log(
       `Generated ${profile.sources.length} responsive sources: ${resolve(root, profile.manifest)}`
     )
+  }
+}
+
+if (!args.includes('--hero')) {
+  const sources = sayingDecorativeImages.map((image) => image.src)
+  const manifest = 'src/data/saying-previews.generated.json'
+  if (args.includes('--check')) {
+    const count = await verifySayingPreviews(root, sources, manifest)
+    console.log(`PASS ${count} Saying previews: ${manifest}`)
+  } else {
+    await generateSayingPreviews(root, sources, manifest)
+    console.log(`Generated ${sources.length} Saying previews: ${manifest}`)
   }
 }

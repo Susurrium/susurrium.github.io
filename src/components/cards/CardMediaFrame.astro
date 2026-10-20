@@ -39,6 +39,7 @@ interface Props {
   /** Draw the editor-only frame outline inside the same clipped element. */
   outline?: boolean
   src?: string
+  preview?: string
   responsive?: boolean
   transform?: CardCropTransform
   width?: number
@@ -62,6 +63,7 @@ const {
   mask = frame === 'diagonal-left' ? 'left' : frame === 'diagonal-right' ? 'right' : 'right',
   outline = false,
   src,
+  preview,
   responsive = true,
   transform = DEFAULT_CARD_CROP_TRANSFORM,
   width = 640,
@@ -99,10 +101,24 @@ const mediaStyle = [
   data-media-mask={effectiveMask}
   data-frame={frame}
   data-fit={fit}
+  data-preview-state={preview ? 'loading' : undefined}
   aria-hidden={decorative ? 'true' : undefined}
   {...dataAttributes}
   style={mediaStyle}
 >
+  {
+    preview && (
+      <img
+        alt=''
+        aria-hidden='true'
+        class:list={['card-media-frame__image', 'card-media-frame__preview', imageClass]}
+        data-card-preview
+        src={preview}
+        width={width}
+        height={height}
+      />
+    )
+  }
   {
     src ? (
       <img
@@ -113,6 +129,8 @@ const mediaStyle = [
         data-media-image
         height={height}
         loading={loading}
+        decoding={preview ? 'async' : undefined}
+        fetchpriority={preview ? 'low' : undefined}
         src={src}
         srcset={imageOptions.srcset}
         sizes={imageOptions.sizes}
@@ -161,6 +179,20 @@ const mediaStyle = [
     transform: scale(var(--card-media-zoom, var(--media-card-image-zoom, 1)));
     transform-origin: var(--card-media-origin, var(--media-card-image-origin, center));
     transition: transform 0.2s ease-in-out;
+  }
+
+  .card-media-frame__preview {
+    position: absolute;
+    inset: 0;
+  }
+
+  .card-media-frame__preview[hidden] {
+    display: none;
+  }
+
+  .card-media-frame[data-preview-state='loading'] > [data-card-image],
+  .card-media-frame[data-preview-state='error'] > [data-card-image] {
+    opacity: 0;
   }
 
   .card-media-frame__missing {
