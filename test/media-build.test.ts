@@ -62,6 +62,11 @@ test('real JPEG and transparent PNG survive content loading, Astro optimization 
       'patches'
     ])
       await cp(resolve(project, entry), resolve(root, entry), { recursive: true })
+    await cp(resolve(root, 'src/site.config.ts'), resolve(root, 'src/site.base.ts'))
+    await cp(
+      resolve(project, 'test/fixtures/pure-site.config.txt'),
+      resolve(root, 'src/site.config.ts')
+    )
     // Astro 组件及其虚拟样式模块必须解析到同一测试根目录。
     const installed = await runFixture(root, process.execPath, [
       'install',
@@ -96,9 +101,16 @@ test('real JPEG and transparent PNG survive content loading, Astro optimization 
         item.kind === 'blog'
           ? `heroImage:\n  src: ./cover.${item.extension}\n  alt: Actual ${item.extension} cover`
           : `cover: ./cover.${item.extension}\ncoverAlt: Actual ${item.extension} cover`
+      const pinned = item.slug === 'media-build-jpeg'
+      const pin = pinned ? 'pin: true\nupdatedDate: 2026-10-09\n' : ''
+      const code = pinned
+        ? '\n```ts\n' +
+          Array.from({ length: 16 }, (_, index) => `console.log(${index})`).join('\n') +
+          '\n```\n'
+        : ''
       await writeFile(
         resolve(directory, 'index.md'),
-        `---\ntitle: ${item.slug}\ndescription: Real image build regression\npublishDate: 2026-10-08\ntags: [media]\ndraft: false\n${cover}\n---\n\nBody image:\n\n![Actual body image](./cover.${item.extension})\n`
+        `---\ntitle: ${item.slug}\ndescription: Real image build regression\npublishDate: 2026-10-08\ntags: [media]\ndraft: false\n${pin}${cover}\n---\n\nBody image:\n\n![Actual body image](./cover.${item.extension})\n${code}`
       )
     }
     const built = await runFixture(root, 'node', [
@@ -141,6 +153,12 @@ test('real JPEG and transparent PNG survive content loading, Astro optimization 
         html.querySelector('meta[property="og:image"]')!.getAttribute('content')!
       )
       if (item.kind === 'blog') {
+        expect(html.querySelector('#waline.hide-meta')).not.toBeNull()
+        expect(html.querySelector('[data-pinned]')).toBeNull()
+        if (item.slug === 'media-build-jpeg') {
+          expect(html.querySelector('code-block')).not.toBeNull()
+          expect(html.querySelector('code-block.collapsed')).toBeNull()
+        }
         expect(social.pathname).toContain('/_astro/')
         const metadata = await sharp(
           await readFile(resolve(root, 'dist', social.pathname.slice(1)))
@@ -155,6 +173,20 @@ test('real JPEG and transparent PNG survive content loading, Astro optimization 
         expect(social.pathname).toBe('/images/social-card.webp')
       }
     }
+    for (const page of ['blog/index.html', 'blog/tags/media/index.html']) {
+      const html = parse(await readFile(resolve(root, 'dist', page), 'utf8'))
+      const first = html.querySelector('[data-content-type="blog"][data-content-id]')!
+      expect(first.getAttribute('data-content-id')).toBe('media-build-jpeg')
+      expect(first.querySelector('[data-pinned]')).not.toBeNull()
+    }
+    const home = parse(await readFile(resolve(root, 'dist/home/index.html'), 'utf8'))
+    expect(
+      home
+        .querySelector('[data-content-type="blog"][data-content-id]')
+        ?.getAttribute('data-content-id')
+    ).not.toBe('media-build-jpeg')
+    const feed = await readFile(resolve(root, 'dist/rss.xml'), 'utf8')
+    expect(feed).toContain('<atom:updated>2026-10-09T00:00:00.000Z</atom:updated>')
     for (const [path, bytes] of originals) expect(await readFile(path)).toEqual(bytes)
     completed = true
   } finally {

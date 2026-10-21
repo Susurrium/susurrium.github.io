@@ -51,6 +51,16 @@
 
 实现集中在 `src/lib/mermaid/`、正文编译插件、中间件、集成和 `src/components/reading/MermaidRuntime.astro`。精确依赖与完整性由 `package.json`、`bun.lock` 维护。
 
+## Pure 功能采用记录（2026-10-21）
+
+2026-10-21，用户明确授权按已确认的 11 项范围开发：Shiki 标记解析、评论 RSS 样式、延迟初始化、独立统计、开发环境计数保护、showMeta、安全区域、Blog 置顶、RSS 日期、长代码折叠及 Astro 字体 API。当时授权范围为实现、文档和验证，未包含提交、推送、合并或部署。
+
+2026-10-22，用户进一步明确授权“提交推送”，范围为将本次变更提交到工作分支，并推送至 origin 的对应分支。
+
+- 功能依据为 `cworld1/astro-theme-pure@4ecd4762e1e750daf7a51978092d7cea8e14c0d6`；参考其 `af05b8f`、`bd2b131`、`2f3e5df`、`633b7ff`、`4ecd476`，以及历史代码折叠、安全区域和 Shiki 改进。保留本项目内容层、客户端清理、评论路径与视觉，按当前架构适配行为。
+- `@shikijs/transformers@4.4.3`：Shiki 官方项目，MIT，直接导入依赖，与锁定的 Shiki 4.4.3 配合使用；完整性由 `bun.lock` 保存。构建期运行，不加入浏览器语法解析运行时。
+- 字体加载使用既有 Astro 7.3.1 的 `fontProviders.local()` 和 `Font`，继续读取原有四个 WOFF2；从 `public/fonts/` 移至 `src/assets/fonts/` 时保留字节。字体来源与授权沿用既有记录，原始字体和许可继续保留。重建脚本使用原始字体，不请求新的字体服务。
+
 ## 2. 复用类型
 
 | 类型       | 含义                                                                         |

@@ -117,7 +117,7 @@ node scripts/adjust-favicon-outline.mjs --out artifacts/favicon/candidate.png
 ### 分享图、字体与友链
 
 - `bun run generate:social-card` 从已确认 Home 素材生成 `public/images/social-card.webp`，输出 1200×630 分享图。
-- `python scripts/generate-fonts.py` 重建 `public/fonts/` 中的 WOFF2，需安装脚本声明的 `fonttools[woff]==4.64.0`。页面使用 WOFF2，原始字体和许可文本保留。
+- `python scripts/generate-fonts.py` 从 `public/fonts/` 的原始字体重建 `src/assets/fonts/` 中的 WOFF2，需安装脚本声明的 `fonttools[woff]==4.64.0`。生成时保留字体时间戳。Astro 本地字体 API 负责交付，原始字体和许可文本保留；变更后核对正常／斜体、字重、预加载与重复请求。
 - `bun run links:check:dry` 只探测友链主链接，不写数据；头像 CDN 不参与失效判定。
 - `bun run links:check` 更新 `cf-links`／`inactive-links` 和本地 `scripts/link-health.json`。默认每次请求重试 3 次，临时错误连续 2 次检查失败后移动；证书错误、404/410 和降级至 HTTP 的重定向在本次重试后立即移动。恢复后按稳定顺序移回。参数为 `--retries=N`、`--threshold=N`、`--timeout=N`、`--concurrency=N`，写入结果审阅后单独提交。
 - 启用 `cacheAvatar` 后，`bun run cache:avatars` 写入 `public/avatars/`，可能更新 `public/links.json`。缓存目录已忽略，作为正式资源提交前检查来源与清单差异。
@@ -170,9 +170,11 @@ bun run verify:home-hero
 bun run verify:home-saying
 bun run verify:browser:lifecycle
 bun run verify:mermaid:browser
+bun run verify:pure:browser
 ```
 
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
+- Pure browser 检查真实代码折叠、完整复制、打印与无 JavaScript 阅读、本地字体正常／斜体按需加载、原生安全区域、评论延迟初始化与 RSS 布局。统计测试使用真实前端与隔离服务响应，校验预览无递增和正式 origin 单次递增，不写生产统计；结果保存在 `artifacts/pure-verification/results.json`。
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
 - Home Saying 覆盖桌面／手机及 DPR 1／2，逐条刷新并核对首次呈现身份、实际 `currentSrc`、响应式候选和预加载请求复用；阻断外部模块和完整图片验证可读文字与同图预览，检查图片加载前后的几何尺寸、慢网络与 CPU 降速、重复站内导航、空／单候选、无响应式候选、图片失败重试和禁用 JavaScript。结果默认写入 `artifacts/saying-verification/results.json`，可用 `SAYING_EVIDENCE_DIR` 指定本项目 `artifacts/` 内的输出目录。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。

@@ -33,6 +33,7 @@ runs:
         bun run verify:home-saying
         bun run verify:browser:lifecycle
         bun run verify:mermaid:browser
+        bun run verify:pure:browser
     - name: Stop browser services
       if: always()
       shell: bash

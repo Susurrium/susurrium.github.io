@@ -115,6 +115,7 @@ sourcesByKey: ReadonlyMap<string, AnyContentEntry>
 查询统一使用 `queryContent()` 和 `sortContentRecords()`：
 
 - `editorial-date-desc`：`updatedAt ?? publishedAt` 倒序；并列时用稳定 key 排序，不依赖加载器枚举顺序。
+- `pinned-editorial-date-desc`：Blog 置顶优先，同组使用编辑日期与稳定 key；只用于 Blog 主列表和标签结果，先排序再分页。
 - `publish-date-desc`：`publishedAt` 倒序；并列时用稳定 key 排序。
 - `id-asc`：稳定 key 正序，适用于无日期的 Saying。
 - 筛选、标签匹配、offset、limit 都在同一查询策略中完成。
@@ -196,18 +197,18 @@ Blog 的 `BlogTextCardAdapter` 仍接收原始 Blog entry，是因为它需要 A
 
 ## 7. 各页面的实现约定
 
-| 页面          | PageData 组合                                                                                       | 内容来源/排序                                        | 视觉边界                                                               |
-| ------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | Blog/Trace 按发布时间；Saying 按 id                  | 现有随机 Saying、Blog 卡片、Trace Media、Timeline 不变                 |
-| Blog 列表     | `content/items`                                                                                     | Blog 编辑日期倒序；独立 pageSize 分页                | 现有 Blog 卡片 DOM/CSS 不变                                            |
-| Blog 标签页   | `content/items`                                                                                     | Blog 编辑日期倒序后按 tag 筛选                       | 与 Blog 列表相同，路由 `/blog/tags`                                    |
-| Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选                      | 与 Trace 列表相同，路由 `/traces/tags`                                 |
-| Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选                     | 与 Saying 列表相同，路由 `/sayings/tags`                               |
-| 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组                        | 现有年份标题和卡片间距不变                                             |
-| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页               | 现有 Trace/Media 输出不变                                              |
-| Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页                   | 现有装饰卡片输出不变                                                   |
-| 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                                   | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
-| RSS           | 不渲染 PageData                                                                                     | 启用 rss surface 的内容，编辑日期倒序；默认只有 Blog | 复用正文编译结果并转换成适合订阅读器的 HTML                            |
+| 页面          | PageData 组合                                                                                       | 内容来源/排序                                                                | 视觉边界                                                               |
+| ------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | 最近 Blog 按编辑日期，Trace 按发布时间，时间线按 Blog 发布时间，Saying 按 id | 现有卡片与 Timeline                                                    |
+| Blog 列表     | `content/items`                                                                                     | 置顶优先，其后编辑日期倒序；独立 pageSize 分页                               | 置顶条目显示标记，其余保持现有卡片                                     |
+| Blog 标签页   | `content/items`                                                                                     | 过滤 tag 后置顶优先，其后编辑日期倒序                                        | 与 Blog 列表相同，路由 `/blog/tags`                                    |
+| Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选                                              | 与 Trace 列表相同，路由 `/traces/tags`                                 |
+| Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选                                             | 与 Saying 列表相同，路由 `/sayings/tags`                               |
+| 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组                                                | 现有年份标题和卡片间距不变                                             |
+| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页                                       | 现有 Trace/Media 输出不变                                              |
+| Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页                                           | 现有装饰卡片输出不变                                                   |
+| 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                                                           | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
+| RSS           | 不渲染 PageData                                                                                     | 启用 rss surface 的内容，发布时间倒序；默认只有 Blog                         | 复用正文编译结果并转换成适合订阅读器的 HTML                            |
 
 ### 7.1 归档分页能力与独立参数
 
@@ -258,7 +259,7 @@ Home 在每次刷新或重新进入时随机选择 Saying，允许连续选中�
 - 指向源 Markdown/MDX 的相对链接通过 source 文件路径映射到真实内容 href，并保留查询串和片段。
 - 有封面时把内容封面加入订阅正文；显式启用 Saying RSS 时补入引文与署名。默认只收录 Blog，不再生成缺失必需属性的 enclosure 元素。
 
-RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying 不伪造日期。`rss` 开关控制条目收录，站点级 `/rss.xml` 入口保留，即使最终没有条目也输出有效空 feed。
+RSS 按发布时间倒序，`pubDate` 固定使用原始发布时间，编辑时间通过 Atom 命名空间中的 `atom:updated` 输出。条目 URL 与 GUID 保持稳定；置顶不影响 RSS，没有日期的 Saying 不伪造日期。`rss` 开关控制条目收录，站点级 `/rss.xml` 入口保留，即使最终没有条目也输出有效空 feed。
 
 ### 7.4 Mermaid 正文编译与资源交付
 
@@ -273,6 +274,20 @@ RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying �
 缓存保存于 `artifacts/mermaid-cache/`，键包含源码、依赖版本、字体文件指纹、规则版本和平台；修改固定渲染规则时推进规则版本。Gantt 的参考日期按构建环境 UTC 日固定并参与缓存键。资源有独立 SHA-256 校验，缺失或损坏时重新生成，缓存 JSON 损坏明确失败；同进程请求合并，写入采用原子替换。只发布实际引用资源，草稿缓存和历史缓存不会扩大公开范围。图表生成不依赖 Chromium；Playwright 仅用于浏览器测试。
 
 ## 8. 代码组织与新增内容类型流程
+
+### 普通代码、字体与安全区域
+
+Shiki 标记由与 Shiki 同版本的 `@shikijs/transformers` 处理。超过 15 行的普通代码生成 `code-block`，`CodeBlockRuntime.astro` 在挂载后启用折叠按钮，并通过 AbortController 清理绑定。服务器 HTML 保留完整代码且隐藏操作按钮；打印解除裁剪，RSS 使用同一完整正文。代码复制始终读取完整源码。
+
+`SiteFonts.astro` 通过 Astro Font API 发布本地字体。WOFF2 位于 `src/assets/fonts/`，原始字体与许可仍保留在 `public/fonts/`；Satoshi 保持 300–900 的正常与斜体变体，Abril Fatface 和 Paralines 保持原字重。只预加载 Satoshi 正常变体，装饰字体按实际使用下载，所有字体请求保持同源。入口布局和普通布局共用字体声明，样式通过对应 CSS 变量读取字体族。
+
+`safe-area.css` 集中维护安全区域变量、页面容器内边距和固定操作区偏移；入口与 Home 背景继续覆盖完整视口。安全区域为零时沿用原有间距。
+
+### 评论初始化与统计
+
+`Comment.astro` 在距视口 200px 的范围内初始化完整 Waline 实例。观察器和实例随组件断连释放；重复挂载不会重复初始化，`showMeta` 默认展示，只有显式为 false 时隐藏元信息。正文长链接样式不覆盖 RSS 订阅控件的布局。
+
+`PageInfo.astro` 独立请求阅读量与评论数，通过每个实例的选择器限制 DOM 更新范围，并在断连时取消读取。完整评论组件关闭自身计数，避免重复递增。只有生产构建且浏览器 origin 与配置的正式站点 origin 一致时递增阅读量；开发和预览只读取。两类组件都沿用规范化评论路径。
 
 统一层位于 `src/lib/content-layer/`：
 
