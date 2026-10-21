@@ -10,6 +10,10 @@
 
 生产站默认不热链参考站资源。已确认的运行时例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、CodeTime 徽章和 Waline；构建期 GitHub 贡献数据与友链头像维护下载使用已登记来源。相关服务/路径在门禁和清单中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
 
+## 2026-10-22 发布授权
+
+用户明确要求“整理合并三个临时开发分支，正式部署发布”，范围包含整合 `codex/performance-hardening`、`codex/pure-improvements` 和 `codex/home-wave-gap`，处理冲突、验证、提交推送、通过 PR 合并至 `develop` 和 `main`、同步生产基线、手动部署 GitHub Pages、核验线上结果及清理已合并分支。第三方素材与个人信息公开范围沿用既有决定。
+
 ## 友链头像
 
 2026-10-20，用户提供“亭外日录”的名称、简介、站点地址 `https://akutagawa.cn/` 与头像地址 `https://akutagawa.cn/avatar.png`，明确要求增加友链。该条目维护在 `public/links.json` 的普通友链分组，头像按所提供的精确 URL 加载。

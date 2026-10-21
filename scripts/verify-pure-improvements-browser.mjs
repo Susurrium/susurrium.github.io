@@ -20,7 +20,9 @@ let failure
 try {
   let selected
   for (const entry of await discoverPublishedContent(site)) {
-    const source = await (await fetch(site + entry.path)).text()
+    const response = await fetch(`${site}${entry.path}/`)
+    assert(response.ok(), `Published detail ${entry.path} returned ${response.status}`)
+    const source = await response.text()
     if (parse(source).querySelector('code-block')) {
       selected = { ...entry, source }
       break
@@ -100,7 +102,7 @@ try {
     page.on('request', (request) => {
       if (request.resourceType() === 'font') fonts.push(request.url())
     })
-    await page.goto(site + selected.path)
+    await page.goto(`${site}${selected.path}/`)
     await page.locator('code-block.collapsed').first().waitFor()
     if (server) {
       await page.waitForFunction(
@@ -141,7 +143,7 @@ try {
     fontPage.on('request', (request) => {
       if (request.resourceType() === 'font') fontRequests.push(request.url())
     })
-    await fontPage.goto(site + '/404')
+    await fontPage.goto(site + '/404.html')
     await fontPage.evaluate(() => document.fonts.ready)
     assert.equal(
       await fontPage.evaluate(
@@ -253,7 +255,7 @@ try {
       }
     })
     assert.deepEqual(safe, { top: '44px', bottom: '34px', left: '48px', right: '52px' })
-    await page.goto(site + '/home')
+    await page.goto(site + '/home/')
     const homeSafe = await page.evaluate(() => {
       const rect = (selector) => document.querySelector(selector).getBoundingClientRect().toJSON()
       return {
@@ -294,7 +296,7 @@ try {
       const productionContext = await contextFor(productionOrigin)
       const productionPage = await productionContext.newPage()
       productionPage.on('pageerror', (error) => errors.push(error.message))
-      await productionPage.goto(productionOrigin + selected.path)
+      await productionPage.goto(`${productionOrigin}${selected.path}/`)
       await productionPage.waitForFunction(
         () => document.querySelector('.waline-pageview-count')?.textContent === '42'
       )
@@ -314,7 +316,7 @@ try {
 
     const noJs = await contextFor(new URL(site).origin, false)
     const noJsPage = await noJs.newPage()
-    await noJsPage.goto(site + selected.path)
+    await noJsPage.goto(`${site}${selected.path}/`)
     assert.equal(await noJsPage.locator('code-block.collapsed').count(), 0)
     assert.equal(await noJsPage.locator('[data-code-collapse]').first().isVisible(), false)
     assert.equal(

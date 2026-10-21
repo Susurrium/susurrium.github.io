@@ -107,7 +107,7 @@ async function inspectHome(page, directory, name) {
 }
 
 async function openHome(page, siteUrl) {
-  await page.goto(`${siteUrl}/home`, { waitUntil: 'load' })
+  await page.goto(`${siteUrl}/home/`, { waitUntil: 'load' })
   await page.waitForFunction(() =>
     document
       .querySelector('[data-home-content-cover]')
@@ -179,7 +179,7 @@ export async function verifyHomeWaves({ cdpEndpoint, siteUrl }) {
           try {
             await context.addInitScript((value) => localStorage.setItem('theme', value), theme)
             const page = await context.newPage()
-            await page.goto(`${siteUrl}/tools/card-crop-review#hero-crop`, { waitUntil: 'load' })
+            await page.goto(`${siteUrl}/tools/card-crop-review/#hero-crop`, { waitUntil: 'load' })
             const root = page.locator('[data-hero-crop-editor]')
             await root.waitFor({ state: 'visible' })
             for (const target of ['desktop', 'mobile']) {
@@ -219,9 +219,9 @@ export async function verifyHomeWaves({ cdpEndpoint, siteUrl }) {
         await page.evaluate(() => {
           window.__heroWaveNavigationProbe = true
         })
-        await page.locator('a[href="/about"]').first().click()
+        await page.locator('a[href="/about/"]').first().click()
         await page.waitForURL(/\/about\/?$/)
-        await page.locator('a[href="/home"]').first().click()
+        await page.locator('a[href="/home/"]').first().click()
         await page.waitForFunction(() =>
           document
             .querySelector('[data-home-content-cover]')

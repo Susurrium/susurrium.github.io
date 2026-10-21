@@ -72,18 +72,14 @@ try {
     )
     await page.waitForTimeout(400)
     assert.equal(requests.length, 2, JSON.stringify(requests))
-    const waves = await page
-      .locator('.hero-gallery__parallax > use')
-      .evaluateAll((elements) =>
-        elements.flatMap((element) =>
-          element
-            .getAnimations()
-            .map((animation) => ({
-              state: animation.playState,
-              time: Number(animation.currentTime)
-            }))
-        )
+    const waves = await page.locator('.hero-gallery__parallax > use').evaluateAll((elements) =>
+      elements.flatMap((element) =>
+        element.getAnimations().map((animation) => ({
+          state: animation.playState,
+          time: Number(animation.currentTime)
+        }))
       )
+    )
     assert.equal(waves.length, 4)
     assert(waves.every((wave) => wave.state === 'running' && wave.time > 0))
     await page.evaluate(() => scrollTo(0, document.body.scrollHeight))
@@ -322,8 +318,14 @@ try {
     assert.equal(await page.locator('waline-page-info').count(), 1)
     await page.waitForTimeout(1000)
     const before = increments.length
-    const productionOrigin = await page.locator('waline-page-info').getAttribute('data-production-origin')
-    assert.equal(before, new URL(site).origin === productionOrigin ? 1 : 0, JSON.stringify(increments))
+    const productionOrigin = await page
+      .locator('waline-page-info')
+      .getAttribute('data-production-origin')
+    assert.equal(
+      before,
+      new URL(site).origin === productionOrigin ? 1 : 0,
+      JSON.stringify(increments)
+    )
     await page.locator('a[href="#waline"]').click()
     await page.locator('.wl-editor').waitFor()
     assert.equal(increments.length, before)
