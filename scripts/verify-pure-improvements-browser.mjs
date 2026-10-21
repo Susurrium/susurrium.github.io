@@ -21,7 +21,7 @@ try {
   let selected
   for (const entry of await discoverPublishedContent(site)) {
     const response = await fetch(`${site}${entry.path}/`)
-    assert(response.ok(), `Published detail ${entry.path} returned ${response.status}`)
+    assert(response.ok, `Published detail ${entry.path} returned ${response.status}`)
     const source = await response.text()
     if (parse(source).querySelector('code-block')) {
       selected = { ...entry, source }
