@@ -1,9 +1,10 @@
 ---
 import '@/assets/styles/app.css'
 
-import { prod } from 'astro-pure/server'
 import { entrance } from '@/data/entrance'
 
+import { prod } from 'astro-pure/server'
+import SiteFonts from '@/components/layout/SiteFonts.astro'
 import config from '@/site-config'
 
 interface Props {
@@ -20,7 +21,11 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 <html lang={config.locale.lang}>
   <head>
     <meta charset='utf-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0, shrink-to-fit=no' />
+    <meta
+      name='viewport'
+      content='width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover'
+    />
+    <SiteFonts />
     <meta name='robots' content='noindex, follow' />
     <link rel='canonical' href={canonicalHome} />
     <link rel='icon' href={config.favicon} />
@@ -47,7 +52,7 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
           src={umamiScriptUrl}
           data-website-id={umamiWebsiteId}
           data-domains='susurrium.github.io'
-        ></script>
+        />
       )
     }
   </head>

@@ -1,34 +1,7 @@
-/* Font */
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
-  font-weight: 300 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2');
-  font-weight: 300 900;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Abril Fatface';
-  src: url('/fonts/AbrilFatface-Regular.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Paralines';
-  src: url('/fonts/Paralines-Regular.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
+@import './safe-area.css';
+
 html {
-  font-family: 'Satoshi', sans-serif;
+  font-family: var(--font-satoshi), sans-serif;
 }
 
 /* Theme */
@@ -154,11 +127,7 @@ html.dark {
  */
 :root {
   --document-handoff-surface: hsl(var(--background));
-  --document-handoff-surface: color-mix(
-    in srgb,
-    hsl(var(--background)) 92%,
-    rgb(198 184 159)
-  );
+  --document-handoff-surface: color-mix(in srgb, hsl(var(--background)) 92%, rgb(198 184 159));
 }
 
 .document-handoff {

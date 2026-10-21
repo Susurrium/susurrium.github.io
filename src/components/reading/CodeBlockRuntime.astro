@@ -1,0 +1,83 @@
+<script>
+  let sequence = 0
+
+  class CodeBlock extends HTMLElement {
+    private controller?: AbortController
+
+    connectedCallback() {
+      this.controller?.abort()
+      const button = this.querySelector<HTMLButtonElement>('[data-code-collapse]')
+      const pre = this.querySelector('pre')
+      if (!button || !pre) return
+      const controller = new AbortController()
+      this.controller = controller
+      pre.id ||= `code-block-${++sequence}`
+      button.setAttribute('aria-controls', pre.id)
+      const render = (collapsed: boolean) => {
+        this.classList.toggle('collapsed', collapsed)
+        button.setAttribute('aria-expanded', String(!collapsed))
+        button.textContent = collapsed ? '展开全部代码' : '收起代码'
+      }
+      render(true)
+      button.hidden = false
+      button.addEventListener('click', () => render(!this.classList.contains('collapsed')), {
+        signal: controller.signal
+      })
+    }
+
+    disconnectedCallback() {
+      this.controller?.abort()
+      this.controller = undefined
+      this.classList.remove('collapsed')
+      const button = this.querySelector<HTMLButtonElement>('[data-code-collapse]')
+      if (button) button.hidden = true
+    }
+  }
+  if (!customElements.get('code-block')) customElements.define('code-block', CodeBlock)
+</script>
+
+<style is:global>
+  code-block.astro-code {
+    display: block;
+  }
+  .astro-code > .code-collapse-toggle {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    padding: 0.5rem;
+    border: 0;
+    border-top: 1px solid hsl(var(--border));
+    border-radius: 0 0 0.75rem 0.75rem;
+    color: hsl(var(--muted-foreground));
+    background: hsl(var(--muted));
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .astro-code > .code-collapse-toggle[hidden] {
+    display: none;
+  }
+  .astro-code.collapsed > pre {
+    max-height: 15rem;
+    overflow: hidden;
+  }
+  .astro-code.collapsed::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    bottom: 2.5rem;
+    height: 6rem;
+    pointer-events: none;
+    background: linear-gradient(transparent, hsl(var(--muted)));
+  }
+  @media print {
+    .astro-code.collapsed > pre {
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .astro-code > .code-collapse-toggle,
+    .astro-code.collapsed::after {
+      display: none !important;
+    }
+  }
+</style>

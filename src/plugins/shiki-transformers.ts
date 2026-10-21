@@ -3,7 +3,8 @@ import type { ShikiTransformer } from 'shiki'
 
 export {
   transformerNotationDiff,
-  transformerNotationHighlight
+  transformerNotationHighlight,
+  transformerRemoveNotationEscape
 } from './shiki-official-transformers'
 
 function parseMetaString(str = '') {
@@ -141,3 +142,25 @@ export const addCopyButton = (timeout?: number): ShikiTransformer => {
     }
   }
 }
+
+export const addCollapse = (threshold = 15): ShikiTransformer => ({
+  name: 'susurrium-code-collapse',
+  pre(node) {
+    const lines = this.lines.length - Number(this.source.endsWith('\n'))
+    if (lines <= threshold) return
+    node.tagName = 'code-block'
+    node.children.push(
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'code-collapse-toggle',
+          'data-code-collapse': '',
+          'aria-expanded': 'true',
+          hidden: true
+        },
+        '展开全部代码'
+      )
+    )
+  }
+})

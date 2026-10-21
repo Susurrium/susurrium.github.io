@@ -12,6 +12,7 @@ import Footer from '@/components/layout/SiteFooter.astro'
 import SiteHeader from '@/components/layout/SiteHeader.astro'
 import ThemeProvider from '@/components/layout/ThemeProvider.astro'
 import MusicPlayer from '@/components/MusicPlayer.astro'
+import CodeBlockRuntime from '@/components/reading/CodeBlockRuntime.astro'
 import ViewTransitionRejectionGuard from '@/components/ViewTransitionRejectionGuard.astro'
 import config from '@/site-config'
 
@@ -182,7 +183,7 @@ const hasPageBackground = Astro.slots.has('page-background')
     }
     <div
       class:list={[
-        'relative w-full max-w-[70rem] px-4 sm:px-7 lg:px-10 min-h-[100dvh] flex flex-col justify-between',
+        'site-page-shell relative w-full max-w-[70rem] min-h-[100dvh] flex flex-col justify-between',
         pageKind === 'home' && 'relative'
       ]}
       data-click-burst-zone
@@ -212,6 +213,7 @@ const hasPageBackground = Astro.slots.has('page-background')
     <div transition:persist='susurrium-music-player'>
       <MusicPlayer />
     </div>
+    <CodeBlockRuntime />
 
     {/* Set highlight color */}
     <style define:vars={{ highlightColor }}>
@@ -233,9 +235,9 @@ const hasPageBackground = Astro.slots.has('page-background')
      brand area while preserving normal sticky behaviour later. */
   body[data-page-kind='home'] header-component:not(.not-top) {
     position: absolute;
-    top: 1rem;
-    right: 0;
-    left: 0;
+    top: calc(1rem + var(--site-safe-top));
+    right: var(--site-safe-right);
+    left: var(--site-safe-left);
     margin-bottom: 0;
     color: #fff;
   }
@@ -255,17 +257,17 @@ const hasPageBackground = Astro.slots.has('page-background')
 
   body[data-page-kind='home'] header-component.not-top {
     position: fixed;
-    top: 1rem;
-    right: max(1rem, calc(50% - 35rem));
-    left: max(1rem, calc(50% - 35rem));
+    top: calc(1rem + var(--site-safe-top));
+    right: max(calc(1rem + var(--site-safe-right)), calc(50% - 35rem));
+    left: max(calc(1rem + var(--site-safe-left)), calc(50% - 35rem));
     margin-bottom: 0;
     margin-inline: 0;
   }
 
   @media (max-width: 639px) {
     body[data-page-kind='home'] header-component.not-top {
-      right: 1rem;
-      left: 1rem;
+      right: calc(1rem + var(--site-safe-right));
+      left: calc(1rem + var(--site-safe-left));
     }
   }
 </style>

@@ -99,9 +99,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
       maxDeltaPerEvent: Number(scene.dataset.scrollEnterMaxDelta),
       desktopMinWidth: Number(scene.dataset.scrollEnterDesktopMinWidth)
     }
-    const desktopViewport = window.matchMedia(
-      `(min-width: ${scrollToEnter.desktopMinWidth}px)`
-    )
+    const desktopViewport = window.matchMedia(`(min-width: ${scrollToEnter.desktopMinWidth}px)`)
     let wheelDistance = 0
     let wheelResetTimer = 0
     let lastWheelAt = 0
@@ -259,8 +257,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
         if (document.visibilityState === 'hidden') {
           resetWheelIntent()
           pauseVideo()
-        }
-        else resumeVideo()
+        } else resumeVideo()
       },
       { signal }
     )
@@ -302,6 +299,8 @@ import EntranceTypedText from './EntranceTypedText.astro'
     position: relative;
     display: grid;
     min-height: 100svh;
+    padding: var(--site-safe-top) var(--site-safe-right) var(--site-safe-bottom)
+      var(--site-safe-left);
     overflow: hidden;
     place-items: center;
     isolation: isolate;
@@ -400,7 +399,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
     max-width: 100%;
     margin: 0.95rem 0 0 !important;
     color: rgb(239 238 229 / 0.93) !important;
-    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-family: var(--font-satoshi), ui-sans-serif, sans-serif;
     font-size: clamp(1.125rem, 1.6vw, 1.4375rem) !important;
     font-weight: 440;
     letter-spacing: 0 !important;
@@ -421,7 +420,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
     max-width: 100%;
     margin: 1rem 0 0 !important;
     color: rgb(237 236 228 / 0.92) !important;
-    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-family: var(--font-satoshi), ui-sans-serif, sans-serif;
     font-size: clamp(1.125rem, 1.39vw, 1.25rem) !important;
     font-weight: 500;
     letter-spacing: 0 !important;
@@ -477,12 +476,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
     border-radius: 999px;
     background-color: rgb(74 54 36 / 0.34);
     background-image:
-      linear-gradient(
-        120deg,
-        rgb(74 54 36 / 0.34),
-        rgb(128 99 63 / 0.24),
-        rgb(74 54 36 / 0.34)
-      ),
+      linear-gradient(120deg, rgb(74 54 36 / 0.34), rgb(128 99 63 / 0.24), rgb(74 54 36 / 0.34)),
       linear-gradient(
         115deg,
         transparent 42%,
@@ -492,15 +486,19 @@ import EntranceTypedText from './EntranceTypedText.astro'
         transparent 58%
       );
     background-repeat: no-repeat, no-repeat;
-    background-size: 100% 100%, 250% 100%;
-    background-position: 0 0, 100% 0;
+    background-size:
+      100% 100%,
+      250% 100%;
+    background-position:
+      0 0,
+      100% 0;
     box-shadow:
       0 0.2rem 0.8rem rgb(8 5 3 / 0.14),
       0 0 1rem rgb(242 201 140 / 0.14),
       inset 0 1px 0 rgb(255 248 232 / 0.22),
       inset 0 -1px 0 rgb(42 26 14 / 0.13);
     color: #f0dfbd;
-    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-family: var(--font-satoshi), ui-sans-serif, sans-serif;
     font-size: clamp(1rem, 1.25vw, 1.125rem);
     font-weight: 540;
     letter-spacing: 0.004em;
@@ -591,12 +589,16 @@ import EntranceTypedText from './EntranceTypedText.astro'
 
   @keyframes entrance-ai-shimmer {
     0% {
-      background-position: 0 0, 100% 0;
+      background-position:
+        0 0,
+        100% 0;
     }
 
     42%,
     100% {
-      background-position: 0 0, 0 0;
+      background-position:
+        0 0,
+        0 0;
     }
   }
 
