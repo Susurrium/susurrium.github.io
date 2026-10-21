@@ -9,6 +9,7 @@ const astroCli = resolve(process.cwd(), 'node_modules', 'astro', 'bin', 'astro.m
 const node = process.execPath
 const buildSequence = [
   [bun, ['run', 'verify:media-images']],
+  [bun, ['run', 'verify:avatars']],
   // `astro build` owns the required content sync. Checking its resulting
   // generated types avoids a second content sync while keeping a full
   // type/diagnostic gate in every build.

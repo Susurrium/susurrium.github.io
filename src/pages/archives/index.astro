@@ -18,7 +18,7 @@ import ContentCard from '@/components/cards/ContentCard.astro'
 
 export const prerender = true
 
-if (!isContentSurfaceEnabled('blog', 'archive')) return Astro.redirect('/home')
+if (!isContentSurfaceEnabled('blog', 'archive')) return Astro.redirect('/home/')
 
 const contentCatalog = await loadContentCatalog()
 const allPosts = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
@@ -68,7 +68,7 @@ const meta = {
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href='/blog' variant='back' />
+  <Button title='Back' href='/blog/' variant='back' />
 
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
@@ -106,7 +106,7 @@ const meta = {
 
 <style>
   .archive-year-mark {
-    font-family: 'Paralines', 'Satoshi', sans-serif;
+    font-family: var(--font-paralines), var(--font-satoshi), sans-serif;
     font-synthesis: none;
     font-variant-numeric: lining-nums;
     font-weight: 400;

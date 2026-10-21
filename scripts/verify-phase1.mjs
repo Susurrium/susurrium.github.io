@@ -73,7 +73,7 @@ function assertNav(path) {
       .trim()
   }))
   const brand = anchors.find(({ attributes }) => /aria-label="Brand"/.test(attributes))
-  expect(brand?.attributes.includes('href="/home"'), `${path} brand links to /home`)
+  expect(brand?.attributes.includes('href="/home/"'), `${path} brand links to /home/`)
 
   const nav = anchors
     .filter(({ attributes }) => /data-nav-menu-item/.test(attributes))
@@ -82,12 +82,12 @@ function assertNav(path) {
       text
     }))
   const expected = [
-    { href: '/home', text: 'Home' },
-    { href: '/blog', text: 'Blog' },
-    { href: '/traces', text: 'Traces' },
-    { href: '/projects', text: 'Projects' },
-    { href: '/about', text: 'About' },
-    { href: '/links', text: 'Links' }
+    { href: '/home/', text: 'Home' },
+    { href: '/blog/', text: 'Blog' },
+    { href: '/traces/', text: 'Traces' },
+    { href: '/projects/', text: 'Projects' },
+    { href: '/about/', text: 'About' },
+    { href: '/links/', text: 'Links' }
   ]
   expect(
     JSON.stringify(nav) === JSON.stringify(expected),
@@ -107,10 +107,10 @@ expect(!entrance.includes('<footer'), 'entrance does not mount the site footer')
 expect(!/<meta[^>]+http-equiv="refresh"/i.test(entrance), 'entrance does not auto-redirect')
 expect(/<meta name="robots" content="noindex, follow"/.test(entrance), 'entrance is noindex')
 expect(
-  /<link rel="canonical" href="https:\/\/susurrium\.github\.io\/home"/.test(entrance),
-  'entrance canonical points to /home'
+  /<link rel="canonical" href="https:\/\/susurrium\.github\.io\/home\/"/.test(entrance),
+  'entrance canonical points to /home/'
 )
-expect(/href="\/home"/.test(entrance), 'entrance exposes an explicit /home link')
+expect(/href="\/home\/"/.test(entrance), 'entrance exposes an explicit /home/ link')
 expect(
   !read('home/index.html').includes('data-pagefind-ignore'),
   '/home is indexable separately from the entrance'
@@ -149,7 +149,7 @@ for (const collection of [
         `${collection.label} ${entry.id} exposes content type metadata`
       )
       expect(
-        detail.includes(`href="/${collection.route}"`),
+        detail.includes(`href="/${collection.route}/"`),
         `${collection.label} ${entry.id} links back to its archive`
       )
     }

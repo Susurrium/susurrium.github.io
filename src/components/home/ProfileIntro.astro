@@ -32,13 +32,13 @@ import config from '@/site-config'
       <h2 id='home-profile-intro-about-heading'>About</h2>
     </div>
     <div class='home-profile-intro__about-body'>
-      <p class='home-profile-intro__role' set:html={profileIntro.role}></p>
+      <p class='home-profile-intro__role' set:html={profileIntro.role} />
       <div class='home-profile-intro__copy'>
-        {profileIntro.paragraphs.map((paragraph) => <p set:html={paragraph}></p>)}
+        {profileIntro.paragraphs.map((paragraph) => <p set:html={paragraph} />)}
       </div>
       <Button
         title='More about me'
-        href='/about'
+        href='/about/'
         variant='ahead'
         aria-label={`了解更多关于 ${config.author} 的信息`}
         data-home-action='ahead'

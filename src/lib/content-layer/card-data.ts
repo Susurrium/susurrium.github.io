@@ -29,6 +29,7 @@ export type TextCardSkin = 'blog' | 'plain'
  * the existing Blog class/interaction contract; it is not a content schema.
  */
 export interface TextCardViewData extends StandardCardData {
+  readonly pinned?: boolean
   readonly draft: boolean
   readonly family: 'text'
   readonly metadata: readonly TextCardMeta[]
@@ -75,6 +76,9 @@ export function toTextCardViewData(
   return {
     ...item.card,
     draft: record.draft,
+    ...(item.placement.showPinned && record.kind === 'blog' && record.pinned
+      ? { pinned: true }
+      : {}),
     family: 'text',
     metadata,
     skin: options.skin ?? (record.kind === 'blog' ? 'blog' : 'plain'),

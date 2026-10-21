@@ -51,12 +51,12 @@ export const theme: ThemeUserConfig = {
   /** Configure the header of your site. */
   header: {
     menu: [
-      { title: 'Home', link: '/home' },
-      { title: 'Blog', link: '/blog' },
-      { title: 'Traces', link: '/traces' },
-      { title: 'Projects', link: '/projects' },
-      { title: 'About', link: '/about' },
-      { title: 'Links', link: '/links' }
+      { title: 'Home', link: '/home/' },
+      { title: 'Blog', link: '/blog/' },
+      { title: 'Traces', link: '/traces/' },
+      { title: 'Projects', link: '/projects/' },
+      { title: 'About', link: '/about/' },
+      { title: 'Links', link: '/links/' }
     ]
   },
 
@@ -170,8 +170,6 @@ export const integ: IntegrationUserConfig = {
     // Refer https://waline.js.org/en/reference/client/props.html
     additionalConfigs: {
       // search: false,
-      pageview: true,
-      comment: true,
       locale: {
         reaction0: 'Like',
         placeholder: 'Welcome to comment. (Email to receive replies. Login is unnecessary)'

@@ -39,7 +39,7 @@ export async function discoverPublishedContent(siteUrl, fetchImpl = fetch) {
   for (let start = 0; start < paths.length; start += 4) {
     const batch = await Promise.all(
       paths.slice(start, start + 4).map(async (path) => {
-        const detail = await fetchImpl(`${siteUrl}${path}`)
+        const detail = await fetchImpl(`${siteUrl}${path}/`)
         if (!detail.ok) throw new Error(`Published detail ${path} returned ${detail.status}`)
         return describeContentDocument(path, await detail.text())
       })

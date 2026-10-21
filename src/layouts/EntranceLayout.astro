@@ -1,9 +1,11 @@
 ---
 import '@/assets/styles/app.css'
 
-import { prod } from 'astro-pure/server'
 import { entrance } from '@/data/entrance'
+import heroImages from '@/data/hero-images.json'
 
+import { prod } from 'astro-pure/server'
+import SiteFonts from '@/components/layout/SiteFonts.astro'
 import config from '@/site-config'
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
 }
 
 const { title = `Enter ${entrance.title}` } = Astro.props
-const canonicalHome = new URL('/home', Astro.site)
+const canonicalHome = new URL('/home/', Astro.site)
 const umamiScriptUrl = 'https://cloud.umami.is/script.js'
 const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 ---
@@ -20,7 +22,11 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 <html lang={config.locale.lang}>
   <head>
     <meta charset='utf-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0, shrink-to-fit=no' />
+    <meta
+      name='viewport'
+      content='width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover'
+    />
+    <SiteFonts />
     <meta name='robots' content='noindex, follow' />
     <link rel='canonical' href={canonicalHome} />
     <link rel='icon' href={config.favicon} />
@@ -28,7 +34,9 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
       rel='preload'
       as='image'
       href='/images/home-media/thumb-1920-1381117.webp'
-      fetchpriority='high'
+      imagesrcset={heroImages['/images/home-media/thumb-1920-1381117.webp'].srcset}
+      imagesizes='(max-width: 767px) max(100vw, 110vh), 100vw'
+      fetchpriority='low'
     />
     <title>{title}</title>
     <Fragment set:html={`<script src="/theme-handoff.js" data-theme-role="read"></script>`} />
@@ -47,7 +55,7 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
           src={umamiScriptUrl}
           data-website-id={umamiWebsiteId}
           data-domains='susurrium.github.io'
-        ></script>
+        />
       )
     }
   </head>

@@ -70,6 +70,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
             class='hero-gallery__image-frame'
             imageClass={isEditor ? 'hero-crop-editor__image' : 'hero-gallery__image'}
             loading={index === 0 ? 'eager' : 'lazy'}
+            deferred={!isEditor && index > 0}
             responsive={!isEditor}
             src={slide.src}
             transform={isEditor ? previewTransform : getHeroCropTransform(slide.src, 'desktop')}
@@ -86,6 +87,13 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
   </div>
 
   <div class='hero-gallery__stage' data-home-hero-stage>
+    {
+      !isEditor && (
+        <button type='button' data-hero-retry hidden class='hero-gallery__retry'>
+          重新加载背景
+        </button>
+      )
+    }
     <div class='hero-gallery__brand' data-home-hero-brand>
       <div class='hero-gallery__brand-pjax'>
         {
@@ -95,7 +103,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
               <h1 class='hero-gallery__title'>{config.title}</h1>
             </div>
           ) : (
-            <a class='hero-gallery__logo' href='/home' rel='start' data-astro-prefetch>
+            <a class='hero-gallery__logo' href='/home/' rel='start' data-astro-prefetch>
               <p class='hero-gallery__artboard'>{config.author}</p>
               <h1 class='hero-gallery__title'>{config.title}</h1>
             </a>
@@ -134,6 +142,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 </section>
 
 <script>
+  import { createHeroPlayback } from '@/lib/client/hero-playback'
   import { resolveHeroVisibility } from '@/lib/home/hero-visibility'
 
   declare global {
@@ -142,6 +151,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
     }
   }
 
+  let activeHero: HTMLElement | undefined
   const initializeHeroGallery = () => {
     // The editor renders this component too, but it must not install the
     // document-level fixed-media/scroll controller.  Requiring the runtime
@@ -152,6 +162,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
     )
     const media = hero?.querySelector<HTMLElement>('[data-home-hero-media]')
     if (!hero || !media) return
+    if (activeHero === hero) return
     const page = hero.closest<HTMLElement>('[data-page-kind="home"]')
     const cover = page?.querySelector<HTMLElement>('[data-home-content-cover]')
 
@@ -159,6 +170,8 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 
     const controller = new AbortController()
     const { signal } = controller
+    activeHero = hero
+    const playback = createHeroPlayback(hero, signal)
     let frame = 0
 
     const sync = () => {
@@ -180,6 +193,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
       media.dataset.mediaVisibleHeight = String(Math.round(visibility.visibleMediaHeight))
       media.dataset.scrollMode = visibility.covered ? 'flow' : 'fixed'
       hero.dataset.heroPhase = visibility.covered ? 'released' : 'hero'
+      playback.setVisible(visibility.visibleMediaHeight > 0)
 
       /*
        * The transition veil used to have a second, independent scroll
@@ -210,6 +224,7 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
       resizeObserver.disconnect()
       if (frame) window.cancelAnimationFrame(frame)
       frame = 0
+      activeHero = undefined
       if (window.__heroGalleryCleanup === cleanup) delete window.__heroGalleryCleanup
     }
 
@@ -297,6 +312,22 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
     animation: hero-gallery-image-animation 36s linear infinite 0s;
   }
 
+  .hero-gallery[data-hero-mode='runtime'] .hero-gallery__slide,
+  .hero-gallery[data-hero-mode='runtime'] .hero-gallery__parallax > use {
+    animation-play-state: paused;
+  }
+
+  .hero-gallery__retry {
+    position: absolute;
+    bottom: 4rem;
+    right: 2rem;
+    z-index: 2;
+    text-decoration: underline;
+  }
+  .hero-gallery__retry[hidden] {
+    display: none;
+  }
+
   .hero-gallery__image-frame {
     z-index: 0;
   }
@@ -382,7 +413,8 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 
   .hero-gallery__waves {
     position: absolute;
-    top: calc(var(--hero-gallery-image-height) - var(--hero-gallery-wave-height));
+    /* 底部重叠 1px，覆盖缩放和小数像素舍入产生的接缝。 */
+    bottom: -1px;
     right: 0;
     left: 0;
     z-index: 2;
@@ -580,10 +612,6 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 
   .hero-gallery--editor[data-hero-viewport='mobile'] .hero-gallery__title {
     font-size: 1.5em;
-  }
-
-  .hero-gallery--editor .hero-gallery__waves {
-    top: calc(100% - var(--hero-gallery-wave-height));
   }
 
   .hero-gallery--editor .hero-gallery__parallax > use {

@@ -120,8 +120,10 @@ if (existsSync(resolve(dist, 'index.html'))) {
   expect(entrance.includes('data-entrance-poster'), 'root contains a poster fallback')
   expect(entrance.includes('entrance-typed-text'), 'root mounts the Typed.js text component')
   expect(
-    /<video\b[^>]*\bmuted\b[^>]*\bautoplay\b[^>]*\bloop\b/i.test(entrance),
-    'root video is muted, autoplaying, and looping'
+    /<video\b[^>]*\bmuted\b[^>]*\bloop\b/i.test(entrance) &&
+      /preload="none"/.test(entrance) &&
+      /data-src="\/media\//.test(entrance),
+    'root video is muted and looping, with runtime-controlled source loading'
   )
   expect(!entrance.includes('<header-component'), 'root does not mount the site header')
   expect(!entrance.includes('<footer'), 'root does not mount the site footer')
@@ -137,11 +139,11 @@ if (existsSync(resolve(dist, 'index.html'))) {
     'root video has no ended-event navigation'
   )
   expect(entrance.includes('location.replace'), 'root enters Home with history replacement')
-  expect(/href="\/home"/.test(entrance), 'root keeps a keyboard-accessible /home link')
+  expect(/href="\/home\/"/.test(entrance), 'root keeps a keyboard-accessible /home/ link')
   expect(/<meta name="robots" content="noindex, follow"/.test(entrance), 'root remains noindex')
   expect(
-    /<link rel="canonical" href="https:\/\/susurrium\.github\.io\/home"/.test(entrance),
-    'root canonical remains /home'
+    /<link rel="canonical" href="https:\/\/susurrium\.github\.io\/home\/"/.test(entrance),
+    'root canonical points to /home/'
   )
   for (const asset of media) {
     expect(entrance.includes(`/${asset.path}`), `root references local ${asset.path}`)

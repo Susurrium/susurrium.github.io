@@ -16,13 +16,13 @@ import {
 
 test('本地与线上路由允许目录尾斜杠，严格核对 canonical 的域名和路径', () => {
   const site = 'https://susurrium.github.io'
-  const canonical = `${site}/traces/tags`
+  const canonical = `${site}/traces/tags/`
   for (const pathname of ['/traces/tags', '/traces/tags/'])
     expect(matchesBrowserRoute({ pathname, canonical }, '/traces/tags', site)).toBe(true)
   for (const state of [
     { pathname: '/blog/tags/', canonical },
     { pathname: '/traces/tags/', canonical: 'https://other.invalid/traces/tags' },
-    { pathname: '/traces/tags/', canonical: `${canonical}/` },
+    { pathname: '/traces/tags/', canonical: canonical.replace(/\/$/, '') },
     { pathname: '/traces/tags/', canonical: `${site}/traces` },
     { pathname: '/traces/tags/', canonical: undefined }
   ])

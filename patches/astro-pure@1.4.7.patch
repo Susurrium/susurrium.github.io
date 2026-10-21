@@ -1,3 +1,180 @@
+diff --git a/node_modules/astro-pure/.bun-tag-6e2bf69e45b2bef0 b/.bun-tag-6e2bf69e45b2bef0
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/astro-pure/.bun-tag-92a321fa80d3d620 b/.bun-tag-92a321fa80d3d620
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/components/pages/ArticleBottom.astro b/components/pages/ArticleBottom.astro
+index 45a2a0229c521574a639c4133f7aca83f12d7906..8537bd8d041506d81162e009a3e5f7f49daef4d5 100644
+--- a/components/pages/ArticleBottom.astro
++++ b/components/pages/ArticleBottom.astro
+@@ -24,7 +24,7 @@ const next = collections[index + 1]
+     {
+       prev && (
+         <a
+-          href={`${path}/${prev.id}`}
++          href={`${path}/${prev.id.split('/').map(encodeURIComponent).join('/')}/`}
+           class='group inline-flex items-center gap-x-2 rounded-xl px-4 py-2 no-underline transition-colors duration-300 hover:bg-muted max-sm:max-w-[80%] sm:flex'
+         >
+           <svg
+@@ -60,7 +60,7 @@ const next = collections[index + 1]
+     {
+       next && (
+         <a
+-          href={`${path}/${next.id}`}
++          href={`${path}/${next.id.split('/').map(encodeURIComponent).join('/')}/`}
+           class='group inline-flex items-center gap-x-2 rounded-xl px-4 py-2 text-right no-underline transition-colors duration-300 hover:bg-muted max-sm:float-end max-sm:max-w-[80%] sm:flex'
+         >
+           <p class='truncate font-medium transition-colors'>{next.data.title}</p>
+diff --git a/components/pages/BackToTop.astro b/components/pages/BackToTop.astro
+index 0ea248e312bdfddf52fdcdcb4a2363b651359769..21e87f93d79c76645acbce2cbe941799dba84d27 100644
+--- a/components/pages/BackToTop.astro
++++ b/components/pages/BackToTop.astro
+@@ -9,7 +9,7 @@ const { header: headerName, content: contentName, needPercent = true } = Astro.p
+   id='action-buttons'
+ >
+   <slot name='other-icons' />
+-  <scroll-button>
++  <scroll-button data-header={headerName} data-content={contentName} data-percent={String(needPercent)}>
+     <button
+       aria-label='Back to Top'
+       class='relative size-10 flex items-center justify-center rounded-full border-2 border-transparent bg-muted text-muted-foreground duration-300 hover:border-border/75 sm:size-12 opacity-0'
+@@ -26,86 +26,65 @@ const { header: headerName, content: contentName, needPercent = true } = Astro.p
+   </scroll-button>
+ </div>
+ 
+-<script is:inline define:vars={{ headerName, contentName, needPercent }}>
++<script>
+   class ScrollBtn extends HTMLElement {
+-    actionBtns
+-    scrollBtn
+-    scrollPercentEl
+-    targetHeader
+-    articleEl
+-    scrollHeight = 0
+-    articleTop = 0
+-    clientHeight = 0
+-    ticking = false
+-    needPercent = true
+-
+-    calculateScrollPercent() {
+-      const scrollTop = Math.max(0, window.scrollY || document.documentElement.scrollTop)
+-      // Before article
+-      if (scrollTop < this.articleTop) return 0
+-      const maxScrollable = this.scrollHeight - this.clientHeight
+-      // After article
+-      if (maxScrollable <= 0) return 100
+-      const progress = Math.min(scrollTop - this.articleTop, maxScrollable)
+-      return Math.round((progress / maxScrollable) * 100)
+-    }
+-
+-    updateScrollPercent() {
+-      const percent = this.calculateScrollPercent()
+-      this.scrollPercentEl.textContent = percent.toString()
+-      this.actionBtns.classList.toggle('ended', percent >= 100)
+-      this.ticking = false
++    private controller?: AbortController
++    private visibilityObserver?: IntersectionObserver
++    private sizeObserver?: ResizeObserver
++    private frame = 0
++    private schedule = () => {
++      if (!this.frame) this.frame = requestAnimationFrame(() => this.update())
+     }
+ 
+     connectedCallback() {
+-      this.needPercent = needPercent
+-      this.actionBtns = document.getElementById('action-buttons')
+-      this.scrollBtn = this.querySelector('button#to-top-btn')
+-      this.scrollPercentEl = this.scrollBtn.querySelector('.top-text .text')
+-      this.targetHeader = document.getElementById(headerName)
+-      this.articleEl = document.getElementById(contentName)
+-
+-      if (!this.articleEl) {
+-        console.error(`Element with ID ${contentName} not found.`)
+-        needPercent = false
+-      }
+-      // Scroll to top action
+-      this.scrollBtn.addEventListener('click', this)
+-      // Observe header visibility
+-      if (this.targetHeader) {
+-        const observer = new IntersectionObserver((entries) => {
+-          entries.forEach((entry) => {
+-            this.actionBtns.classList.toggle('show', !entry.isIntersecting)
+-          })
+-        })
+-        observer.observe(this.targetHeader)
+-      } else {
+-        console.error(`Element with ID ${headerName} not found.`)
+-      }
+-      // Scroll percent update
+-      if (this.needPercent) {
+-        this.scrollHeight = this.articleEl.scrollHeight
+-        this.articleTop = this.articleEl.offsetTop
+-        this.clientHeight = document.documentElement.clientHeight
++      this.disconnectedCallback()
++      const surface = this.closest<HTMLElement>('#action-buttons')
++      const header = document.getElementById(this.dataset.header || '')
++      const content = document.getElementById(this.dataset.content || '')
++      if (!surface || !header || !content) throw new Error('BackToTop requires its surface, header and content')
++      this.controller = new AbortController()
++      const { signal } = this.controller
++      this.querySelector('button')?.addEventListener('click', () => {
++        window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
++      }, { signal })
++      this.visibilityObserver = new IntersectionObserver(([entry]) => {
++        surface.classList.toggle('show', !entry.isIntersecting)
++      })
++      this.visibilityObserver.observe(header)
++      this.sizeObserver = new ResizeObserver(this.schedule)
++      this.sizeObserver.observe(content)
++      this.sizeObserver.observe(header)
++      window.addEventListener('scroll', this.schedule, { passive: true, signal })
++      window.addEventListener('resize', this.schedule, { signal })
++      content.addEventListener('load', this.schedule, { capture: true, signal })
++      void document.fonts.ready.then(() => { if (!signal.aborted) this.schedule() })
++      this.schedule()
++    }
+ 
+-        document.addEventListener('scroll', () => {
+-          if (!this.ticking) {
+-            requestAnimationFrame(() => this.updateScrollPercent())
+-            this.ticking = true
+-          }
+-        })
+-      } else {
+-        this.actionBtns.classList.add('ended')
+-      }
++    private update() {
++      this.frame = 0
++      if (!this.isConnected) return
++      const content = document.getElementById(this.dataset.content || '')
++      if (!content) return
++      const rect = content.getBoundingClientRect()
++      const length = rect.height - document.documentElement.clientHeight
++      const percent = this.dataset.percent === 'false' ? 100 : Math.round(Math.max(0, Math.min(1, -rect.top / Math.max(1, length))) * 100)
++      const text = this.querySelector('.top-text .text')
++      if (text) text.textContent = String(percent)
++      this.closest('#action-buttons')?.classList.toggle('ended', percent >= 100)
+     }
+ 
+-    handleEvent(event) {
+-      if (event.type === 'click') {
+-        window.scrollTo({ top: 0, behavior: 'smooth' })
++    disconnectedCallback() {
++      this.controller?.abort()
++      this.visibilityObserver?.disconnect()
++      this.sizeObserver?.disconnect()
++      if (this.frame) {
++        cancelAnimationFrame(this.frame)
++        this.frame = 0
+       }
+     }
+   }
+-  customElements.define('scroll-button', ScrollBtn)
++  if (!customElements.get('scroll-button')) customElements.define('scroll-button', ScrollBtn)
+ </script>
+ 
+ <style>
 diff --git a/components/pages/PostPreview.astro b/components/pages/PostPreview.astro
 index 777883fbc004e5832be3c19e99d09d7c6d656941..eba2e455b4d566c06203ffe8e0ac4627615dd66d 100644
 --- a/components/pages/PostPreview.astro
@@ -11,6 +188,154 @@ index 777883fbc004e5832be3c19e99d09d7c6d656941..eba2e455b4d566c06203ffe8e0ac4627
            {data.draft && <span class='text-red-500'>(Draft) </span>}
            {data.title}
          </div>
+diff --git a/components/pages/TOC.astro b/components/pages/TOC.astro
+index 3e3603a5043032865fc779c16ae9e0897f235937..d9d8add6ad4410c85395cf676235eff2c15ffdc2 100644
+--- a/components/pages/TOC.astro
++++ b/components/pages/TOC.astro
+@@ -43,9 +43,18 @@ const toc = generateToc(headings)
+     tocLinks: TOCLink[] = []
+     headingProgress: Record<string, HeadingProgress> = {}
+ 
+-    constructor() {
+-      super()
+-      // Initialize the headings and tocLinks
++    private controller?: AbortController
++    private observer?: ResizeObserver
++    private frame = 0
++
++    private schedule = () => {
++      if (!this.frame) this.frame = requestAnimationFrame(this.updatePositionAndStyle)
++    }
++
++    connectedCallback() {
++      this.disconnectedCallback()
++      this.controller = new AbortController()
++      const { signal } = this.controller
+       this.headings = Array.from(
+         document.querySelectorAll(
+           'article h1, article h2, article h3, article h4, article h5, article h6'
+@@ -56,40 +65,71 @@ const toc = generateToc(headings)
+         progressBar: link.previousElementSibling as HTMLElement,
+         slug: (link.getAttribute('href') || '').substring(1)
+       }))
++      this.tocLinks.forEach((link) => {
++        link.element.addEventListener('click', (event) => {
++          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
++          const heading = this.headings.find((item) => item.id === link.slug)
++          if (!heading) return
++          event.preventDefault()
++          history.pushState(null, heading.textContent || '', link.element.getAttribute('href'))
++          heading.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
++        }, { signal })
++      })
++      window.addEventListener('scroll', this.schedule, { passive: true, signal })
++      window.addEventListener('resize', this.schedule, { signal })
++      document.addEventListener('visibilitychange', this.schedule, { signal })
++      const article = document.querySelector('article')
++      this.observer = new ResizeObserver(this.schedule)
++      if (article) {
++        this.observer.observe(article)
++        article.addEventListener('load', this.schedule, { capture: true, signal })
++      }
++      void document.fonts.ready.then(() => { if (!signal.aborted) this.schedule() })
++      this.schedule()
++    }
++
++    disconnectedCallback() {
++      this.controller?.abort()
++      this.observer?.disconnect()
++      if (this.frame) cancelAnimationFrame(this.frame)
++      this.frame = 0
++      this.headings = []
++      this.tocLinks = []
++      this.headingProgress = {}
+     }
+ 
+     updatePositionAndStyle = () => {
++      this.frame = 0
++      if (!this.isConnected || document.hidden) return
+       const windowHeight = window.innerHeight
+-      const pageOffset =
+-        window.scrollY - ((document.querySelector('#content') as HTMLElement)?.offsetTop || 0)
+-      const postOffset =
+-        ((document.querySelector('#content') as HTMLElement)?.offsetHeight || 0) + 127
+-
++      const contentBottom = document.querySelector('#content')?.getBoundingClientRect().bottom ?? windowHeight
++      // 先读取当前文章的全部几何信息，再集中更新目录，避免交替读写触发布局。
++      const rectangles = this.headings.map((heading) => heading.getBoundingClientRect())
+       this.headings.forEach((el, index) => {
+-        const nextHeadingTop = this.headings[index + 1]?.offsetTop || postOffset
+-        const range = [el.offsetTop - pageOffset, nextHeadingTop - pageOffset - el.offsetHeight]
+-        const progress = (windowHeight - range[0]) / (range[1] - range[0])
++        const current = rectangles[index]
++        const end = (rectangles[index + 1]?.top ?? contentBottom + 127) - current.height
++        const progress = (windowHeight - current.top) / Math.max(1, end - current.top)
+ 
+         this.headingProgress[el.id] = {
+-          inView: range[0] < windowHeight && range[1] > 0,
++          inView: current.top < windowHeight && end > 0,
+           progress: Math.max(0, Math.min(1, progress))
+         }
+       })
+ 
+       this.tocLinks.forEach(({ element: el, progressBar: bar, slug }, i) => {
+-        const { inView, progress } = this.headingProgress[slug]
+-        if (this.headingProgress[slug]) {
++        const state = this.headingProgress[slug]
++        if (state) {
++          const { inView, progress } = state
+           el.classList.toggle('highlight', inView)
+           el.classList.toggle('highlight-bg-translucent', inView)
+           el.classList.toggle(
+             'rounded-t-2xl',
+-            inView && (i === 0 || !this.headingProgress[this.tocLinks[i - 1]?.slug].inView)
++            inView && !this.headingProgress[this.tocLinks[i - 1]?.slug]?.inView
+           )
+           el.classList.toggle(
+             'rounded-b-2xl',
+             inView &&
+-              (i === this.tocLinks.length - 1 ||
+-                !this.headingProgress[this.tocLinks[i + 1]?.slug].inView)
++              !this.headingProgress[this.tocLinks[i + 1]?.slug]?.inView
+           )
+           bar.classList.toggle('is-read', !inView && progress === 1)
+           bar.classList.toggle('highlight-bg', inView)
+@@ -98,34 +138,9 @@ const toc = generateToc(headings)
+       })
+     }
+ 
+-    connectedCallback() {
+-      // Smooth scroll
+-      this.tocLinks.forEach((link) => {
+-        link.element.addEventListener('click', (e) => {
+-          e.preventDefault()
+-          // Push the history to add the hash at the end of the URL
+-          const directHeading = this.headings.find((heading) => heading.id === link.slug)
+-          if (directHeading) {
+-            // Push the history to add the hash at the end of the URL
+-            history.pushState(
+-              null,
+-              directHeading.textContent || '',
+-              link.element.getAttribute('href')
+-            )
+-            directHeading.scrollIntoView({ behavior: 'smooth' })
+-          } else {
+-            console.warn(`No heading found for slug: ${link.slug}`)
+-          }
+-        })
+-      })
+-
+-      // Initial first and listen to scroll event
+-      setInterval(this.updatePositionAndStyle, 100)
+-      window.addEventListener('scroll', this.updatePositionAndStyle)
+-    }
+   }
+ 
+-  customElements.define('toc-heading', TOC)
++  if (!customElements.get('toc-heading')) customElements.define('toc-heading', TOC)
+ </script>
+ 
+ <style>
 diff --git a/index.ts b/index.ts
 index a11556b9016ea8221407c2cd0318dfb2f601914d..a6ca1e2f46983c7a1157375ac1d11d5b0b6568cc 100644
 --- a/index.ts

@@ -9,7 +9,7 @@ import sitemap from '@astrojs/sitemap'
 // import node from '@astrojs/node'
 // Integrations
 import AstroPureIntegration from 'astro-pure'
-import { defineConfig } from 'astro/config'
+import { defineConfig, fontProviders } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
@@ -22,15 +22,18 @@ import searchIndex from './src/integrations/search-index.ts'
 // Local integrations
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
+import rehypeDirectoryLinks from './src/plugins/rehype-directory-links.ts'
 import rehypeMermaidSource from './src/plugins/rehype-mermaid-source.ts'
 import remarkRemoveDuplicateTitleHeading from './src/plugins/remark-remove-duplicate-title-heading.ts'
 // Shiki
 import {
+  addCollapse,
   addCopyButton,
   addLanguage,
   addTitle,
   transformerNotationDiff,
   transformerNotationHighlight,
+  transformerRemoveNotationEscape,
   updateStyle
 } from './src/plugins/shiki-transformers.ts'
 import config from './src/site.config.ts'
@@ -46,8 +49,57 @@ export default defineConfig({
   site: 'https://susurrium.github.io',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
-  trailingSlash: 'never',
+  trailingSlash: 'always',
   compressHTML: true,
+  fonts: [
+    {
+      provider: fontProviders.local(),
+      name: 'Satoshi',
+      cssVariable: '--font-satoshi',
+      fallbacks: [],
+      weights: ['300 900'],
+      styles: ['normal', 'italic'],
+      optimizedFallbacks: false,
+      options: {
+        variants: [
+          {
+            src: ['./src/assets/fonts/Satoshi-Variable.woff2'],
+            weight: '300 900',
+            style: 'normal'
+          },
+          {
+            src: ['./src/assets/fonts/Satoshi-VariableItalic.woff2'],
+            weight: '300 900',
+            style: 'italic'
+          }
+        ]
+      }
+    },
+    {
+      provider: fontProviders.local(),
+      name: 'Abril Fatface',
+      cssVariable: '--font-abril',
+      fallbacks: [],
+      optimizedFallbacks: false,
+      options: {
+        variants: [
+          { src: ['./src/assets/fonts/AbrilFatface-Regular.woff2'], weight: 400, style: 'normal' }
+        ]
+      }
+    },
+    {
+      provider: fontProviders.local(),
+      name: 'Paralines',
+      cssVariable: '--font-paralines',
+      fallbacks: [],
+      optimizedFallbacks: false,
+      options: {
+        variants: [
+          { src: ['./src/assets/fonts/Paralines-Regular.woff2'], weight: 400, style: 'normal' }
+        ]
+      }
+    }
+  ],
 
   // Adapter
   // https://docs.astro.build/en/guides/deploy/
@@ -75,7 +127,9 @@ export default defineConfig({
     // props.
     sitemap({
       filter: (page) =>
-        !new Set(['/', '/404', '/search', '/tools/card-crop-review']).has(new URL(page).pathname)
+        !new Set(['/', '/404', '/search', '/tools/card-crop-review']).has(
+          new URL(page).pathname.replace(/\/$/, '') || '/'
+        )
     }),
     // astro-pure will automatically add mdx & unocss
     // mdx(),
@@ -103,6 +157,7 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [remarkMath, remarkAlert, remarkRemoveDuplicateTitleHeading],
       rehypePlugins: [
+        rehypeDirectoryLinks,
         rehypeMermaidSource,
         [rehypeKatex, { strict: false }],
         rehypeHeadingIds,
@@ -125,10 +180,12 @@ export default defineConfig({
       transformers: [
         transformerNotationDiff(),
         transformerNotationHighlight(),
+        transformerRemoveNotationEscape(),
         updateStyle(),
         addTitle(),
         addLanguage(),
-        addCopyButton(2000)
+        addCopyButton(2000),
+        addCollapse(15)
       ]
     }
   },

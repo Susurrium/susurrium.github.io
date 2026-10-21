@@ -13,6 +13,8 @@
  * `mask` input remains for frame-less media blocks, but it cannot contradict
  * a supplied diagonal frame.
  */
+import type { ImageMetadata } from 'astro'
+import { getImage } from 'astro:assets'
 import {
   CARD_CROP_FRAME_RATIO,
   DEFAULT_CARD_CROP_TRANSFORM,
@@ -21,7 +23,7 @@ import {
   type CardCropFrame,
   type CardCropTransform
 } from '@/lib/card-crop/types'
-import { cardImageOptions } from '@/lib/media/card-image'
+import { cardImageOptions, cardImageSizes, type CardImageLayout } from '@/lib/media/card-image'
 
 export type CardMediaMask = 'left' | 'right' | 'none'
 
@@ -39,6 +41,8 @@ interface Props {
   /** Draw the editor-only frame outline inside the same clipped element. */
   outline?: boolean
   src?: string
+  imageMetadata?: ImageMetadata
+  imageLayout?: CardImageLayout
   preview?: string
   responsive?: boolean
   transform?: CardCropTransform
@@ -63,6 +67,8 @@ const {
   mask = frame === 'diagonal-left' ? 'left' : frame === 'diagonal-right' ? 'right' : 'right',
   outline = false,
   src,
+  imageMetadata,
+  imageLayout = 'archive',
   preview,
   responsive = true,
   transform = DEFAULT_CARD_CROP_TRANSFORM,
@@ -73,7 +79,30 @@ const {
 } = Astro.props as Props
 
 const normalizedTransform = normalizeCropTransform(transform)
-const imageOptions = responsive ? cardImageOptions(src, normalizedTransform.zoom) : {}
+let imageOptions = responsive
+  ? cardImageOptions(src, normalizedTransform.zoom, imageLayout, fit)
+  : {}
+let deliveredSrc = src
+if (responsive && imageMetadata && imageMetadata.src === src) {
+  // 本地封面保留足够的重采样细节，较小原图继续使用实际宽度。
+  const widths = [
+    ...new Set([768, 960, 1280, 1920].map((width) => Math.min(width, imageMetadata.width)))
+  ]
+  const images = await Promise.all(
+    widths.map((width) => getImage({ src: imageMetadata, width, format: 'webp', quality: 86 }))
+  )
+  deliveredSrc = images[0].src
+  imageOptions = {
+    srcset: images.map((image, index) => `${image.src} ${widths[index]}w`).join(', '),
+    sizes: cardImageSizes(
+      imageMetadata.width,
+      imageMetadata.height,
+      normalizedTransform.zoom,
+      imageLayout,
+      fit
+    )
+  }
+}
 const position = `${normalizedTransform.x}% ${normalizedTransform.y}%`
 const frameRatio = aspectRatio ?? CARD_CROP_FRAME_RATIO
 const effectiveMask: CardMediaMask = frame ? (frame === 'diagonal-left' ? 'left' : 'right') : mask
@@ -131,7 +160,7 @@ const mediaStyle = [
         loading={loading}
         decoding={preview ? 'async' : undefined}
         fetchpriority={preview ? 'low' : undefined}
-        src={src}
+        src={deliveredSrc}
         srcset={imageOptions.srcset}
         sizes={imageOptions.sizes}
         width={width}

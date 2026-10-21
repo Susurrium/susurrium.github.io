@@ -10,13 +10,13 @@ export const entrance = {
     'A tracer of the past, a seeker of echoes that last.',
     'A learner amid the susurrus of doubt, a shadow drifting about.',
     'A reader of quiet pages, a scribe of passing phrases.',
-    'A coder at first light, a builder of my small world, byte by byte.',
+    'A coder at first light, a builder of my small world, byte by byte.'
   ],
   featuredLine: {
     prefix: 'I hope to sketch the architecture of tomorrow with',
-    keyword: 'AI agents',
+    keyword: 'AI agents'
   },
-  homeHref: '/home',
+  homeHref: '/home/',
   scrollToEnter: {
     enabled: true,
     threshold: 200,

@@ -1,6 +1,7 @@
 ---
 import { prod } from 'astro-pure/server'
 import type { SiteMeta } from 'astro-pure/types'
+import SiteFonts from '@/components/layout/SiteFonts.astro'
 import config from '@/site-config'
 
 type Props = SiteMeta & {
@@ -36,7 +37,10 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 ---
 
 <meta charset='utf-8' />
-<meta content='width=device-width, initial-scale=1.0, shrink-to-fit=no' name='viewport' />
+<meta
+  content='width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover'
+  name='viewport'
+/>
 <meta content='IE=edge' http-equiv='X-UA-Compatible' />
 <slot name='early-head' />
 <title>{siteTitle}</title>
@@ -50,7 +54,7 @@ const umamiWebsiteId = '99c69339-dfd3-42e5-8def-5a6877712e7b'
 <link rel='manifest' href='/favicon/site.webmanifest' />
 
 {/* Font preloads */}
-<link rel='preload' href='/fonts/Satoshi-Variable.woff2' as='font' type='font/woff2' crossorigin />
+<SiteFonts />
 
 {/* Canonical URL */}
 <link rel='canonical' href={canonicalURL} />

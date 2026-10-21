@@ -121,6 +121,8 @@ for (const file of distFiles.filter((file) => extname(file) === '.html')) {
   maximumDocumentBytes = Math.max(maximumDocumentBytes, document.byteLength)
   maximumScriptBytes = Math.max(maximumScriptBytes, scripts)
   maximumStyleBytes = Math.max(maximumStyleBytes, styles)
+  if (html.querySelector('comment-component') && scripts > 45 * 1024)
+    failures.push(`${relativePath(file)} initial JS gzip exceeds the 45 KiB comment-page budget`)
   for (const [kind, bytes, recommended, hard] of [
     ['HTML', document.byteLength, 0.25 * MiB, 0.5 * MiB],
     ['local initial JS (gzip)', scripts, 0.2 * MiB, 0.4 * MiB],

@@ -34,6 +34,7 @@ const fallbackItem = sayingItems[0]
         >
           <ContentCard
             class='home-saying-card'
+            imageLayout='home-saying'
             item={item}
             preview={homeSayingPreview(item)}
             imageLoading='eager'
@@ -48,13 +49,13 @@ const fallbackItem = sayingItems[0]
       </script>
       <noscript>
         <style is:inline set:html={'saying-random-card { display: none !important; }'} />
-        <ContentCard class='home-saying-card' item={fallbackItem} />
+        <ContentCard class='home-saying-card' imageLayout='home-saying' item={fallbackItem} />
       </noscript>
       {isContentSurfaceEnabled('saying', 'archive') && (
         <div class='home-random-saying__actions' data-home-saying-actions>
           <Button
             title='View all'
-            href='/sayings'
+            href='/sayings/'
             variant='ahead'
             aria-label='View all Sayings'
             data-home-action='ahead'

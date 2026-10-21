@@ -8,6 +8,7 @@
  * one semantic card link. Its slanted media and hover geometry remain intact,
  * while each local asset supplies an editorially fixed cut direction.
  */
+import type { ImageMetadata } from 'astro'
 import { getCardCutSide } from '@/data/home-media'
 import type {
   CardCutSide,
@@ -26,6 +27,7 @@ import {
   type CardLayoutVariant
 } from '@/lib/card-crop/types'
 import { formatContentDate } from '@/lib/content'
+import type { CardImageLayout } from '@/lib/media/card-image'
 
 import CardMediaFrame from '@/components/cards/CardMediaFrame.astro'
 
@@ -45,6 +47,7 @@ interface Props {
   imageClass?: string
   responsive?: boolean
   date?: Date
+  pinned?: boolean
   description?: string
   footerText?: string
   /**
@@ -54,6 +57,8 @@ interface Props {
   headingLevel?: HeadingLevel
   href?: string
   image?: ResolvedCardImage
+  imageMetadata?: ImageMetadata
+  imageLayout?: CardImageLayout
   preview?: string
   imageLoading?: 'eager' | 'lazy'
   /** `contain` is available to the crop-review tool for difficult assets. */
@@ -77,11 +82,14 @@ const {
   cropPosition = '50% 50%',
   crop,
   date,
+  pinned = false,
   description,
   footerText,
   headingLevel = 3,
   href,
   image,
+  imageMetadata,
+  imageLayout,
   preview,
   imageLoading = 'lazy',
   imageClass,
@@ -169,6 +177,8 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
         imageClass={`media-card__image${imageClass ? ` ${imageClass}` : ''}`}
         mask={cutSide}
         src={image?.src}
+        {imageMetadata}
+        {imageLayout}
         preview={preview}
         loading={imageLoading}
         responsive={responsive}
@@ -187,7 +197,15 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
             </div>
           )
         }
-        <Heading class='media-card__title' id={headingId} data-card-title>{title}</Heading>
+        <Heading class='media-card__title' id={headingId} data-card-title>
+          {
+            pinned && (
+              <span class='text-primary me-1' data-pinned>
+                置顶
+              </span>
+            )
+          }{title}
+        </Heading>
         {
           description !== undefined && (
             <p class='media-card__excerpt' data-card-description hidden={!description}>

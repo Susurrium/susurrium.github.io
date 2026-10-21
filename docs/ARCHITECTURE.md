@@ -29,6 +29,10 @@
 
 已纳入统一层的页面包括 Home、Blog 列表、标签页、归档页、Trace 列表、Saying 列表、三类详情页和 RSS。`docs` collection 独立定义在 schema 中，对应当前尚未提供的 `src/content/docs/`；根目录 `docs/` 保存工程文档。
 
+公开页面地址统一使用目录尾斜杠，资源文件保持文件 URL；canonical、内部导航、内容详情、标签、分页、分享、sitemap、RSS 和 Pagefind 采用同一规则。`basePath` 与内容 ID 继续作为不带尾斜杠的路由构造输入，`contentPath()`、`contentTagPath()` 在输出边界生成目录地址。Waline 继续使用原有不带尾斜杠的规范化 path，RSS 的 GUID 保留原有条目身份。
+
+正文编译通过 [rehype-directory-links.ts](../src/plugins/rehype-directory-links.ts) 规范化已知站内页面链接，兼容既有 Markdown/MDX 写法。查询串、片段及编码继续保留；资源文件、外站链接和段内锚点保留其语义，文章源文件不因 URL 格式调整而改写。严格发布检查扫描所有构建页面中指向实际目录页的链接。
+
 ### 1.3 明确不做的事情
 
 - 不把三个物理 collection 合并成一个 Markdown 目录；它们的 schema 和正文形态仍然独立。
@@ -115,6 +119,7 @@ sourcesByKey: ReadonlyMap<string, AnyContentEntry>
 查询统一使用 `queryContent()` 和 `sortContentRecords()`：
 
 - `editorial-date-desc`：`updatedAt ?? publishedAt` 倒序；并列时用稳定 key 排序，不依赖加载器枚举顺序。
+- `pinned-editorial-date-desc`：Blog 置顶优先，同组使用编辑日期与稳定 key；只用于 Blog 主列表和标签结果，先排序再分页。
 - `publish-date-desc`：`publishedAt` 倒序；并列时用稳定 key 排序。
 - `id-asc`：稳定 key 正序，适用于无日期的 Saying。
 - 筛选、标签匹配、offset、limit 都在同一查询策略中完成。
@@ -196,18 +201,18 @@ Blog 的 `BlogTextCardAdapter` 仍接收原始 Blog entry，是因为它需要 A
 
 ## 7. 各页面的实现约定
 
-| 页面          | PageData 组合                                                                                       | 内容来源/排序                                        | 视觉边界                                                               |
-| ------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | Blog/Trace 按发布时间；Saying 按 id                  | 现有随机 Saying、Blog 卡片、Trace Media、Timeline 不变                 |
-| Blog 列表     | `content/items`                                                                                     | Blog 编辑日期倒序；独立 pageSize 分页                | 现有 Blog 卡片 DOM/CSS 不变                                            |
-| Blog 标签页   | `content/items`                                                                                     | Blog 编辑日期倒序后按 tag 筛选                       | 与 Blog 列表相同，路由 `/blog/tags`                                    |
-| Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选                      | 与 Trace 列表相同，路由 `/traces/tags`                                 |
-| Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选                     | 与 Saying 列表相同，路由 `/sayings/tags`                               |
-| 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组                        | 现有年份标题和卡片间距不变                                             |
-| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页               | 现有 Trace/Media 输出不变                                              |
-| Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页                   | 现有装饰卡片输出不变                                                   |
-| 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                                   | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
-| RSS           | 不渲染 PageData                                                                                     | 启用 rss surface 的内容，编辑日期倒序；默认只有 Blog | 复用正文编译结果并转换成适合订阅读器的 HTML                            |
+| 页面          | PageData 组合                                                                                       | 内容来源/排序                                                                | 视觉边界                                                               |
+| ------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Home          | `featured-saying/candidates`、`recent-writing/blog`、`recent-writing/trace`、`blog-timeline/year-*` | 最近 Blog 按编辑日期，Trace 按发布时间，时间线按 Blog 发布时间，Saying 按 id | 现有卡片与 Timeline                                                    |
+| Blog 列表     | `content/items`                                                                                     | 置顶优先，其后编辑日期倒序；独立 pageSize 分页                               | 置顶条目显示标记，其余保持现有卡片                                     |
+| Blog 标签页   | `content/items`                                                                                     | 过滤 tag 后置顶优先，其后编辑日期倒序                                        | 与 Blog 列表相同，路由 `/blog/tags`                                    |
+| Trace 标签页  | `content/items`                                                                                     | Trace 发布时间倒序后按 tag 筛选                                              | 与 Trace 列表相同，路由 `/traces/tags`                                 |
+| Saying 标签页 | `content/items`                                                                                     | Saying 稳定 ID 顺序后按 tag 筛选                                             | 与 Saying 列表相同，路由 `/sayings/tags`                               |
+| 归档页        | 每年一个 `year-YYYY/posts`                                                                          | Blog 编辑日期倒序后按年份分组                                                | 现有年份标题和卡片间距不变                                             |
+| Trace 列表    | `content/items`                                                                                     | Trace 发布时间倒序；独立 pageSize 分页                                       | 现有 Trace/Media 输出不变                                              |
+| Saying 列表   | `content/items`                                                                                     | Saying id 正序；独立 pageSize 分页                                           | 现有装饰卡片输出不变                                                   |
+| 三类详情      | `article/primary` + `related/*`                                                                     | 各自类型的详情排序                                                           | 共用阅读壳层；Blog 保留版权卡片，Trace/Saying 按策略关闭，其余布局不变 |
+| RSS           | 不渲染 PageData                                                                                     | 启用 rss surface 的内容，发布时间倒序；默认只有 Blog                         | 复用正文编译结果并转换成适合订阅读器的 HTML                            |
 
 ### 7.1 归档分页能力与独立参数
 
@@ -258,7 +263,7 @@ Home 在每次刷新或重新进入时随机选择 Saying，允许连续选中�
 - 指向源 Markdown/MDX 的相对链接通过 source 文件路径映射到真实内容 href，并保留查询串和片段。
 - 有封面时把内容封面加入订阅正文；显式启用 Saying RSS 时补入引文与署名。默认只收录 Blog，不再生成缺失必需属性的 enclosure 元素。
 
-RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying 不伪造日期。`rss` 开关控制条目收录，站点级 `/rss.xml` 入口保留，即使最终没有条目也输出有效空 feed。
+RSS 按发布时间倒序，`pubDate` 固定使用原始发布时间，编辑时间通过 Atom 命名空间中的 `atom:updated` 输出。条目 URL 与 GUID 保持稳定；置顶不影响 RSS，没有日期的 Saying 不伪造日期。`rss` 开关控制条目收录，站点级 `/rss.xml` 入口保留，即使最终没有条目也输出有效空 feed。
 
 ### 7.4 Mermaid 正文编译与资源交付
 
@@ -273,6 +278,20 @@ RSS 条目沿用编辑日期排序和时间戳策略；没有日期的 Saying �
 缓存保存于 `artifacts/mermaid-cache/`，键包含源码、依赖版本、字体文件指纹、规则版本和平台；修改固定渲染规则时推进规则版本。Gantt 的参考日期按构建环境 UTC 日固定并参与缓存键。资源有独立 SHA-256 校验，缺失或损坏时重新生成，缓存 JSON 损坏明确失败；同进程请求合并，写入采用原子替换。只发布实际引用资源，草稿缓存和历史缓存不会扩大公开范围。图表生成不依赖 Chromium；Playwright 仅用于浏览器测试。
 
 ## 8. 代码组织与新增内容类型流程
+
+### 普通代码、字体与安全区域
+
+Shiki 标记由与 Shiki 同版本的 `@shikijs/transformers` 处理。超过 15 行的普通代码生成 `code-block`，`CodeBlockRuntime.astro` 在挂载后启用折叠按钮，并通过 AbortController 清理绑定。服务器 HTML 保留完整代码且隐藏操作按钮；打印解除裁剪，RSS 使用同一完整正文。代码复制始终读取完整源码。
+
+`SiteFonts.astro` 通过 Astro Font API 发布本地字体。WOFF2 位于 `src/assets/fonts/`，原始字体与许可仍保留在 `public/fonts/`；Satoshi 保持 300–900 的正常与斜体变体，Abril Fatface 和 Paralines 保持原字重。只预加载 Satoshi 正常变体，装饰字体按实际使用下载，所有字体请求保持同源。入口布局和普通布局共用字体声明，样式通过对应 CSS 变量读取字体族。
+
+`safe-area.css` 集中维护安全区域变量、页面容器内边距和固定操作区偏移；入口与 Home 背景继续覆盖完整视口。安全区域为零时沿用原有间距。
+
+### 评论初始化与统计
+
+`Comment.astro` 在距视口 320px 的范围内、访问评论锚点或操作加载按钮时按需加载 Waline 脚本与样式，失败时显示重试入口。观察器、事件和实例随组件断连释放，异步加载拒绝过期挂载；`showMeta` 默认展示，只有显式为 false 时隐藏元信息。正文长链接样式不覆盖 RSS 订阅控件的布局。
+
+`PageInfo.astro` 独立请求阅读量与评论数，通过每个实例的选择器限制 DOM 更新范围，并在断连时取消读取。完整评论组件关闭自身计数，避免重复递增。只有生产构建且浏览器 origin 与配置的正式站点 origin 一致时递增阅读量；开发和预览只读取。两类组件都沿用规范化评论路径。
 
 统一层位于 `src/lib/content-layer/`：
 
@@ -444,6 +463,10 @@ CardCropEditor 的正式预览复用 MediaCard／CardMediaFrame，编辑框读�
 
 Hero 使用独立 HeroMediaFrame，无卡片斜边；工作台等比缩放真实 Home 舞台，原图的编辑身份与响应式派生图片保持一致。固定媒体由一个滚动控制器计算可见高度，以 clip-path 连续裁剪，完全越界后隐藏；反向滚动不切换固定与流式定位。几何逻辑见 [hero-visibility.ts](../src/lib/home/hero-visibility.ts)。
 
+运行时由 [hero-playback.ts](../src/lib/client/hero-playback.ts) 管理六张图片的预读和 CSS 动画时钟：首图在 HTML 中直接输出，其余图片通过 `data-*` 保存候选，首图解码后只提前准备下一张。下一张尚未解码时在淡出前暂停，保持当前画面；失败有有界重试和手动重试。Hero 离开视口、文档隐藏或入口交接未完成时暂停；减少动画模式保留首图。工作台继续使用独立的单图预览，不启用轮播控制器。
+
+四层波浪通过 `bottom: -1px` 依附 Hero 容器底边，向下重叠 1 CSS px，覆盖波浪与下方遮罩在小数像素绘制时产生的接缝。首页与裁剪工作台共用该定位规则；波浪高度继续遵循原有响应式范围，工作台将舞台整体等比缩放并在容器边界裁剪。
+
 ## 客户端生命周期与外部资源
 
 ### 响应式图片交付
@@ -451,6 +474,10 @@ Hero 使用独立 HeroMediaFrame，无卡片斜边；工作台等比缩放真实
 公共图片保留原始素材身份，候选文件通过 `src/data/*-images.json` 关联；裁剪配置始终使用原图标识。卡片依据视口与裁剪缩放提供 `sizes`，工作台编辑器读取源图，切换素材时清除上一张图片的候选。
 
 本地阅读封面由 [reading-image.ts](../src/lib/media/reading-image.ts) 生成不超过原宽度及 1280px 的 WebP 候选；前景和背投图共用候选与 `sizes`。公共图库封面复用卡片清单中的候选。源文件继续保留，正文的本地相对图片由 Astro 构建管线处理。
+
+本地卡片封面在 ContentCard 渲染边界取得 `ImageMetadata`，通过 MediaCard 传给 CardMediaFrame，生成 768、960、1280、1920px 候选；768px 以下的原图保持实际宽度，小图不放大。较小裁剪框也保留足够的重采样细节。`card-image.ts` 根据归档、Home Recent、Home Saying 的媒体框及源图比例、fit、裁剪缩放计算 `sizes`，同时覆盖现有 5% 悬停/键盘聚焦缩放的像素需求；原图标识和裁剪记录保持有效。
+
+友链页面使用 `friend-avatars.generated.json` 中与已登记源地址精确对应的同源候选。前景头像和卡片背景分别声明展示尺寸，共享派生图；不可用来源保留明确状态。头像生成和验证入口见 [开发指南](./DEVELOPMENT.md#分享图字体与友链)。
 
 About 装饰人物的图片地址保存于 `data-*`，仅在宽度、动画偏好和页面生命周期允许时设置 `src`／`srcset`，停用时移除。素材生成、清单验证与预算操作见 [公共素材维护](./DEVELOPMENT.md#公共素材维护)。
 
@@ -461,13 +488,15 @@ About 装饰人物的图片地址保存于 `data-*`，仅在宽度、动画偏�
 | 主题            | light/dark/system 分离，手选不被系统变化覆盖；存储不可用时按既定行为处理                          | [theme.ts](../src/lib/client/theme.ts)                                                     |
 | 音乐            | 首次点击才加载 APlayer 和 Meting 数据；持久单例跨路由保留，订阅去重；失败显示重试与歌单链接       | [music.ts](../src/lib/client/music.ts)、[MusicPlayer](../src/components/MusicPlayer.astro) |
 | 地图            | 本地 ESM 主模块、shared、worker、CSS 整套加载；接近视口时初始化，离开清理；任务身份隔离取消与重开 | [residence-map.ts](../src/scripts/residence-map.ts)                                        |
-| Waline          | 保存实例、断连 destroy，浏览量目标按组件管理；补丁只处理自身 reaction 请求取消                    | [waline 组件](../src/components/waline/)                                                   |
+| Waline          | 轻量计数独立执行；评论在接近视口、锚点或操作时加载，完整实例关闭重复计数，断连销毁并拒绝过期挂载  | [waline 组件](../src/components/waline/)                                                   |
 | 图片缩放        | 一个文档共享 medium-zoom 实例，当前文章 attach，导航前关闭并 detach                               | [ArticleImageZoom](../src/components/reading/ArticleImageZoom.astro)                       |
 | 二维码          | 本地按需 runtime，custom element 管理展开、复制和断连                                             | [ContentCopyright](../src/components/reading/ContentCopyright.astro)                       |
 | View Transition | 仅消费已完成 DOM 交换后的已知可恢复 ready 拒绝，其他异常正常传播                                  | [guard](../src/components/ViewTransitionRejectionGuard.astro)                              |
 | 贡献记录        | 构建期公开 GitHub HTML、进程内缓存；缺失数据标未知，整体失败显示中性骨架，不伪造贡献              | [github-contributions.ts](../src/data/github-contributions.ts)                             |
 
 根路径入口每次直达重新播放，以 `location.replace()` 进入 `/home`；入口不索引并保持 canonical 约定。视频、poster、Typed.js 同源加载，键盘、页面可见性和播放就绪状态受生命周期管理。
+
+入口 picture 负责响应式 poster，视频 source 在动画偏好、可见性和播放条件允许后才挂载；减少动画模式不挂载视频地址。Home 首图预加载与 Hero 的候选和 sizes 一致，保持请求复用。目录与返回顶部由 Pure 补丁管理事件、Observer 和动画帧的连接/断连生命周期；目录在滚动和尺寸变化时更新，页面离开后释放全部实例任务。
 
 效果宿主在短期同源 iframe 内运行固定 vendor 算法，移除 iframe 清理 canvas、RAF、定时器和监听器。父页面只转发允许的空白点击，排除链接、按钮、表单、播放器、导航、选中文字和交互卡片。
 

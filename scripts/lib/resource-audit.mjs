@@ -1,4 +1,12 @@
-import { ident, parse as parseCss, string, tokenize, tokenTypes, url as cssUrl, walk as walkCss } from 'css-tree'
+import {
+  url as cssUrl,
+  ident,
+  parse as parseCss,
+  string,
+  tokenize,
+  tokenTypes,
+  walk as walkCss
+} from 'css-tree'
 import { parse as parseHtml } from 'node-html-parser'
 
 /** WHATWG srcset tokenization: commas inside data URLs are part of the URL. */
@@ -45,16 +53,22 @@ export function cssResourceUrls(source, inline = false) {
   })
   const tokens = []
   tokenize(source, (type, start, end) => {
-    if (type === tokenTypes.BadUrl || type === tokenTypes.BadString) throw new Error('Malformed CSS URL or string.')
-    if (type !== tokenTypes.Comment && type !== tokenTypes.WhiteSpace) tokens.push({ type, text: source.slice(start, end) })
+    if (type === tokenTypes.BadUrl || type === tokenTypes.BadString)
+      throw new Error('Malformed CSS URL or string.')
+    if (type !== tokenTypes.Comment && type !== tokenTypes.WhiteSpace)
+      tokens.push({ type, text: source.slice(start, end) })
   })
   for (let index = 0; index < tokens.length; index++) {
     const token = tokens[index]
     const previous = tokens[index - 1]
     if (token.type === tokenTypes.Url) urls.push(cssUrl.decode(token.text))
     if (token.type === tokenTypes.String && previous) {
-      const inUrl = previous.type === tokenTypes.Function && ident.decode(previous.text.slice(0, -1)).toLowerCase() === 'url'
-      const inImport = previous.type === tokenTypes.AtKeyword && ident.decode(previous.text.slice(1)).toLowerCase() === 'import'
+      const inUrl =
+        previous.type === tokenTypes.Function &&
+        ident.decode(previous.text.slice(0, -1)).toLowerCase() === 'url'
+      const inImport =
+        previous.type === tokenTypes.AtKeyword &&
+        ident.decode(previous.text.slice(1)).toLowerCase() === 'import'
       if (inUrl || inImport) urls.push(string.decode(token.text))
     }
   }
@@ -81,11 +95,21 @@ export function htmlResourceUrls(document) {
       )
     )
       continue
-    const urls = ['src', 'href', 'poster', 'data', 'xlink:href']
+    const urls = [
+      'src',
+      'href',
+      'poster',
+      'data',
+      'xlink:href',
+      'data-src',
+      'data-hero-deferred-src'
+    ]
       .map((name) => element.getAttribute(name))
       .filter(Boolean)
     const srcset = element.getAttribute('srcset') ?? element.getAttribute('imagesrcset')
     if (srcset) urls.push(...srcsetUrls(srcset))
+    const deferred = element.getAttribute('data-hero-deferred-srcset')
+    if (deferred) urls.push(...srcsetUrls(deferred))
     for (const url of new Set(urls)) resources.push({ tagName, url, kind: 'html' })
   }
   for (const element of document.querySelectorAll('style,[style]')) {
