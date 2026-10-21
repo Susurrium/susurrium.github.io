@@ -56,6 +56,7 @@ export function adaptBlogEntry(entry: CollectionEntry<'blog'>): BlogRecord {
     key: contentKey('blog', entry.id),
     kind: 'blog',
     language: entry.data.language,
+    pinned: entry.data.pin === true,
     publishedAt: entry.data.publishDate,
     tags: [...(entry.data.tags ?? [])],
     title: entry.data.title,

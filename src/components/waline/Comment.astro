@@ -4,8 +4,6 @@ import { normalizeWalinePath } from '@/lib/waline-path'
 import { cn } from 'astro-pure/utils'
 import config from '@/site-config'
 
-import Pageview from './Pageview.astro'
-
 const { class: className } = Astro.props
 ---
 
@@ -15,8 +13,10 @@ const { class: className } = Astro.props
       data-waline-path={normalizeWalinePath(Astro.url.pathname)}
       data-comment-state='idle'
     >
-      <Pageview comment />
-      <div id='waline' class={cn('not-prose', className)}>
+      <div
+        id='waline'
+        class={cn('not-prose', config.integ.waline.showMeta === false && 'hide-meta', className)}
+      >
         <p data-comment-status role='status'>
           评论尚未加载。
         </p>
@@ -194,12 +194,11 @@ const { class: className } = Astro.props
     max-width: 100%;
   }
 
-  #waline :global(a) {
+  #waline :global(.wl-content a, .wl-text a, .wl-comment-text a) {
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: anywhere;
     max-width: 100%;
-    display: inline-block;
   }
 
   #waline :global(.wl-item, .wl-card-item) {
@@ -211,6 +210,10 @@ const { class: className } = Astro.props
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: anywhere;
+  }
+
+  #waline.hide-meta :global(.wl-meta) {
+    display: none;
   }
 
   /* Reaction buttons */

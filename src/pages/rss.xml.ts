@@ -9,6 +9,7 @@ import {
   sortContentRecords
 } from '@/lib/content-layer'
 import { normalizeContentFilePath, prepareFeedContent } from '@/lib/rss-content'
+import { rssItemDates } from '@/lib/rss-dates'
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
 import config from 'virtual:config'
 
@@ -27,7 +28,7 @@ export const GET: APIRoute = async (context) => {
   const site = context.site ?? new URL(import.meta.env.SITE)
   const records = sortContentRecords(
     catalog.all.filter((record) => isContentSurfaceEnabled(record.kind, 'rss')),
-    'editorial-date-desc'
+    'publish-date-desc'
   )
   const container = await AstroContainer.create({ astroConfig: { site: site.href } })
   container.addServerRenderer({ renderer: mdxRenderer })
@@ -73,19 +74,21 @@ export const GET: APIRoute = async (context) => {
       contentLinks,
       resolveAsset
     })
+    const dates = rssItemDates(record)
     items.push({
       title: record.title,
       description: record.description ?? record.title,
-      pubDate: record.updatedAt ?? record.publishedAt,
+      pubDate: dates.pubDate,
       link: record.href,
       // 保留现有订阅条目的 GUID，目录地址规范化只改变访问链接。
-      customData: `<guid isPermaLink="true">${escapeHtml(new URL(record.href.replace(/\/$/, ''), site).href)}</guid>`,
+      customData: `<guid isPermaLink="true">${escapeHtml(new URL(record.href.replace(/\/$/, ''), site).href)}</guid>${dates.customData ?? ''}`,
       categories: [...record.tags],
       content
     })
   }
 
   return rss({
+    xmlns: { atom: 'http://www.w3.org/2005/Atom' },
     trailingSlash: true,
     stylesheet: '/scripts/pretty-feed-v3.xsl',
     title: config.title,

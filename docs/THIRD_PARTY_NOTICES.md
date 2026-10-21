@@ -8,6 +8,11 @@ asset marked `PENDING` must not be deployed until its rights are confirmed.
 
 ## Fonts
 
+The four existing WOFF2 derivatives are maintained in `src/assets/fonts/` and
+delivered through Astro's local font API. Their source fonts and the notices
+listed below remain in `public/fonts/`. This changes delivery and preserves the
+existing font bytes and authorization scope.
+
 - `public/fonts/AbrilFatface-Regular.ttf` — accompanied by
   `public/fonts/AbrilFatface-OFL.txt` (SIL Open Font License 1.1). Keep the
   license text with the font when redistributing it.

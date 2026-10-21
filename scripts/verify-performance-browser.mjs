@@ -319,10 +319,11 @@ try {
     await page.goto(`${site}${article.path}/`, { waitUntil: 'load' })
     assert.equal(await page.locator('comment-component').getAttribute('data-comment-state'), 'idle')
     assert.equal(await page.locator('.wl-editor').count(), 0)
-    assert.equal(await page.locator('comment-component waline-pageview').count(), 1)
+    assert.equal(await page.locator('waline-page-info').count(), 1)
     await page.waitForTimeout(1000)
     const before = increments.length
-    assert.equal(before, 1, JSON.stringify(increments))
+    const productionOrigin = await page.locator('waline-page-info').getAttribute('data-production-origin')
+    assert.equal(before, new URL(site).origin === productionOrigin ? 1 : 0, JSON.stringify(increments))
     await page.locator('a[href="#waline"]').click()
     await page.locator('.wl-editor').waitFor()
     assert.equal(increments.length, before)

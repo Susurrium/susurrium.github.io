@@ -81,7 +81,7 @@ export function buildCollectionStaticPaths(
   const definition = getContentTypeDefinition(kind)
   const records = sortContentRecords(
     catalog.byKind[kind] as readonly ContentRecord[],
-    definition.defaultSort
+    kind === 'blog' ? 'pinned-editorial-date-desc' : definition.defaultSort
   )
   const pageSize = resolveContentPageSize(options.pagination)
 

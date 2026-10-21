@@ -54,6 +54,13 @@ const redirectClass = isBlog ? 'blog-text-card__redirect' : 'text-card__redirect
         <div class='flex flex-grow justify-between gap-x-3'>
           <Heading class={cn('m-0 text-inherit', detailed ? 'font-medium' : 'font-normal')}>
             {data.draft && <span class='text-red-500'>(Draft) </span>}
+            {
+              data.pinned && (
+                <span class='text-primary me-1' data-pinned>
+                  置顶
+                </span>
+              )
+            }
             {data.title}
           </Heading>
           <svg

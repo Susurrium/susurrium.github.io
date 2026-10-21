@@ -301,6 +301,8 @@ import EntranceTypedText from './EntranceTypedText.astro'
     position: relative;
     display: grid;
     min-height: 100svh;
+    padding: var(--site-safe-top) var(--site-safe-right) var(--site-safe-bottom)
+      var(--site-safe-left);
     overflow: hidden;
     place-items: center;
     isolation: isolate;
@@ -399,7 +401,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
     max-width: 100%;
     margin: 0.95rem 0 0 !important;
     color: rgb(239 238 229 / 0.93) !important;
-    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-family: var(--font-satoshi), ui-sans-serif, sans-serif;
     font-size: clamp(1.125rem, 1.6vw, 1.4375rem) !important;
     font-weight: 440;
     letter-spacing: 0 !important;
@@ -420,7 +422,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
     max-width: 100%;
     margin: 1rem 0 0 !important;
     color: rgb(237 236 228 / 0.92) !important;
-    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-family: var(--font-satoshi), ui-sans-serif, sans-serif;
     font-size: clamp(1.125rem, 1.39vw, 1.25rem) !important;
     font-weight: 500;
     letter-spacing: 0 !important;
@@ -498,7 +500,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
       inset 0 1px 0 rgb(255 248 232 / 0.22),
       inset 0 -1px 0 rgb(42 26 14 / 0.13);
     color: #f0dfbd;
-    font-family: 'Satoshi', ui-sans-serif, sans-serif;
+    font-family: var(--font-satoshi), ui-sans-serif, sans-serif;
     font-size: clamp(1rem, 1.25vw, 1.125rem);
     font-weight: 540;
     letter-spacing: 0.004em;

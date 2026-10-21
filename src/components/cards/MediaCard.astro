@@ -47,6 +47,7 @@ interface Props {
   imageClass?: string
   responsive?: boolean
   date?: Date
+  pinned?: boolean
   description?: string
   footerText?: string
   /**
@@ -81,6 +82,7 @@ const {
   cropPosition = '50% 50%',
   crop,
   date,
+  pinned = false,
   description,
   footerText,
   headingLevel = 3,
@@ -195,7 +197,15 @@ const Heading = `h${headingLevel}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
             </div>
           )
         }
-        <Heading class='media-card__title' id={headingId} data-card-title>{title}</Heading>
+        <Heading class='media-card__title' id={headingId} data-card-title>
+          {
+            pinned && (
+              <span class='text-primary me-1' data-pinned>
+                置顶
+              </span>
+            )
+          }{title}
+        </Heading>
         {
           description !== undefined && (
             <p class='media-card__excerpt' data-card-description hidden={!description}>

@@ -9,7 +9,7 @@ import sitemap from '@astrojs/sitemap'
 // import node from '@astrojs/node'
 // Integrations
 import AstroPureIntegration from 'astro-pure'
-import { defineConfig } from 'astro/config'
+import { defineConfig, fontProviders } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import { remarkAlert } from 'remark-github-blockquote-alert'
 import remarkMath from 'remark-math'
@@ -27,11 +27,13 @@ import rehypeMermaidSource from './src/plugins/rehype-mermaid-source.ts'
 import remarkRemoveDuplicateTitleHeading from './src/plugins/remark-remove-duplicate-title-heading.ts'
 // Shiki
 import {
+  addCollapse,
   addCopyButton,
   addLanguage,
   addTitle,
   transformerNotationDiff,
   transformerNotationHighlight,
+  transformerRemoveNotationEscape,
   updateStyle
 } from './src/plugins/shiki-transformers.ts'
 import config from './src/site.config.ts'
@@ -49,6 +51,55 @@ export default defineConfig({
   // base: '/astro-pure/',
   trailingSlash: 'always',
   compressHTML: true,
+  fonts: [
+    {
+      provider: fontProviders.local(),
+      name: 'Satoshi',
+      cssVariable: '--font-satoshi',
+      fallbacks: [],
+      weights: ['300 900'],
+      styles: ['normal', 'italic'],
+      optimizedFallbacks: false,
+      options: {
+        variants: [
+          {
+            src: ['./src/assets/fonts/Satoshi-Variable.woff2'],
+            weight: '300 900',
+            style: 'normal'
+          },
+          {
+            src: ['./src/assets/fonts/Satoshi-VariableItalic.woff2'],
+            weight: '300 900',
+            style: 'italic'
+          }
+        ]
+      }
+    },
+    {
+      provider: fontProviders.local(),
+      name: 'Abril Fatface',
+      cssVariable: '--font-abril',
+      fallbacks: [],
+      optimizedFallbacks: false,
+      options: {
+        variants: [
+          { src: ['./src/assets/fonts/AbrilFatface-Regular.woff2'], weight: 400, style: 'normal' }
+        ]
+      }
+    },
+    {
+      provider: fontProviders.local(),
+      name: 'Paralines',
+      cssVariable: '--font-paralines',
+      fallbacks: [],
+      optimizedFallbacks: false,
+      options: {
+        variants: [
+          { src: ['./src/assets/fonts/Paralines-Regular.woff2'], weight: 400, style: 'normal' }
+        ]
+      }
+    }
+  ],
 
   // Adapter
   // https://docs.astro.build/en/guides/deploy/
@@ -129,10 +180,12 @@ export default defineConfig({
       transformers: [
         transformerNotationDiff(),
         transformerNotationHighlight(),
+        transformerRemoveNotationEscape(),
         updateStyle(),
         addTitle(),
         addLanguage(),
-        addCopyButton(2000)
+        addCopyButton(2000),
+        addCollapse(15)
       ]
     }
   },
