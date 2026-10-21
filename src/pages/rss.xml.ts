@@ -78,13 +78,15 @@ export const GET: APIRoute = async (context) => {
       description: record.description ?? record.title,
       pubDate: record.updatedAt ?? record.publishedAt,
       link: record.href,
+      // 保留现有订阅条目的 GUID，目录地址规范化只改变访问链接。
+      customData: `<guid isPermaLink="true">${escapeHtml(new URL(record.href.replace(/\/$/, ''), site).href)}</guid>`,
       categories: [...record.tags],
       content
     })
   }
 
   return rss({
-    trailingSlash: false,
+    trailingSlash: true,
     stylesheet: '/scripts/pretty-feed-v3.xsl',
     title: config.title,
     description: config.description,

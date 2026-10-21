@@ -1,3 +1,5 @@
+import { directoryPath } from '@/lib/site-path'
+
 import type {
   ContentCapabilities,
   ContentKind,
@@ -115,9 +117,9 @@ export function contentPath(kind: ContentKind, id?: string): string {
       `Invalid ${kind} content id "${id}": use nonempty path segments and avoid the reserved tags route.`
     )
   }
-  return id === undefined
-    ? basePath
-    : `${basePath}/${id.split('/').map(encodeURIComponent).join('/')}`
+  return directoryPath(
+    id === undefined ? basePath : `${basePath}/${id.split('/').map(encodeURIComponent).join('/')}`
+  )
 }
 
 /** Keep ordinary tag URLs; reserve a reversible single-segment slug for URL delimiters. */
@@ -133,7 +135,9 @@ export function contentTagLabel(slug: string): string {
 
 export function contentTagPath(kind: ContentKind, tag?: string): string {
   const tagPath = getContentTypeDefinition(kind).tagPath
-  return tag === undefined ? tagPath : `${tagPath}/${encodeURIComponent(contentTagSlug(tag))}`
+  return directoryPath(
+    tag === undefined ? tagPath : `${tagPath}/${encodeURIComponent(contentTagSlug(tag))}`
+  )
 }
 
 export function contentLabel(kind: ContentKind): string {

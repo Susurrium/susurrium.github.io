@@ -112,7 +112,10 @@ const hasPageBackground = Astro.slots.has('page-background')
       })()
     </script>
     <script is:inline>
-      if (window.location.hash === '#from-entrance' && window.location.pathname === '/home') {
+      if (
+        window.location.hash === '#from-entrance' &&
+        /^\/home\/?$/.test(window.location.pathname)
+      ) {
         document.documentElement.dataset.homeHandoff = 'pending'
         window.history.replaceState(null, '', window.location.pathname + window.location.search)
       }

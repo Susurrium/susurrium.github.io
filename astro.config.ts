@@ -22,6 +22,7 @@ import searchIndex from './src/integrations/search-index.ts'
 // Local integrations
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
+import rehypeDirectoryLinks from './src/plugins/rehype-directory-links.ts'
 import rehypeMermaidSource from './src/plugins/rehype-mermaid-source.ts'
 import remarkRemoveDuplicateTitleHeading from './src/plugins/remark-remove-duplicate-title-heading.ts'
 // Shiki
@@ -46,7 +47,7 @@ export default defineConfig({
   site: 'https://susurrium.github.io',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
-  trailingSlash: 'never',
+  trailingSlash: 'always',
   compressHTML: true,
 
   // Adapter
@@ -75,7 +76,9 @@ export default defineConfig({
     // props.
     sitemap({
       filter: (page) =>
-        !new Set(['/', '/404', '/search', '/tools/card-crop-review']).has(new URL(page).pathname)
+        !new Set(['/', '/404', '/search', '/tools/card-crop-review']).has(
+          new URL(page).pathname.replace(/\/$/, '') || '/'
+        )
     }),
     // astro-pure will automatically add mdx & unocss
     // mdx(),
@@ -103,6 +106,7 @@ export default defineConfig({
     processor: unified({
       remarkPlugins: [remarkMath, remarkAlert, remarkRemoveDuplicateTitleHeading],
       rehypePlugins: [
+        rehypeDirectoryLinks,
         rehypeMermaidSource,
         [rehypeKatex, { strict: false }],
         rehypeHeadingIds,
