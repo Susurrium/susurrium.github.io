@@ -36,9 +36,15 @@ export function sortContentRecords<T extends ContentRecord>(
 ): T[] {
   const sorted = [...records]
   if (sort === 'id-asc') return sorted.sort(compareIds)
-  return sorted.sort((left, right) =>
-    compareDates(left, right, sort === 'editorial-date-desc', true)
-  )
+  return sorted.sort((left, right) => {
+    if (sort === 'pinned-editorial-date-desc') {
+      const pinned =
+        Number(right.kind === 'blog' && right.pinned === true) -
+        Number(left.kind === 'blog' && left.pinned === true)
+      if (pinned !== 0) return pinned
+    }
+    return compareDates(left, right, sort !== 'publish-date-desc', true)
+  })
 }
 
 export function queryContent(catalog: ContentCatalog, query: ContentQuery = {}): ContentRecord[] {

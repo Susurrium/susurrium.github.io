@@ -37,6 +37,7 @@ const blog = defineCollection({
         tags: contentTagsSchema,
         language: contentText(80).optional(),
         draft: z.boolean().default(false),
+        pin: z.boolean().default(false),
         // Special fields
         comment: z.boolean().default(true)
       })

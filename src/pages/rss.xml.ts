@@ -9,6 +9,7 @@ import {
   sortContentRecords
 } from '@/lib/content-layer'
 import { normalizeContentFilePath, prepareFeedContent } from '@/lib/rss-content'
+import { rssItemDates } from '@/lib/rss-dates'
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
 import config from 'virtual:config'
 
@@ -27,7 +28,7 @@ export const GET: APIRoute = async (context) => {
   const site = context.site ?? new URL(import.meta.env.SITE)
   const records = sortContentRecords(
     catalog.all.filter((record) => isContentSurfaceEnabled(record.kind, 'rss')),
-    'editorial-date-desc'
+    'publish-date-desc'
   )
   const container = await AstroContainer.create({ astroConfig: { site: site.href } })
   container.addServerRenderer({ renderer: mdxRenderer })
@@ -76,7 +77,7 @@ export const GET: APIRoute = async (context) => {
     items.push({
       title: record.title,
       description: record.description ?? record.title,
-      pubDate: record.updatedAt ?? record.publishedAt,
+      ...rssItemDates(record),
       link: record.href,
       categories: [...record.tags],
       content
@@ -84,6 +85,7 @@ export const GET: APIRoute = async (context) => {
   }
 
   return rss({
+    xmlns: { atom: 'http://www.w3.org/2005/Atom' },
     trailingSlash: false,
     stylesheet: '/scripts/pretty-feed-v3.xsl',
     title: config.title,
