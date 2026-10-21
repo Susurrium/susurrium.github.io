@@ -120,7 +120,9 @@ node scripts/adjust-favicon-outline.mjs --out artifacts/favicon/candidate.png
 - `python scripts/generate-fonts.py` 重建 `public/fonts/` 中的 WOFF2，需安装脚本声明的 `fonttools[woff]==4.64.0`。页面使用 WOFF2，原始字体和许可文本保留。
 - `bun run links:check:dry` 只探测友链主链接，不写数据；头像 CDN 不参与失效判定。
 - `bun run links:check` 更新 `cf-links`／`inactive-links` 和本地 `scripts/link-health.json`。默认每次请求重试 3 次，临时错误连续 2 次检查失败后移动；证书错误、404/410 和降级至 HTTP 的重定向在本次重试后立即移动。恢复后按稳定顺序移回。参数为 `--retries=N`、`--threshold=N`、`--timeout=N`、`--concurrency=N`，写入结果审阅后单独提交。
-- 启用 `cacheAvatar` 后，`bun run cache:avatars` 写入 `public/avatars/`，可能更新 `public/links.json`。缓存目录已忽略，作为正式资源提交前检查来源与清单差异。
+- `bun run cache:avatars` 显式更新 `public/links.json` 已登记地址的头像；下载和解码后生成 80、160、320、480px WebP，小图不放大，保留透明度与动画帧。派生图写入 `public/media/friend-avatars/`，清单写入 `src/data/friend-avatars.generated.json`，两者一起提交。命令不修改友链名单、分组和源地址。
+- 头像更新失败时保留已有通过校验的派生图；首次无法取得有效素材的条目标记为 `unavailable`，页面显示明确的无头像状态。下载失败使命令返回非零，报告保存在 `artifacts/avatar-update/result.json`。格式、生成或本地清单错误会终止更新，保留原清单。
+- `bun run verify:avatars` 只读核对清单来源、文件哈希、字节、尺寸、比例及动画帧数；构建自动执行，不访问远端。`integ.links.cacheAvatar` 仅保留 Pure 配置兼容性，本站友链使用独立的头像清单。
 
 部署只使用友链只读检查，不定时写回、不自动 commit/push。健康计数是被忽略的本地状态。
 
@@ -169,6 +171,7 @@ bun run verify:phase6:browser
 bun run verify:home-hero
 bun run verify:home-saying
 bun run verify:browser:lifecycle
+bun run verify:performance
 bun run verify:mermaid:browser
 ```
 
@@ -176,7 +179,11 @@ bun run verify:mermaid:browser
 - Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
 - Home Saying 覆盖桌面／手机及 DPR 1／2，逐条刷新并核对首次呈现身份、实际 `currentSrc`、响应式候选和预加载请求复用；阻断外部模块和完整图片验证可读文字与同图预览，检查图片加载前后的几何尺寸、慢网络与 CPU 降速、重复站内导航、空／单候选、无响应式候选、图片失败重试和禁用 JavaScript。结果默认写入 `artifacts/saying-verification/results.json`，可用 `SAYING_EVIDENCE_DIR` 指定本项目 `artifacts/` 内的输出目录。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
+- Performance 检查 Hero 首图解码前的请求隔离、单张预读、视口外暂停、减少动画模式、入口 poster/视频请求、20 次站内切换后的监听器数量、本地封面候选、同源头像、评论锚点及浏览量递增、目录 URL。结果保存在 `artifacts/performance-verification/results.json`；它与既有浏览器回归共同进入 CI。
+
 - Mermaid browser 扫描全部公开正文，检查 SVG、字体、实例 ID、明暗主题、手机缩放与打印恢复，并检查客户端未包含图表渲染器。设置 `MERMAID_EVIDENCE_DIR` 为 `artifacts/` 下目录可采集各图桌面明暗和手机截图，供检查文字、连线和配色。没有公开图表时明确记录，真实生成与开发更新仍由隔离站点测试覆盖。
+
+`bun run measure:performance` 对 Home 桌面/手机、Blog 阅读和 Links 分别默认采样 5 次，固定 Saying 随机值、冷缓存、视口与 DPR；手机采用 1.6 Mbps 下行、150ms 延迟和 4 倍 CPU 降速。记录 LCP、CLS 会话最大值、长任务、本地/外部字节、未完成请求与异常，输出 `artifacts/performance-comparison/results.json`。`PERFORMANCE_BASE_URL` 指向已保存产物的独立预览时，交替采集前后版本；`PERFORMANCE_SAMPLES` 可指定 1–20 次。测量期间停止其他构建和浏览器回归，结果按实验条件解释，真实用户分位值需要独立的访客数据。
 
 脚本从真实构建发现详情、搜索词和目录分支，缺失分支明确记录。CI 与 Pages 复用同一份待发布产物，不注入测试文章。专项行为要求见 [架构说明](./ARCHITECTURE.md)。
 
@@ -187,7 +194,7 @@ bun run verify:mermaid:browser
 1. 上游服务在 4322，当前生产预览在 4321，隔离 Chrome 开启远程调试端口 9224。
 2. 运行 `bun run capture:visual-baseline`，默认输出 `artifacts/visual-baseline/`；自定义 `VISUAL_OUTPUT_DIR` 选择已忽略的本地目录。
 3. 核对 manifest：默认 7 页、4 个视口/主题、2 个站点、顶部/底部，共 112 张截图。指定 `VISUAL_CURRENT_BLOG_DETAIL_PATH` 及可选上游/GitHub 详情变量时按实际数量核对，最多 9 页、144 张。
-4. 上游 `/` 对应当前 `/home`；其余 Blog、标签（上游 `/tags` 对本站 `/blog/tags`）、归档、搜索、About、Links 分别比较。采用无尾斜杠 URL。
+4. 上游 `/` 对应当前 `/home/`；其余 Blog、标签（上游 `/tags` 对本站 `/blog/tags/`）、归档、搜索、About、Links 分别比较。当前站点采用目录尾斜杠 URL。
 5. 按 [视觉与交互约定](./ARCHITECTURE.md#视觉与交互约定) 检查字号、间距、颜色、圆角、布局、Header/Footer 和交互，记录提交、工作树状态、视口、主题、异常与未覆盖范围。
 
 Opening Media 临时样本采用 `qa-local-*`、`zz-qa-visual-*`，专用资源位于 `src/assets/qa-local-media/`；卡片样本采用 `card-preview-*`。审阅完成后移出这些样本与专用素材，再构建正式产物。`.gitignore` 不阻止内容加载器读取本地文件。历史采集结果见 [参考记录](./archive/REFERENCE_HISTORY_20261008.md)。

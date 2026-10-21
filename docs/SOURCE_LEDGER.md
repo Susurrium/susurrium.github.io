@@ -8,13 +8,19 @@
 
 2026-09-02 的 [站长确认记录](./archive/OWNER_CONFIRMATION_RECORD.zh-CN.md) 保存当时媒体、字体、链接和位置的确认范围。第三方许可、署名和外部授权证据见 [素材说明](./THIRD_PARTY_NOTICES.md)。
 
-生产站默认不热链参考站资源。已确认的例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、CodeTime 徽章、Waline、构建期 GitHub 贡献数据和现有友链头像；这些服务/路径在门禁中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
+生产站默认不热链参考站资源。已确认的运行时例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、CodeTime 徽章和 Waline；构建期 GitHub 贡献数据与友链头像维护下载使用已登记来源。相关服务/路径在门禁和清单中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
 
 ## 友链头像
 
 2026-10-20，用户提供“亭外日录”的名称、简介、站点地址 `https://akutagawa.cn/` 与头像地址 `https://akutagawa.cn/avatar.png`，明确要求增加友链。该条目维护在 `public/links.json` 的普通友链分组，头像按所提供的精确 URL 加载。
 
 同日，用户进一步授权提交推送，并明确要求“正式发布部署”，范围包含通过 PR 合并至 `develop` 和 `main`、同步生产基线、手动部署 GitHub Pages 及核验线上结果。
+
+2026-10-22，用户确认按本次性能优化方案开发，包含已登记头像的同源响应式派生图。来源仍以 `public/links.json` 中的精确地址为准，名单、顺序与地址保持现状。生成器为 `scripts/cache-friend-avatars.mjs` 与 `scripts/lib/friend-avatars.mjs`，输出 `public/media/friend-avatars/`，原始内容 SHA-256、候选 SHA-256、尺寸、帧数和字节记录于 `src/data/friend-avatars.generated.json`。生成使用既有 sharp，WebP 质量 82，保留透明度与动画帧，不放大小图；正式构建只核对本地文件。当前 12 个来源提供 45 张派生图，HanLife 与 George 的源地址无法取得有效素材，清单显式标记不可用；下载错误保留于 `artifacts/avatar-update/result.json`。
+
+同次开发通过 `patches/astro-pure@1.4.7.patch` 维护目录与返回顶部的连接/断连清理、按事件更新和文章相邻导航的目录 URL；第三方视觉结构和许可保持原有来源。此次开发授权包含实现、测试、性能对比与文档维护。
+
+同日，用户明确要求“提交推送”，授权将本次性能优化改动提交并推送至 `codex/performance-hardening` 工作分支。
 
 ## Mermaid 图表依赖
 

@@ -29,6 +29,10 @@
 
 已纳入统一层的页面包括 Home、Blog 列表、标签页、归档页、Trace 列表、Saying 列表、三类详情页和 RSS。`docs` collection 独立定义在 schema 中，对应当前尚未提供的 `src/content/docs/`；根目录 `docs/` 保存工程文档。
 
+公开页面地址统一使用目录尾斜杠，资源文件保持文件 URL；canonical、内部导航、内容详情、标签、分页、分享、sitemap、RSS 和 Pagefind 采用同一规则。`basePath` 与内容 ID 继续作为不带尾斜杠的路由构造输入，`contentPath()`、`contentTagPath()` 在输出边界生成目录地址。Waline 继续使用原有不带尾斜杠的规范化 path，RSS 的 GUID 保留原有条目身份。
+
+正文编译通过 [rehype-directory-links.ts](../src/plugins/rehype-directory-links.ts) 规范化已知站内页面链接，兼容既有 Markdown/MDX 写法。查询串、片段及编码继续保留；资源文件、外站链接和段内锚点保留其语义，文章源文件不因 URL 格式调整而改写。严格发布检查扫描所有构建页面中指向实际目录页的链接。
+
 ### 1.3 明确不做的事情
 
 - 不把三个物理 collection 合并成一个 Markdown 目录；它们的 schema 和正文形态仍然独立。
@@ -444,6 +448,8 @@ CardCropEditor 的正式预览复用 MediaCard／CardMediaFrame，编辑框读�
 
 Hero 使用独立 HeroMediaFrame，无卡片斜边；工作台等比缩放真实 Home 舞台，原图的编辑身份与响应式派生图片保持一致。固定媒体由一个滚动控制器计算可见高度，以 clip-path 连续裁剪，完全越界后隐藏；反向滚动不切换固定与流式定位。几何逻辑见 [hero-visibility.ts](../src/lib/home/hero-visibility.ts)。
 
+运行时由 [hero-playback.ts](../src/lib/client/hero-playback.ts) 管理六张图片的预读和 CSS 动画时钟：首图在 HTML 中直接输出，其余图片通过 `data-*` 保存候选，首图解码后只提前准备下一张。下一张尚未解码时在淡出前暂停，保持当前画面；失败有有界重试和手动重试。Hero 离开视口、文档隐藏或入口交接未完成时暂停；减少动画模式保留首图。工作台继续使用独立的单图预览，不启用轮播控制器。
+
 ## 客户端生命周期与外部资源
 
 ### 响应式图片交付
@@ -451,6 +457,10 @@ Hero 使用独立 HeroMediaFrame，无卡片斜边；工作台等比缩放真实
 公共图片保留原始素材身份，候选文件通过 `src/data/*-images.json` 关联；裁剪配置始终使用原图标识。卡片依据视口与裁剪缩放提供 `sizes`，工作台编辑器读取源图，切换素材时清除上一张图片的候选。
 
 本地阅读封面由 [reading-image.ts](../src/lib/media/reading-image.ts) 生成不超过原宽度及 1280px 的 WebP 候选；前景和背投图共用候选与 `sizes`。公共图库封面复用卡片清单中的候选。源文件继续保留，正文的本地相对图片由 Astro 构建管线处理。
+
+本地卡片封面在 ContentCard 渲染边界取得 `ImageMetadata`，通过 MediaCard 传给 CardMediaFrame，生成 768、960、1280、1920px 候选；768px 以下的原图保持实际宽度，小图不放大。较小裁剪框也保留足够的重采样细节。`card-image.ts` 根据归档、Home Recent、Home Saying 的媒体框及源图比例、fit、裁剪缩放计算 `sizes`，同时覆盖现有 5% 悬停/键盘聚焦缩放的像素需求；原图标识和裁剪记录保持有效。
+
+友链页面使用 `friend-avatars.generated.json` 中与已登记源地址精确对应的同源候选。前景头像和卡片背景分别声明展示尺寸，共享派生图；不可用来源保留明确状态。头像生成和验证入口见 [开发指南](./DEVELOPMENT.md#分享图字体与友链)。
 
 About 装饰人物的图片地址保存于 `data-*`，仅在宽度、动画偏好和页面生命周期允许时设置 `src`／`srcset`，停用时移除。素材生成、清单验证与预算操作见 [公共素材维护](./DEVELOPMENT.md#公共素材维护)。
 
@@ -461,13 +471,15 @@ About 装饰人物的图片地址保存于 `data-*`，仅在宽度、动画偏�
 | 主题            | light/dark/system 分离，手选不被系统变化覆盖；存储不可用时按既定行为处理                          | [theme.ts](../src/lib/client/theme.ts)                                                     |
 | 音乐            | 首次点击才加载 APlayer 和 Meting 数据；持久单例跨路由保留，订阅去重；失败显示重试与歌单链接       | [music.ts](../src/lib/client/music.ts)、[MusicPlayer](../src/components/MusicPlayer.astro) |
 | 地图            | 本地 ESM 主模块、shared、worker、CSS 整套加载；接近视口时初始化，离开清理；任务身份隔离取消与重开 | [residence-map.ts](../src/scripts/residence-map.ts)                                        |
-| Waline          | 保存实例、断连 destroy，浏览量目标按组件管理；补丁只处理自身 reaction 请求取消                    | [waline 组件](../src/components/waline/)                                                   |
+| Waline          | 轻量计数独立执行；评论在接近视口、锚点或操作时加载，完整实例关闭重复计数，断连销毁并拒绝过期挂载  | [waline 组件](../src/components/waline/)                                                   |
 | 图片缩放        | 一个文档共享 medium-zoom 实例，当前文章 attach，导航前关闭并 detach                               | [ArticleImageZoom](../src/components/reading/ArticleImageZoom.astro)                       |
 | 二维码          | 本地按需 runtime，custom element 管理展开、复制和断连                                             | [ContentCopyright](../src/components/reading/ContentCopyright.astro)                       |
 | View Transition | 仅消费已完成 DOM 交换后的已知可恢复 ready 拒绝，其他异常正常传播                                  | [guard](../src/components/ViewTransitionRejectionGuard.astro)                              |
 | 贡献记录        | 构建期公开 GitHub HTML、进程内缓存；缺失数据标未知，整体失败显示中性骨架，不伪造贡献              | [github-contributions.ts](../src/data/github-contributions.ts)                             |
 
 根路径入口每次直达重新播放，以 `location.replace()` 进入 `/home`；入口不索引并保持 canonical 约定。视频、poster、Typed.js 同源加载，键盘、页面可见性和播放就绪状态受生命周期管理。
+
+入口 picture 负责响应式 poster，视频 source 在动画偏好、可见性和播放条件允许后才挂载；减少动画模式不挂载视频地址。Home 首图预加载与 Hero 的候选和 sizes 一致，保持请求复用。目录与返回顶部由 Pure 补丁管理事件、Observer 和动画帧的连接/断连生命周期；目录在滚动和尺寸变化时更新，页面离开后释放全部实例任务。
 
 效果宿主在短期同源 iframe 内运行固定 vendor 算法，移除 iframe 清理 canvas、RAF、定时器和监听器。父页面只转发允许的空白点击，排除链接、按钮、表单、播放器、导航、选中文字和交互卡片。
 
