@@ -50,7 +50,7 @@ const paginationProps = toPaginatorProps(page)
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href='/home' variant='back' />
+  <Button title='Back' href='/home/' variant='back' />
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
       <h1 id='blog-heading' class='mb-6 mt-6 text-3xl font-medium sm:mt-10'>Blog</h1>
@@ -72,7 +72,7 @@ const paginationProps = toPaginatorProps(page)
                 <span class='text-muted-foreground'>
                   Page {page.currentPage} - Showing {page.data.length} of {collectionsCount} posts
                 </span>
-                <a aria-label='Browse archives by year' href='/archives' data-astro-prefetch>
+                <a aria-label='Browse archives by year' href='/archives/' data-astro-prefetch>
                   Browse archives by year →
                 </a>
               </div>
@@ -120,7 +120,7 @@ const paginationProps = toPaginatorProps(page)
               <Button
                 title='View all'
                 aria-label='View all tags'
-                href='/blog/tags'
+                href='/blog/tags/'
                 variant='ahead'
                 class='not-prose'
                 data-taxonomy-action='ahead'

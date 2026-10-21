@@ -2,16 +2,25 @@
 import { normalizeWalinePath } from '@/lib/waline-path'
 
 import config from '@/site-config'
+
+interface Props {
+  comment?: boolean
+}
+const { comment = false } = Astro.props
 ---
 
 <waline-pageview
+  data-comment={String(comment)}
   data-server={config.integ.waline.server}
   data-path={normalizeWalinePath(Astro.url.pathname)}></waline-pageview>
 <script>
+  import { commentCount } from '@waline/client/comment'
   import { pageviewCount } from '@waline/client/pageview'
 
   class WalinePageview extends HTMLElement {
     private abort?: () => void
+    private abortComments?: () => void
+    private counted = false
 
     connectedCallback() {
       this.abort?.()
@@ -19,12 +28,19 @@ import config from '@/site-config'
       if (!serverURL) return
       // Capture the canonical path synchronously. Waline cancels counter
       // reads; its increment POST does not accept a cancellation signal.
-      this.abort = pageviewCount({ serverURL, path: this.dataset.path || '/' })
+      const path = this.dataset.path || '/'
+      this.abort = pageviewCount({ serverURL, path, update: !this.counted })
+      this.counted = true
+      this.abortComments?.()
+      if (this.dataset.comment === 'true' && document.querySelector('.waline-comment-count'))
+        this.abortComments = commentCount({ serverURL, path })
     }
 
     disconnectedCallback() {
       this.abort?.()
       this.abort = undefined
+      this.abortComments?.()
+      this.abortComments = undefined
     }
   }
   if (!customElements.get('waline-pageview'))

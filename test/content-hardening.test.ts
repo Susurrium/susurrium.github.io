@@ -143,7 +143,7 @@ describe('content publishing regressions', () => {
     )
     expect(
       calls.some(
-        ({ params }) => `/traces/tags/${params.tag}` === contentTagPath('trace', 'CI/CD #开发')
+        ({ params }) => `/traces/tags/${params.tag}/` === contentTagPath('trace', 'CI/CD #开发')
       )
     ).toBe(true)
     expect(contentTagSlug('工程实践')).toBe('工程实践')
@@ -153,7 +153,7 @@ describe('content publishing regressions', () => {
   })
 
   test('encodes nested IDs by segment and rejects routes that collide with taxonomy', () => {
-    expect(contentPath('blog', 'folder/中文 name')).toBe('/blog/folder/%E4%B8%AD%E6%96%87%20name')
+    expect(contentPath('blog', 'folder/中文 name')).toBe('/blog/folder/%E4%B8%AD%E6%96%87%20name/')
     expect(() => contentPath('blog', 'tags/anything')).toThrow('reserved tags')
     expect(() => contentPath('trace', '../escape')).toThrow('nonempty path segments')
   })

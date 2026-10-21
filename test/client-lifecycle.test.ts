@@ -77,6 +77,7 @@ function environment(imports: Record<string, unknown> = {}) {
       define: (name: string, value: new () => ElementStub) => registry.set(name, value)
     },
     document,
+    location: { hash: '' },
     window: Object.assign(new EventTarget(), {
       location: {
         href: 'https://site.test/search?type=blog&tag=Astro',
@@ -184,7 +185,7 @@ describe('component lifecycle regression scenarios', () => {
     expect(music.lookup['[data-music-error]']?.hidden).toBe(false)
   })
 
-  test('each mounted Waline instance is destroyed when its page disconnects', () => {
+  test('each lazily mounted Waline instance is destroyed when its page disconnects', async () => {
     let created = 0
     let destroyed = 0
     const env = environment({
@@ -200,19 +201,25 @@ describe('component lifecycle regression scenarios', () => {
       },
       'virtual:config': {
         default: { integ: { waline: { enable: true, server: 'https://comments.test' } } }
-      }
+      },
+      '@waline/client/style?url': { default: '/waline.css' },
+      '@/lib/client/resources': { loadBrowserResource: async () => {} }
     })
     env.load('src/components/waline/Comment.astro')
     const Constructor = env.registry.get('comment-component')!
     const comments = new Constructor() as ElementStub & {
       connectedCallback(): void
       disconnectedCallback(): void
+      load(): Promise<void>
     }
     comments.lookup['#waline'] = new ElementStub()
     comments.dataset.walinePath = '/blog/article'
     comments.connectedCallback()
+    expect(created).toBe(0)
+    await comments.load()
     comments.disconnectedCallback()
     comments.connectedCallback()
+    await comments.load()
     comments.disconnectedCallback()
     expect({ created, destroyed }).toEqual({ created: 2, destroyed: 2 })
   })

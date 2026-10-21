@@ -8,6 +8,10 @@ export function matchesBrowserRoute({ pathname, canonical }, expectedPath, canon
   // Pages 的目录重定向允许尾斜杠；canonical 仍须精确指向发布站的目标路由。
   return (
     normalizePathname(pathname) === expectedPath &&
-    canonical === new URL(expectedPath, canonicalSiteUrl).href
+    canonical ===
+      new URL(
+        expectedPath === '/' || expectedPath.endsWith('/') ? expectedPath : `${expectedPath}/`,
+        canonicalSiteUrl
+      ).href
   )
 }

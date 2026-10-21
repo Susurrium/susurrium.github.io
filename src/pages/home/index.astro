@@ -86,7 +86,7 @@ const meta = {
                   {isContentSurfaceEnabled('blog', 'archive') && (
                     <Button
                       title='View all'
-                      href='/blog'
+                      href='/blog/'
                       variant='ahead'
                       aria-label='View all Blog posts'
                       data-home-action='ahead'
@@ -112,7 +112,7 @@ const meta = {
                   {isContentSurfaceEnabled('trace', 'archive') && (
                     <Button
                       title='View all'
-                      href='/traces'
+                      href='/traces/'
                       variant='ahead'
                       aria-label='View all Traces'
                       data-home-action='ahead'
@@ -122,7 +122,7 @@ const meta = {
                 {recentTraceItems.length > 0 ? (
                   <div class='home-writing__trace-list' data-home-recent-trace-list>
                     {recentTraceItems.map((item) => (
-                      <ContentCard class='home-recent-card' item={item} />
+                      <ContentCard class='home-recent-card' imageLayout='home-recent' item={item} />
                     ))}
                   </div>
                 ) : (

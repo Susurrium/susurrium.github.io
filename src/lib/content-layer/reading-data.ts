@@ -341,7 +341,7 @@ export function toReadingFrameData(record: ContentRecord): ReadingFrameData {
   return {
     backHref: resolveContentPolicy(record.kind).surfaces.archive
       ? contentPath(record.kind)
-      : '/home',
+      : '/home/',
     contentTypeLabel: contentLabel(record.kind),
     meta: {
       ...(articleDate && { articleDate }),

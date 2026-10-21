@@ -22,7 +22,7 @@ export function buildHomeSayingCatalog(items: readonly HomeSayingItem[]) {
       image: {
         src: image.src,
         source: image.source,
-        ...cardImageOptions(image.src, image.crop?.transform.zoom)
+        ...cardImageOptions(image.src, image.crop?.transform.zoom, 'home-saying', image.crop?.fit)
       }
     }
   })

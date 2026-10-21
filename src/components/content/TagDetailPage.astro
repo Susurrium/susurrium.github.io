@@ -9,6 +9,7 @@ import {
   type ContentKind,
   type PageItem
 } from '@/lib/content-layer'
+import { directoryPath } from '@/lib/site-path'
 
 import { Paginator } from 'astro-pure/components/pages'
 import { Button } from 'astro-pure/user'
@@ -35,7 +36,7 @@ const paginationProps = toPaginatorProps(page)
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href={definition.basePath} variant='back' />
+  <Button title='Back' href={directoryPath(definition.basePath)} variant='back' />
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
       <h1 id={`${kind}-tag-heading`} class='mb-6 flex items-end gap-x-2 text-3xl font-medium'>
