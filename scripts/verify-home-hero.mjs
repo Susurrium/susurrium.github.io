@@ -7,6 +7,8 @@
  * repository content.
  */
 
+import { verifyHomeWaves } from './lib/hero-wave-verification.mjs'
+
 const cdpEndpoint = (process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224').replace(/\/$/, '')
 const siteUrl = (process.env.HOME_HERO_SITE_URL ?? 'http://127.0.0.1:4321').replace(/\/$/, '')
 
@@ -195,3 +197,5 @@ try {
   cdp.close()
   await fetch(`${cdpEndpoint}/json/close/${target.id}`, { method: 'PUT' }).catch(() => undefined)
 }
+
+await verifyHomeWaves({ cdpEndpoint, siteUrl })

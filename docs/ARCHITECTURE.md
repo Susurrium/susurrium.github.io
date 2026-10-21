@@ -444,6 +444,8 @@ CardCropEditor 的正式预览复用 MediaCard／CardMediaFrame，编辑框读�
 
 Hero 使用独立 HeroMediaFrame，无卡片斜边；工作台等比缩放真实 Home 舞台，原图的编辑身份与响应式派生图片保持一致。固定媒体由一个滚动控制器计算可见高度，以 clip-path 连续裁剪，完全越界后隐藏；反向滚动不切换固定与流式定位。几何逻辑见 [hero-visibility.ts](../src/lib/home/hero-visibility.ts)。
 
+四层波浪通过 `bottom: -1px` 依附 Hero 容器底边，向下重叠 1 CSS px，覆盖波浪与下方遮罩在小数像素绘制时产生的接缝。首页与裁剪工作台共用该定位规则；波浪高度继续遵循原有响应式范围，工作台将舞台整体等比缩放并在容器边界裁剪。
+
 ## 客户端生命周期与外部资源
 
 ### 响应式图片交付
