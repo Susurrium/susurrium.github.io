@@ -20,6 +20,7 @@ import type {
   ContentPresentation,
   RenderablePageItem
 } from '@/lib/content-layer/types'
+import type { CardImageLayout } from '@/lib/media/card-image'
 
 import BlogTextCardAdapter from '@/components/cards/BlogTextCardAdapter.astro'
 import MediaCard from '@/components/cards/MediaCard.astro'
@@ -41,6 +42,7 @@ interface LegacyProps {
   presentation?: ContentPresentation | string
   preview?: string
   imageLoading?: 'eager' | 'lazy'
+  imageLayout?: CardImageLayout
 }
 
 interface ModelProps {
@@ -49,6 +51,7 @@ interface ModelProps {
   item: RenderablePageItem
   preview?: string
   imageLoading?: 'eager' | 'lazy'
+  imageLayout?: CardImageLayout
 }
 
 type Props = LegacyProps | ModelProps
@@ -81,6 +84,12 @@ const item: RenderablePageItem = isLegacy
 const detailed = item.placement.detailed
 const cardView: ContentCardViewData = toContentCardViewData(item)
 const classNameValue = className
+const localImage =
+  item.source.collection === 'trace'
+    ? item.source.data.cover
+    : item.source.collection === 'blog'
+      ? item.source.data.heroImage?.src
+      : undefined
 ---
 
 {
@@ -113,6 +122,8 @@ const classNameValue = className
       headingLevel={item.placement.headingLevel}
       href={cardView.data.href}
       image={cardView.data.image}
+      imageMetadata={typeof localImage === 'object' ? localImage : undefined}
+      imageLayout={props.imageLayout}
       preview={props.preview}
       imageLoading={props.imageLoading}
       index={item.placement.index}
