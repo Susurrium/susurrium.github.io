@@ -65,7 +65,7 @@ export function isEditorialContentPage(path) {
  * links page marker text. Any additional Arthals identity/domain occurrence is
  * deliberately retained and will fail the strict release gate.
  */
-export function stripAllowedArthalsFriend({ path, markerText, linksManifest }) {
+export function stripAllowedArthalsFriend({ path, markerText, linksManifest, avatarManifest }) {
   if (path !== 'links/index.html') return markerText
 
   const friend = manifestArthalsFriend(linksManifest)
@@ -74,9 +74,21 @@ export function stripAllowedArthalsFriend({ path, markerText, linksManifest }) {
   // Do not treat an isolated marker as the declared friend. The generated
   // links card must expose all three manifest fields before any exception is
   // applied.
-  const hasDeclaredFriendFields = [friend.name, friend.link, friend.avatar].every((value) =>
+  const fieldsPresent = [friend.name, friend.link].every((value) =>
     new RegExp(escapeRegExp(value), 'i').test(markerText)
   )
+  const avatar = avatarManifest?.images?.[friend.avatar]
+  const hasLocalAvatar =
+    avatar?.state === 'ready' &&
+    /^[a-f0-9]{64}$/.test(avatar.sourceSha256) &&
+    avatar.candidates?.some(
+      (candidate) =>
+        new RegExp(`^/media/friend-avatars/${avatar.sourceSha256}-[0-9]+\\.webp$`).test(
+          candidate.src
+        ) && markerText.includes(candidate.src)
+    )
+  const hasDeclaredFriendFields =
+    fieldsPresent && (markerText.includes(friend.avatar) || hasLocalAvatar)
   if (!hasDeclaredFriendFields) return markerText
 
   return [friend.name, friend.link, friend.avatar].reduce(

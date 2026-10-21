@@ -6,6 +6,7 @@ import {
   loadContentCatalog,
   type ContentKind
 } from '@/lib/content-layer'
+import { directoryPath } from '@/lib/site-path'
 
 import { Button } from 'astro-pure/user'
 import { cn } from 'astro-pure/utils'
@@ -18,7 +19,9 @@ interface Props {
 const { kind } = Astro.props as Props
 const definition = getContentTypeDefinition(kind)
 if (!isContentSurfaceEnabled(kind, 'tags')) {
-  return Astro.redirect(isContentSurfaceEnabled(kind, 'archive') ? definition.basePath : '/home')
+  return Astro.redirect(
+    isContentSurfaceEnabled(kind, 'archive') ? directoryPath(definition.basePath) : '/home/'
+  )
 }
 const catalog = await loadContentCatalog()
 const tags = getContentTagCounts(catalog, kind)
@@ -30,7 +33,7 @@ const meta = {
 ---
 
 <PageLayout {meta}>
-  <Button title='Back' href={definition.basePath} variant='back' />
+  <Button title='Back' href={directoryPath(definition.basePath)} variant='back' />
   <main class='mt-6 lg:mt-10'>
     <div id='content-header' class='animate'>
       <h1 id={`${kind}-tags-heading`} class='mb-6 text-3xl font-medium'>{definition.label} Tags</h1>

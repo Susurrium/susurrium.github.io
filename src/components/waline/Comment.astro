@@ -1,39 +1,86 @@
 ---
 import { normalizeWalinePath } from '@/lib/waline-path'
 
-import config from '@/site-config'
-
-import '@waline/client/style'
-
 import { cn } from 'astro-pure/utils'
+import config from '@/site-config'
 
 const { class: className } = Astro.props
 ---
 
 {
   config.integ.waline.enable && (
-    <comment-component data-waline-path={normalizeWalinePath(Astro.url.pathname)}>
-      <div id='waline' class={cn('not-prose', className)}>
-        Comment seems to stuck. Try to refresh?✨
+    <comment-component
+      data-waline-path={normalizeWalinePath(Astro.url.pathname)}
+      data-comment-state='idle'
+    >
+      <div
+        id='waline'
+        class={cn('not-prose', config.integ.waline.showMeta === false && 'hide-meta', className)}
+      >
+        <p data-comment-status role='status'>
+          评论尚未加载。
+        </p>
+        <button type='button' data-comment-load disabled>
+          加载评论
+        </button>
+        <noscript>
+          <p>启用 JavaScript 后可加载评论。</p>
+        </noscript>
       </div>
     </comment-component>
   )
 }
 
 <script>
-  import { init as walineInit } from '@waline/client'
+  import { loadBrowserResource } from '@/lib/client/resources'
   import type { WalineEmojiPresets, WalineInstance } from '@waline/client'
+  import walineStyleUrl from '@waline/client/style?url'
   import config from 'virtual:config'
 
   const walineConfig = config.integ.waline
 
   class Comment extends HTMLElement {
     private instance: WalineInstance | null = null
+    private controller?: AbortController
+    private observer?: IntersectionObserver
+    private generation = 0
+    private loading = false
 
     connectedCallback() {
-      this.instance?.destroy()
+      this.disconnectedCallback()
+      this.controller = new AbortController()
+      const { signal } = this.controller
+      this.dataset.commentState = 'idle'
+      const trigger = this.querySelector<HTMLButtonElement>('[data-comment-load]')
+      if (trigger) trigger.disabled = false
+      this.querySelector('[data-comment-load]')?.addEventListener('click', this.load, { signal })
+      this.addEventListener('focusin', this.load, { signal })
+      const checkHash = () => {
+        if (location.hash === '#waline' && this.dataset.commentState === 'idle') void this.load()
+      }
+      window.addEventListener('hashchange', checkHash, { signal })
+      document.addEventListener('astro:page-load', checkHash, { signal })
+      this.observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && this.dataset.commentState === 'idle') void this.load()
+        },
+        { rootMargin: '320px 0px' }
+      )
+      this.observer.observe(this)
+      checkHash()
+    }
+
+    private load = async () => {
+      if (this.instance || this.loading || !this.isConnected) return
       const container = this.querySelector<HTMLElement>('#waline')
       if (!container) return
+      this.loading = true
+      this.dataset.commentState = 'loading'
+      const generation = this.generation
+      const status = this.querySelector<HTMLElement>('[data-comment-status]')
+      const button = this.querySelector<HTMLButtonElement>('[data-comment-load]')
+      if (status) status.textContent = '正在加载评论…'
+      if (button) button.disabled = true
       // Prevent Vue log errors
       ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
       ;(globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false
@@ -41,22 +88,48 @@ const { class: className } = Astro.props
         globalThis as unknown as { __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: boolean }
       ).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
 
-      const emoji = walineConfig.emoji?.map(
-        (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
-      )
-      const path = this.dataset.walinePath || window.location.pathname.replace(/\/+$/, '') || '/'
+      try {
+        const [{ init: walineInit }] = await Promise.all([
+          import('@waline/client'),
+          loadBrowserResource(walineStyleUrl, 'stylesheet', 'waline-client-style')
+        ])
+        if (generation !== this.generation || !this.isConnected) return
+        const emoji = walineConfig.emoji?.map(
+          (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
+        )
+        const path = this.dataset.walinePath || window.location.pathname.replace(/\/+$/, '') || '/'
 
-      this.instance = walineInit({
-        el: container,
-        serverURL: walineConfig.server || '',
-        emoji,
-        reaction: ['/icons/heart-item.svg'],
-        ...walineConfig.additionalConfigs,
-        path
-      })
+        this.instance = walineInit({
+          el: container,
+          serverURL: walineConfig.server || '',
+          emoji,
+          reaction: ['/icons/heart-item.svg'],
+          ...walineConfig.additionalConfigs,
+          pageview: false,
+          comment: false,
+          path
+        })
+        this.observer?.disconnect()
+        this.dataset.commentState = 'ready'
+      } catch (error) {
+        if (generation !== this.generation || !this.isConnected) return
+        console.error('Unable to load Waline comments.', error)
+        this.dataset.commentState = 'error'
+        if (status) status.textContent = '评论加载失败，请重试。'
+        if (button) {
+          button.disabled = false
+          button.textContent = '重新加载评论'
+        }
+      } finally {
+        if (generation === this.generation) this.loading = false
+      }
     }
 
     disconnectedCallback() {
+      this.controller?.abort()
+      this.observer?.disconnect()
+      this.generation++
+      this.loading = false
       this.instance?.destroy()
       this.instance = null
     }
@@ -67,6 +140,14 @@ const { class: className } = Astro.props
 </script>
 
 <style>
+  comment-component {
+    display: block;
+    min-height: 18rem;
+  }
+  [data-comment-load] {
+    margin-top: 0.5rem;
+    text-decoration: underline;
+  }
   /* Basic theme */
   #waline {
     /* Font size */
@@ -113,12 +194,11 @@ const { class: className } = Astro.props
     max-width: 100%;
   }
 
-  #waline :global(a) {
+  #waline :global(.wl-content a, .wl-text a, .wl-comment-text a) {
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: anywhere;
     max-width: 100%;
-    display: inline-block;
   }
 
   #waline :global(.wl-item, .wl-card-item) {
@@ -130,6 +210,10 @@ const { class: className } = Astro.props
     word-wrap: break-word;
     word-break: break-word;
     overflow-wrap: anywhere;
+  }
+
+  #waline.hide-meta :global(.wl-meta) {
+    display: none;
   }
 
   /* Reaction buttons */

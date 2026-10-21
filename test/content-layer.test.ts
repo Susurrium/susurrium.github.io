@@ -169,7 +169,7 @@ describe('canonical content adapters', () => {
 
     expect(blog).toMatchObject({
       cardTitle: 'Canonical Blog',
-      href: '/blog/canonical-blog',
+      href: '/blog/canonical-blog/',
       key: 'blog:canonical-blog',
       kind: 'blog',
       title: 'Canonical Blog'
@@ -183,7 +183,7 @@ describe('canonical content adapters', () => {
     })
 
     expect(trace).toMatchObject({
-      href: '/traces/canonical-trace',
+      href: '/traces/canonical-trace/',
       key: 'trace:canonical-trace',
       kind: 'trace',
       title: 'Canonical Trace'
@@ -197,7 +197,7 @@ describe('canonical content adapters', () => {
     expect(saying).toMatchObject({
       author: 'An Author',
       cardTitle: '“A normalized Saying.”',
-      href: '/sayings/canonical-saying',
+      href: '/sayings/canonical-saying/',
       key: 'saying:canonical-saying',
       kind: 'saying',
       originalText: 'Original wording',
@@ -232,7 +232,7 @@ describe('canonical content adapters', () => {
       contentId: 'canonical-blog',
       contentType: 'blog',
       date: blogUpdatedDate,
-      href: '/blog/canonical-blog',
+      href: '/blog/canonical-blog/',
       title: 'Canonical Blog'
     })
     expect(toStandardCardData(records[2]!)).toMatchObject({
@@ -272,8 +272,8 @@ describe('presentation projections', () => {
       { icon: 'earth', value: 'zh-CN' }
     ])
     expect(view.tags).toEqual([
-      { href: '/blog/tags/architecture', label: 'architecture' },
-      { href: '/blog/tags/content', label: 'content' }
+      { href: '/blog/tags/architecture/', label: 'architecture' },
+      { href: '/blog/tags/content/', label: 'content' }
     ])
   })
 })
@@ -489,10 +489,10 @@ describe('archive pagination', () => {
 
 describe('registry and build-time policy', () => {
   test('keeps every taxonomy route scoped to its own content type', () => {
-    expect(contentTagPath('blog')).toBe('/blog/tags')
-    expect(contentTagPath('trace')).toBe('/traces/tags')
-    expect(contentTagPath('saying')).toBe('/sayings/tags')
-    expect(contentTagPath('blog', 'architecture')).toBe('/blog/tags/architecture')
+    expect(contentTagPath('blog')).toBe('/blog/tags/')
+    expect(contentTagPath('trace')).toBe('/traces/tags/')
+    expect(contentTagPath('saying')).toBe('/sayings/tags/')
+    expect(contentTagPath('blog', 'architecture')).toBe('/blog/tags/architecture/')
     expect(contentTypeRegistry.blog.tagPath).not.toBe('/tags')
   })
 
@@ -591,8 +591,8 @@ describe('reading projections', () => {
       meta: { language: 'zh-CN', readingTime: '8 min read' },
       openingMedia: { alt: 'A meaningful cover', src: '/images/blog-cover.webp' },
       tags: [
-        { href: '/blog/tags/architecture', label: 'architecture' },
-        { href: '/blog/tags/content', label: 'content' }
+        { href: '/blog/tags/architecture/', label: 'architecture' },
+        { href: '/blog/tags/content/', label: 'content' }
       ]
     })
     expect(trace.openingMedia).toMatchObject({
@@ -615,7 +615,7 @@ describe('reading projections', () => {
         text: 'A normalized Saying.'
       }
     })
-    expect(saying.tags[0]).toEqual({ href: '/sayings/tags/content', label: 'content' })
+    expect(saying.tags[0]).toEqual({ href: '/sayings/tags/content/', label: 'content' })
   })
 
   test('keeps Blog opening media optional when heroImage is absent', () => {
@@ -763,13 +763,13 @@ describe('reading projections', () => {
     expect(toReadingNavigation(items[1]!, items)).toEqual({
       next: {
         contentType: 'trace',
-        href: '/traces/last',
+        href: '/traces/last/',
         key: 'trace:last',
         title: 'Canonical Trace'
       },
       previous: {
         contentType: 'trace',
-        href: '/traces/first',
+        href: '/traces/first/',
         key: 'trace:first',
         title: 'Canonical Trace'
       }
@@ -793,7 +793,7 @@ describe('reading projections', () => {
     const saying = adaptSayingEntry(makeSayingEntry())
 
     expect(toReadingFrameData(blog)).toMatchObject({
-      backHref: '/blog',
+      backHref: '/blog/',
       contentTypeLabel: 'Blog',
       meta: {
         articleDate: blogDate.toISOString(),
@@ -803,7 +803,7 @@ describe('reading projections', () => {
       }
     })
     expect(toReadingFrameData(saying)).toMatchObject({
-      backHref: '/sayings',
+      backHref: '/sayings/',
       contentTypeLabel: 'Saying',
       meta: { title: 'A normalized Saying.' }
     })
@@ -849,16 +849,16 @@ describe('catalog query policies', () => {
       'saying'
     ])
     expect(getContentTagCounts(catalog, 'blog')).toEqual([
-      { count: 1, href: '/blog/tags/architecture', tag: 'architecture' },
-      { count: 1, href: '/blog/tags/content', tag: 'content' }
+      { count: 1, href: '/blog/tags/architecture/', tag: 'architecture' },
+      { count: 1, href: '/blog/tags/content/', tag: 'content' }
     ])
   })
 
   test('builds registry-ordered type-level tag index entries', () => {
     expect(getContentTagIndexEntries(makeCatalog())).toEqual([
-      { href: '/blog/tags', kind: 'blog', label: 'Blog Tags', tagCount: 2 },
-      { href: '/traces/tags', kind: 'trace', label: 'Trace Tags', tagCount: 1 },
-      { href: '/sayings/tags', kind: 'saying', label: 'Saying Tags', tagCount: 2 }
+      { href: '/blog/tags/', kind: 'blog', label: 'Blog Tags', tagCount: 2 },
+      { href: '/traces/tags/', kind: 'trace', label: 'Trace Tags', tagCount: 1 },
+      { href: '/sayings/tags/', kind: 'saying', label: 'Saying Tags', tagCount: 2 }
     ])
   })
 

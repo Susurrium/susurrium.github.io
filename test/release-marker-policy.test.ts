@@ -27,6 +27,44 @@ const renderedFriend = arthalsMarkerText({
 })
 
 describe('strict release Arthals marker exception', () => {
+  test('recognizes an exact generated avatar while rejecting unrelated local candidates', () => {
+    const sourceSha256 = 'a'.repeat(64)
+    const src = `/media/friend-avatars/${sourceSha256}-160.webp`
+    const avatarManifest = {
+      images: {
+        'https://cdn.arthals.ink/Arthals.png': {
+          state: 'ready',
+          sourceSha256,
+          candidates: [{ src }]
+        }
+      }
+    }
+    const markerText = `Arthals' ink https://arthals.ink/ ${src}`
+    expect(
+      stripAllowedArthalsFriend({
+        path: 'links/index.html',
+        markerText,
+        linksManifest,
+        avatarManifest
+      })
+    ).not.toMatch(/Arthals|arthals\.ink/i)
+    expect(
+      stripAllowedArthalsFriend({
+        path: 'links/index.html',
+        markerText: markerText.replace(src, '/media/friend-avatars/unrelated.webp'),
+        linksManifest,
+        avatarManifest
+      })
+    ).toMatch(/Arthals/i)
+    expect(
+      stripAllowedArthalsFriend({
+        path: 'about/index.html',
+        markerText,
+        linksManifest,
+        avatarManifest
+      })
+    ).toMatch(/Arthals/i)
+  })
   test('does not audit editorial content detail pages for release markers', () => {
     expect(isEditorialContentPage('blog/susurrium-blog-development/index.html')).toBe(true)
     expect(isEditorialContentPage('traces/debug-session/index.html')).toBe(true)

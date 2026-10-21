@@ -1,0 +1,39 @@
+:root {
+  --site-safe-top: env(safe-area-inset-top, 0px);
+  --site-safe-right: env(safe-area-inset-right, 0px);
+  --site-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --site-safe-left: env(safe-area-inset-left, 0px);
+}
+.site-page-shell {
+  --site-gutter: 1rem;
+  padding-top: var(--site-safe-top);
+  padding-bottom: var(--site-safe-bottom);
+  padding-left: calc(var(--site-gutter) + var(--site-safe-left));
+  padding-right: calc(var(--site-gutter) + var(--site-safe-right));
+}
+.site-page-shell > header-component {
+  top: calc(1rem + var(--site-safe-top));
+}
+body[data-page-kind='home'] .site-page-shell {
+  padding-top: 0;
+}
+body[data-page-kind='home'] [data-home-hero] {
+  margin-left: calc(50% - 50vw + (var(--site-safe-right) - var(--site-safe-left)) / 2);
+}
+#action-buttons {
+  bottom: calc(2rem + var(--site-safe-bottom));
+  inset-inline-end: calc(1rem + var(--site-safe-right));
+}
+@media (min-width: 640px) {
+  .site-page-shell {
+    --site-gutter: 1.75rem;
+  }
+  #action-buttons {
+    inset-inline-end: calc(2rem + var(--site-safe-right));
+  }
+}
+@media (min-width: 1024px) {
+  .site-page-shell {
+    --site-gutter: 2.5rem;
+  }
+}

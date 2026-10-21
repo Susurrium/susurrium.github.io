@@ -131,6 +131,9 @@ async function evaluate(cdp, expression) {
 }
 
 async function navigate(cdp, url) {
+  const target = new URL(url)
+  if (!target.pathname.endsWith('/')) target.pathname += '/'
+  url = target.href
   const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
   await cdp.call('Page.navigate', { url })
   await loaded
@@ -405,7 +408,7 @@ try {
       })()`
     )
     assert(
-      taxonomy.navigationVisible && taxonomy.indexHref === archive.tagPath,
+      taxonomy.navigationVisible && taxonomy.indexHref === `${archive.tagPath}/`,
       `${archive.kind} archive exposes its visible View all tags entry`
     )
     assert(
@@ -484,8 +487,8 @@ try {
     'Search content-type filters keep registry order after All'
   )
   assert(
-    searchFilters.mainSearchHref === '/search',
-    'Header search icon still points directly to /search'
+    searchFilters.mainSearchHref === '/search/',
+    'Header search icon points directly to /search/'
   )
   assert(searchFilters.pagefindRoot, 'Search page keeps the existing Pagefind custom element')
   assert(

@@ -3,8 +3,11 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 
 font_dir = Path(__file__).resolve().parents[1] / "public" / "fonts"
+output_dir = Path(__file__).resolve().parents[1] / "src" / "assets" / "fonts"
+output_dir.mkdir(parents=True, exist_ok=True)
 for source in sorted([*font_dir.glob("*.ttf"), *font_dir.glob("*.otf")]):
-    with TTFont(source) as font:
+    with TTFont(source, recalcTimestamp=False) as font:
         font.flavor = "woff2"
-        font.save(source.with_suffix(".woff2"))
-    print(f"{source.name}: {source.stat().st_size} → {source.with_suffix('.woff2').stat().st_size} bytes")
+        output = output_dir / source.with_suffix(".woff2").name
+        font.save(output)
+    print(f"{source.name}: {source.stat().st_size} → {output.stat().st_size} bytes")

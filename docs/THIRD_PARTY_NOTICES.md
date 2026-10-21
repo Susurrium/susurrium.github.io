@@ -8,6 +8,11 @@ asset marked `PENDING` must not be deployed until its rights are confirmed.
 
 ## Fonts
 
+The four existing WOFF2 derivatives are maintained in `src/assets/fonts/` and
+delivered through Astro's local font API. Their source fonts and the notices
+listed below remain in `public/fonts/`. This changes delivery and preserves the
+existing font bytes and authorization scope.
+
 - `public/fonts/AbrilFatface-Regular.ttf` — accompanied by
   `public/fonts/AbrilFatface-OFL.txt` (SIL Open Font License 1.1). Keep the
   license text with the font when redistributing it.
@@ -61,8 +66,16 @@ boundaries are recorded in [the source ledger](./SOURCE_LEDGER.md#mermaid-图表
 
 ## External services and links
 
+`public/media/friend-avatars/` contains responsive WebP derivatives of the exact
+reviewed avatar sources in `public/links.json`. Source hashes, candidate hashes,
+dimensions and frame counts are recorded in
+`src/data/friend-avatars.generated.json`. The 2026-10-22 performance development
+authorization covers local delivery and resizing, with transparency and animation
+preserved. These derivatives retain the original avatar rights and attribution;
+the project's Apache-2.0 license does not grant rights to the depicted artwork.
+
 The candidate keeps explicit runtime exceptions documented in
 [source ledger](./SOURCE_LEDGER.md) (CARTO/OSM maps, Waline, public music, Umami,
-CodeTime, and manually reviewed friend avatars). External links are content,
+CodeTime). Friend avatar maintenance uses only the reviewed source URLs. External links are content,
 not a license grant. `public/links.json` is a manually reviewed snapshot and
 must not be mutated automatically during deployment.

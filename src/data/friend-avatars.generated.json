@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 1,
+  "images": {
+    "/images/wormhole.png": {
+      "sourceSha256": "a809c5177e230bd4dc4370a719f1d3be84c7c4fb221820c147914579282b39ab",
+      "width": 328,
+      "height": 328,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/a809c5177e230bd4dc4370a719f1d3be84c7c4fb221820c147914579282b39ab-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 778,
+          "sha256": "a69ec790d1923a651739fd4214c1dafe1ce83c525046bc6c878e41be8cc959d7"
+        },
+        {
+          "src": "/media/friend-avatars/a809c5177e230bd4dc4370a719f1d3be84c7c4fb221820c147914579282b39ab-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 1534,
+          "sha256": "87c6f9f42980df533d5911091a1bd4405d46bcfe4686e5fe067c502fae54f3ce"
+        },
+        {
+          "src": "/media/friend-avatars/a809c5177e230bd4dc4370a719f1d3be84c7c4fb221820c147914579282b39ab-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 2866,
+          "sha256": "86a2540e17cf1acc9dbb1327a90b673bd3eeb519f9f87dc1a0ee030cdbad5e4b"
+        },
+        {
+          "src": "/media/friend-avatars/a809c5177e230bd4dc4370a719f1d3be84c7c4fb221820c147914579282b39ab-328.webp",
+          "width": 328,
+          "height": 328,
+          "bytes": 3000,
+          "sha256": "59970b92708f42a98279d86f67feb6d0149e6f73b00df27792d91eac6c133b4a"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://akutagawa.cn/avatar.png": {
+      "sourceSha256": "6a66772d6d82e3c01dea4b623dcafc9c0bf61ed8d1ea27543c0de2d3cd36a9d6",
+      "width": 1254,
+      "height": 1254,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/6a66772d6d82e3c01dea4b623dcafc9c0bf61ed8d1ea27543c0de2d3cd36a9d6-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 1330,
+          "sha256": "2e5c288eb7d9f5f02bba57a94644694735e67b2ff4ec6faa2040e07647e4fbb3"
+        },
+        {
+          "src": "/media/friend-avatars/6a66772d6d82e3c01dea4b623dcafc9c0bf61ed8d1ea27543c0de2d3cd36a9d6-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 3130,
+          "sha256": "80f862cdb31d0a9fa3d35775d68e1e71fb36f85a033d7564f7dff0b7e987a43e"
+        },
+        {
+          "src": "/media/friend-avatars/6a66772d6d82e3c01dea4b623dcafc9c0bf61ed8d1ea27543c0de2d3cd36a9d6-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 8030,
+          "sha256": "b66734965b1f4d50c73d72fe4887f3c46c580b59d66dc5c2f991bf32c9fdc4df"
+        },
+        {
+          "src": "/media/friend-avatars/6a66772d6d82e3c01dea4b623dcafc9c0bf61ed8d1ea27543c0de2d3cd36a9d6-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 15044,
+          "sha256": "6b2d80615e2537971a49508cb8395e2a717cbe519df364f7f9508e325f931675"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://api-space.tnxg.top/avatar?s=qq": {
+      "sourceSha256": "3f99969c51973f0defa0347afb57911d79d8a08b5c89275e346d609c6066f88a",
+      "width": 640,
+      "height": 640,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/3f99969c51973f0defa0347afb57911d79d8a08b5c89275e346d609c6066f88a-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 2922,
+          "sha256": "856108137c9553e130f30e5498b628455ef9e3477a623d57d7917678e50bffe5"
+        },
+        {
+          "src": "/media/friend-avatars/3f99969c51973f0defa0347afb57911d79d8a08b5c89275e346d609c6066f88a-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 8812,
+          "sha256": "e2c5fe428cfdc5d17938d84d6cf0bee918072c3450c05196a2a8502f8467247d"
+        },
+        {
+          "src": "/media/friend-avatars/3f99969c51973f0defa0347afb57911d79d8a08b5c89275e346d609c6066f88a-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 25588,
+          "sha256": "f4efa3c462c1690f9a517aecbd24b985f3c9556dc4f4037e8cba6dabeb5ef3d7"
+        },
+        {
+          "src": "/media/friend-avatars/3f99969c51973f0defa0347afb57911d79d8a08b5c89275e346d609c6066f88a-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 42432,
+          "sha256": "3ba90b1bb29b4fe5be82e59abb12f4a0f36b6911f3ff6e6f1486aeae29278a7a"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://bf.zzxworld.com/images/favicon.png": {
+      "sourceSha256": "d51ea4aad4c5f98678380ee32834e4a6b2703939c2c845c602e66ffea6760f02",
+      "width": 132,
+      "height": 132,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/d51ea4aad4c5f98678380ee32834e4a6b2703939c2c845c602e66ffea6760f02-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 1312,
+          "sha256": "10dca2c621f06ff3d794f75939fb562ee4cc8b91ea6612777629464847113913"
+        },
+        {
+          "src": "/media/friend-avatars/d51ea4aad4c5f98678380ee32834e4a6b2703939c2c845c602e66ffea6760f02-132.webp",
+          "width": 132,
+          "height": 132,
+          "bytes": 2126,
+          "sha256": "90d7f7252e2a8ee53b427772d9e3cbf485ab6d7b3134fa8cc4de17d6d0d05c97"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://cdn.arthals.ink/Arthals.png": {
+      "sourceSha256": "9f3b7d615b70c1c783571dcda9bd631a1f73269a2d9f6b4d78753848a628204a",
+      "width": 1024,
+      "height": 1024,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/9f3b7d615b70c1c783571dcda9bd631a1f73269a2d9f6b4d78753848a628204a-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 1188,
+          "sha256": "b102fb2c19a883a6e0ad035d6fde1242908a4983fd2010be22e112afe79342aa"
+        },
+        {
+          "src": "/media/friend-avatars/9f3b7d615b70c1c783571dcda9bd631a1f73269a2d9f6b4d78753848a628204a-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 3370,
+          "sha256": "886aacb05a5ea6180c77f9c024c5870e2e39ebe1432a608a90928d61c54bbf05"
+        },
+        {
+          "src": "/media/friend-avatars/9f3b7d615b70c1c783571dcda9bd631a1f73269a2d9f6b4d78753848a628204a-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 10366,
+          "sha256": "f3556650a72a66c1882f74046ceeb79640890753c21ee11739d1ac862563125d"
+        },
+        {
+          "src": "/media/friend-avatars/9f3b7d615b70c1c783571dcda9bd631a1f73269a2d9f6b4d78753848a628204a-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 19164,
+          "sha256": "84b6bdef0c5f8abab07af682f243eddc29d1c5d7b4cc440bc28dd03147664488"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://cravatar.cn/avatar/1ffe42aa45a6b1444a786b1f32dfa8aa?s=200": {
+      "sourceSha256": "9b3cde0024610b98e69131d87fdbf5704d3e7916fe8c4850a682b7d6a8436743",
+      "width": 200,
+      "height": 200,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/9b3cde0024610b98e69131d87fdbf5704d3e7916fe8c4850a682b7d6a8436743-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 972,
+          "sha256": "eff1423c8cf56fb516d69eda19d19ebf25478051f71781609f1a8dad86a4417b"
+        },
+        {
+          "src": "/media/friend-avatars/9b3cde0024610b98e69131d87fdbf5704d3e7916fe8c4850a682b7d6a8436743-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 1716,
+          "sha256": "6f781b266d42d9034ccef07ecb2973b5265106b5692af47f74db23172f06c243"
+        },
+        {
+          "src": "/media/friend-avatars/9b3cde0024610b98e69131d87fdbf5704d3e7916fe8c4850a682b7d6a8436743-200.webp",
+          "width": 200,
+          "height": 200,
+          "bytes": 2168,
+          "sha256": "edbd304d851138378f53399379e43a32fb9747d318ccf0d9bc051f5910948df7"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://fastly.jsdelivr.net/npm/xyx404blogphoto@1.2.23/avatar.webp": {
+      "sourceSha256": "53a490560fe55fc2d5e6ad15d040849f722f494c6d8ad447459199e021ea10d5",
+      "width": 1024,
+      "height": 944,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/53a490560fe55fc2d5e6ad15d040849f722f494c6d8ad447459199e021ea10d5-80.webp",
+          "width": 80,
+          "height": 74,
+          "bytes": 3998,
+          "sha256": "3b7bf898adaec7fe9c8273b5d011490358b47f4d4d698386fb2d693bf68eb9e6"
+        },
+        {
+          "src": "/media/friend-avatars/53a490560fe55fc2d5e6ad15d040849f722f494c6d8ad447459199e021ea10d5-160.webp",
+          "width": 160,
+          "height": 148,
+          "bytes": 10700,
+          "sha256": "bbd28fed6bc3c3459ae96cc50a2dae3fea4dd705788d6ae9e10ef8d690941a29"
+        },
+        {
+          "src": "/media/friend-avatars/53a490560fe55fc2d5e6ad15d040849f722f494c6d8ad447459199e021ea10d5-320.webp",
+          "width": 320,
+          "height": 295,
+          "bytes": 25380,
+          "sha256": "a0a08e89878eee2a11a1f5af48ab4c260b1a6d843f117a9402aaccc4ced95b80"
+        },
+        {
+          "src": "/media/friend-avatars/53a490560fe55fc2d5e6ad15d040849f722f494c6d8ad447459199e021ea10d5-480.webp",
+          "width": 480,
+          "height": 442,
+          "bytes": 39572,
+          "sha256": "cd8c9e53eda4b0b400aa2fc2f11131971686f4b82b03fa01363bf960725dc7d5"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://hanlife02.com/avatar.webp": {
+      "state": "unavailable",
+      "error": "fetch failed"
+    },
+    "https://largeskull.github.io/images/avatar.jpg": {
+      "sourceSha256": "5943f2e5c974c8acf7dd85fae18c843c08bac68ebe89ad61be1a17e6fde93dbf",
+      "width": 1080,
+      "height": 1080,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/5943f2e5c974c8acf7dd85fae18c843c08bac68ebe89ad61be1a17e6fde93dbf-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 1670,
+          "sha256": "f0203cbed5c96cd91d691b6e5c2c4e73dfe20b53e679bcce65387def2cc7ef24"
+        },
+        {
+          "src": "/media/friend-avatars/5943f2e5c974c8acf7dd85fae18c843c08bac68ebe89ad61be1a17e6fde93dbf-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 5404,
+          "sha256": "9b0bab7f6b4e18343d5887a7265e8b2db0273db1dd22d84a46c757d1b4ca3396"
+        },
+        {
+          "src": "/media/friend-avatars/5943f2e5c974c8acf7dd85fae18c843c08bac68ebe89ad61be1a17e6fde93dbf-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 19056,
+          "sha256": "0320168c494ee37373af033dd6562cc56f082bb167d3702e8c6fb755423e4736"
+        },
+        {
+          "src": "/media/friend-avatars/5943f2e5c974c8acf7dd85fae18c843c08bac68ebe89ad61be1a17e6fde93dbf-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 45684,
+          "sha256": "60f48b6fac11390c9eed5a9a8e3352aa552fa27b1599b99cf40eeecf525697ef"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://q.qlogo.cn/g?b=qq&nk=1003521738&s=640": {
+      "sourceSha256": "25409f125a1f7ca333ec01bde6a23b3711cf5b453e3f49b277d767f000f3bc03",
+      "width": 640,
+      "height": 640,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/25409f125a1f7ca333ec01bde6a23b3711cf5b453e3f49b277d767f000f3bc03-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 1962,
+          "sha256": "2f310d0addd23bfb5c4d8250963e054e750263326bdbff3b3e9224658dd79b64"
+        },
+        {
+          "src": "/media/friend-avatars/25409f125a1f7ca333ec01bde6a23b3711cf5b453e3f49b277d767f000f3bc03-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 5946,
+          "sha256": "9deb60d6cc6177e2ef627410569384101b560516c354495ca727805cb34b7d08"
+        },
+        {
+          "src": "/media/friend-avatars/25409f125a1f7ca333ec01bde6a23b3711cf5b453e3f49b277d767f000f3bc03-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 16972,
+          "sha256": "5341aa921aa7c4219195bd8e94a1b26152494e6b8b78b375e8211c6855a897d0"
+        },
+        {
+          "src": "/media/friend-avatars/25409f125a1f7ca333ec01bde6a23b3711cf5b453e3f49b277d767f000f3bc03-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 28662,
+          "sha256": "3287f7fa636141403394fb50a243eb705d9311d1ef5941f5ff04363970d17df8"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://skywt.cn/api/og?title=SkyWT": {
+      "sourceSha256": "adaca01af5b0a838077cd8acd88cbb390dd4987d05ff45d82b55dc7e7041a127",
+      "width": 1200,
+      "height": 630,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/adaca01af5b0a838077cd8acd88cbb390dd4987d05ff45d82b55dc7e7041a127-80.webp",
+          "width": 80,
+          "height": 42,
+          "bytes": 200,
+          "sha256": "903ec01963fe066b7a39ae0b2791ce0cf3ed833535d8b82ec6b3c8125a4552b9"
+        },
+        {
+          "src": "/media/friend-avatars/adaca01af5b0a838077cd8acd88cbb390dd4987d05ff45d82b55dc7e7041a127-160.webp",
+          "width": 160,
+          "height": 84,
+          "bytes": 460,
+          "sha256": "759af421cfd1d91b11816cf360e8f8537d91c0e2efbe6a350d1d319dde00ec29"
+        },
+        {
+          "src": "/media/friend-avatars/adaca01af5b0a838077cd8acd88cbb390dd4987d05ff45d82b55dc7e7041a127-320.webp",
+          "width": 320,
+          "height": 168,
+          "bytes": 1132,
+          "sha256": "3c22a91f893aae023f6749552cbea05c66b4a5131cdb1adbc02f2107364d9541"
+        },
+        {
+          "src": "/media/friend-avatars/adaca01af5b0a838077cd8acd88cbb390dd4987d05ff45d82b55dc7e7041a127-480.webp",
+          "width": 480,
+          "height": 252,
+          "bytes": 1690,
+          "sha256": "facde99e19c618454e1a76b3dcf21e5dd2312e421464e276cdce1463f9defeeb"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://www.george-blog.top/wp-content/uploads/2025/07/cropped-George.jpg": {
+      "state": "unavailable",
+      "error": "fetch failed"
+    },
+    "https://www.helloimg.com/i/2024/09/25/66f355782f700.jpg": {
+      "sourceSha256": "274eec113d3c90a97c4689a12d55476b6c0db164b52912df67ef7696b474e7a2",
+      "width": 640,
+      "height": 640,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/274eec113d3c90a97c4689a12d55476b6c0db164b52912df67ef7696b474e7a2-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 1894,
+          "sha256": "296b517a92232ad4364b56d00ffe8b488f7801d5e28aa60bbe2bc65ef9d0bb3c"
+        },
+        {
+          "src": "/media/friend-avatars/274eec113d3c90a97c4689a12d55476b6c0db164b52912df67ef7696b474e7a2-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 5492,
+          "sha256": "1459df97e05c73d082ce8a6547f01b963249817b2262d6eaeac34a18eeec7a83"
+        },
+        {
+          "src": "/media/friend-avatars/274eec113d3c90a97c4689a12d55476b6c0db164b52912df67ef7696b474e7a2-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 15410,
+          "sha256": "aa6a48087423a43250f340c2c17bc3caed208a60cf183088d4b24ae4122ce3aa"
+        },
+        {
+          "src": "/media/friend-avatars/274eec113d3c90a97c4689a12d55476b6c0db164b52912df67ef7696b474e7a2-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 26210,
+          "sha256": "0863b78e8601d4415e560bf52d00e031582ffe94f4dc4b1f948ece17805af7f7"
+        }
+      ],
+      "state": "ready"
+    },
+    "https://www.travellings.cn/assets/travelling.png": {
+      "sourceSha256": "d71cd0c6459448cbb8d3b1825df138a6cf80c48535df9de14ca4df91caab6e4d",
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "candidates": [
+        {
+          "src": "/media/friend-avatars/d71cd0c6459448cbb8d3b1825df138a6cf80c48535df9de14ca4df91caab6e4d-80.webp",
+          "width": 80,
+          "height": 80,
+          "bytes": 2532,
+          "sha256": "52f3536ecf88719b4f26820dde16a722b5173ea6c35ea61f3f22b3d63cc9cf73"
+        },
+        {
+          "src": "/media/friend-avatars/d71cd0c6459448cbb8d3b1825df138a6cf80c48535df9de14ca4df91caab6e4d-160.webp",
+          "width": 160,
+          "height": 160,
+          "bytes": 6512,
+          "sha256": "433ff1deb82ab3607732aa537d4f914ce73c0b168a1ff0e7044ebc2c60168b75"
+        },
+        {
+          "src": "/media/friend-avatars/d71cd0c6459448cbb8d3b1825df138a6cf80c48535df9de14ca4df91caab6e4d-320.webp",
+          "width": 320,
+          "height": 320,
+          "bytes": 14684,
+          "sha256": "19a39a7b57acc68cde752edf65b46520dc63704841be78777a63404ebd64b204"
+        },
+        {
+          "src": "/media/friend-avatars/d71cd0c6459448cbb8d3b1825df138a6cf80c48535df9de14ca4df91caab6e4d-480.webp",
+          "width": 480,
+          "height": 480,
+          "bytes": 21940,
+          "sha256": "7ea83c4a6e1f2cdfe39065245648da8e6da5b96aea5fc0bd65284da892de935e"
+        }
+      ],
+      "state": "ready"
+    }
+  }
+}

@@ -139,7 +139,8 @@ test('card responsive options follow the selected source and account for crop zo
   expect(cardImageOptions(source, 1.25)).toEqual({
     srcset:
       '/images/card-media/43935854_p0_master1200-480.webp 480w, /images/card-media/43935854_p0_master1200-960.webp 960w, /images/card-media/43935854_p0_master1200-1200.webp 1200w',
-    sizes: '(max-width: 767px) calc(100vw * 1.25), 800px'
+    sizes:
+      '(max-width: 767px) calc(max(calc(100vw - 48px), calc(224px * 1.6)) * 1.3125), (max-width: 1023px) calc(max(calc((100vw - 112px) / 2), calc(222px * 1.6)) * 1.3125), calc(max(calc((min(100vw, 1120px) - 136px) / 2), calc(222px * 1.6)) * 1.3125)'
   })
   expect(cardImageOptions('/images/social-card.webp')).toEqual({})
   expect(cardImageOptions(undefined)).toEqual({})

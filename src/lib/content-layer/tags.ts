@@ -102,7 +102,7 @@ export function getTagRecords(catalog: ContentCatalog, kind: ContentKind, tag: s
     recordsForKind(catalog, kind).filter((record) =>
       record.tags.some((candidate) => candidate.toLowerCase() === normalizedTag)
     ),
-    getContentTypeDefinition(kind).defaultSort
+    kind === 'blog' ? 'pinned-editorial-date-desc' : getContentTypeDefinition(kind).defaultSort
   )
 }
 
@@ -129,6 +129,7 @@ export function buildTagStaticPaths(
       const imageAssignment =
         sayingImageAssignments?.get(record.key) ?? traceImageAssignments?.get(record.key)
       return createPageItem(record, {
+        ...(kind === 'blog' ? { showPinned: true } : {}),
         detailed: true,
         headingLevel: 2,
         ...(imageAssignment ? { imageAssignment } : {}),

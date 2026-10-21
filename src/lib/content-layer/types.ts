@@ -92,6 +92,7 @@ export interface ContentRecordBase {
 
 export interface BlogRecord extends ContentRecordBase {
   readonly kind: 'blog'
+  readonly pinned?: boolean
   readonly language?: string
   readonly comment: boolean
   readonly image?: ContentImageInput
@@ -134,9 +135,11 @@ export interface StandardCardData {
 /** Standard data plus the resolved image policy required by Media. */
 export type MediaCardData = Omit<StandardCardData, 'image'> & {
   readonly image: ResolvedCardImage
+  readonly pinned?: boolean
 }
 
 export interface CardPlacement {
+  readonly showPinned?: boolean
   readonly actionLabel?: string
   readonly detailed: boolean
   readonly headingLevel?: HeadingLevel
@@ -253,7 +256,8 @@ export interface LoadedContentCatalog extends ContentCatalog {
   readonly sources: ContentCatalogSources
 }
 
-export type ContentSort = 'editorial-date-desc' | 'publish-date-desc' | 'id-asc'
+export type ContentSort =
+  'editorial-date-desc' | 'pinned-editorial-date-desc' | 'publish-date-desc' | 'id-asc'
 
 export interface ContentQuery {
   readonly kinds?: readonly ContentKind[]

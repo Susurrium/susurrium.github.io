@@ -1,0 +1,4 @@
+import base, { integ as baseInteg } from './site.base'
+export * from './site.base'
+export const integ = { ...baseInteg, waline: { ...baseInteg.waline, showMeta: false } }
+export default { ...base, integ }

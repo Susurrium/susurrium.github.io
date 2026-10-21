@@ -168,7 +168,11 @@ const filterEntries = browserEntries.map((entry) => ({
     processResult: (result: PagefindResult) => void
   }) => PagefindInstance
 
-  const formatURL = (path: string) => path.replace(/(.)\/(#.*)?$/, '$1$2')
+  const formatURL = (path: string) => {
+    const url = new URL(path, window.location.origin)
+    if (!url.pathname.endsWith('/')) url.pathname += '/'
+    return `${url.pathname}${url.search}${url.hash}`
+  }
 
   const normalizeResult = (result: PagefindResult) => {
     result.url = formatURL(result.url)
@@ -225,10 +229,7 @@ const filterEntries = browserEntries.map((entry) => ({
       this.addEventListener(
         'click',
         (event) => {
-          if (
-            event.target instanceof Element &&
-            event.target.closest('.pagefind-ui__search-clear')
-          )
+          if (event.target instanceof Element && event.target.closest('.pagefind-ui__search-clear'))
             this.updateQueryURL('')
         },
         { signal }

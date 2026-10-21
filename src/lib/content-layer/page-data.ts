@@ -31,6 +31,7 @@ import type {
 } from './types'
 
 export interface PageItemOptions {
+  readonly showPinned?: boolean
   readonly actionLabel?: string
   readonly detailed?: boolean
   readonly headingLevel?: HeadingLevel
@@ -138,6 +139,7 @@ export function toStandardCardData(record: ContentRecord): StandardCardData {
  */
 export function createPageItem(record: ContentRecord, options: PageItemOptions = {}): PageItem {
   const placement: CardPlacement = {
+    ...(options.showPinned ? { showPinned: true } : {}),
     actionLabel: options.actionLabel ?? getContentTypeDefinition(record.kind).defaultActionLabel,
     detailed: options.detailed ?? false,
     headingLevel: options.headingLevel,
@@ -293,7 +295,13 @@ export function resolveMediaImage(item: ResolvedPageItem) {
 }
 
 export function toMediaCardData(item: ResolvedPageItem): MediaCardData {
-  return { ...item.card, image: resolveMediaImage(item) }
+  return {
+    ...item.card,
+    image: resolveMediaImage(item),
+    ...(item.placement.showPinned && item.record.kind === 'blog' && item.record.pinned
+      ? { pinned: true }
+      : {})
+  }
 }
 
 export function buildCollectionPageData(
@@ -311,6 +319,7 @@ export function buildCollectionPageData(
       sayingImageAssignments?.get(record.key) ?? traceImageAssignments?.get(record.key)
     return createPageItem(record, {
       ...options,
+      ...(kind === 'blog-archive' ? { showPinned: true } : {}),
       ...(imageAssignment ? { imageAssignment } : {}),
       index: options.index ?? index
     })
