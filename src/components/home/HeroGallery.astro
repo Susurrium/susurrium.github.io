@@ -413,7 +413,8 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 
   .hero-gallery__waves {
     position: absolute;
-    top: calc(var(--hero-gallery-image-height) - var(--hero-gallery-wave-height));
+    /* 底部重叠 1px，覆盖缩放和小数像素舍入产生的接缝。 */
+    bottom: -1px;
     right: 0;
     left: 0;
     z-index: 2;
@@ -611,10 +612,6 @@ const slides = isEditor && previewSlide ? [previewSlide] : heroSlides
 
   .hero-gallery--editor[data-hero-viewport='mobile'] .hero-gallery__title {
     font-size: 1.5em;
-  }
-
-  .hero-gallery--editor .hero-gallery__waves {
-    top: calc(100% - var(--hero-gallery-wave-height));
   }
 
   .hero-gallery--editor .hero-gallery__parallax > use {

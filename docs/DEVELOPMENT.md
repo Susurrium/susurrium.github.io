@@ -178,7 +178,7 @@ bun run verify:pure:browser
 
 - Phase 6 browser 检查移动目录、焦点与键盘、空归档、减少动画，以及 Home 与归档的 Saying 图片身份。
 - Pure browser 检查真实代码折叠、完整复制、打印与无 JavaScript 阅读、本地字体正常／斜体按需加载、原生安全区域、评论延迟初始化与 RSS 布局。统计测试使用真实前端与隔离服务响应，校验预览无递增和正式 origin 单次递增，不写生产统计；结果保存在 `artifacts/pure-verification/results.json`。
-- Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪。
+- Home Hero 检查桌面、移动、短视口下的越界与反向滚动裁剪；波浪接缝检查覆盖小数边界、DPR 1／1.25／2、明暗主题、动画偏好、窗口尺寸变化和站内导航，并核对裁剪工作台的桌面／手机与三种预览模式。通过实际边界重叠和接缝区域像素检查验证覆盖，结果与局部截图保存在 `artifacts/hero-wave-verification/`。
 - Home Saying 覆盖桌面／手机及 DPR 1／2，逐条刷新并核对首次呈现身份、实际 `currentSrc`、响应式候选和预加载请求复用；阻断外部模块和完整图片验证可读文字与同图预览，检查图片加载前后的几何尺寸、慢网络与 CPU 降速、重复站内导航、空／单候选、无响应式候选、图片失败重试和禁用 JavaScript。结果默认写入 `artifacts/saying-verification/results.json`，可用 `SAYING_EVIDENCE_DIR` 指定本项目 `artifacts/` 内的输出目录。
 - Lifecycle 检查入口、地图 ESM 加载、空白点击、含引号文字复制、多次路由切换、音乐持久性、效果启停、阅读首图、直接暗色 Home 与减少动画清理。
 - Performance 检查 Hero 首图解码前的请求隔离、单张预读、视口外暂停、减少动画模式、入口 poster/视频请求、20 次站内切换后的监听器数量、本地封面候选、同源头像、评论锚点及浏览量递增、目录 URL。结果保存在 `artifacts/performance-verification/results.json`；它与既有浏览器回归共同进入 CI。
