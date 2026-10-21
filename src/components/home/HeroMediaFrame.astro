@@ -19,6 +19,7 @@ interface Props {
   imageClass?: string
   loading?: 'eager' | 'lazy'
   responsive?: boolean
+  deferred?: boolean
   mobileTransform?: HeroCropTransform
   src: string
   style?: string
@@ -35,6 +36,7 @@ const {
   imageClass,
   loading = 'lazy',
   responsive: useResponsiveImages = true,
+  deferred = false,
   mobileTransform,
   src,
   style: customStyle,
@@ -90,8 +92,10 @@ const style = [
     data-hero-image
     height={responsive?.height ?? height}
     loading={loading}
-    src={src}
-    srcset={responsive?.srcset}
+    src={deferred ? undefined : src}
+    srcset={deferred ? undefined : responsive?.srcset}
+    data-hero-deferred-src={deferred ? src : undefined}
+    data-hero-deferred-srcset={deferred ? responsive?.srcset : undefined}
     sizes={responsive ? '(max-width: 767px) max(100vw, 110vh), 100vw' : undefined}
     fetchpriority={loading === 'eager' ? 'high' : 'low'}
     decoding='async'

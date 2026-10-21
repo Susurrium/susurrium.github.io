@@ -34,20 +34,11 @@ import EntranceTypedText from './EntranceTypedText.astro'
       decoding='async'
     />
   </picture>
-  <video
-    data-entrance-video
-    muted
-    autoplay
-    loop
-    playsinline
-    preload='metadata'
-    poster={entrance.media.poster}
-    aria-hidden='true'
-  >
-    <source media='(max-width: 720px)' src={entrance.media.mobileWebm} type='video/webm' />
-    <source media='(max-width: 720px)' src={entrance.media.mobileMp4} type='video/mp4' />
-    <source src={entrance.media.webm} type='video/webm' />
-    <source src={entrance.media.mp4} type='video/mp4' />
+  <video data-entrance-video muted loop playsinline preload='none' aria-hidden='true'>
+    <source media='(max-width: 720px)' data-src={entrance.media.mobileWebm} type='video/webm' />
+    <source media='(max-width: 720px)' data-src={entrance.media.mobileMp4} type='video/mp4' />
+    <source data-src={entrance.media.webm} type='video/webm' />
+    <source data-src={entrance.media.mp4} type='video/mp4' />
   </video>
   <div class='entrance-scene__veil' aria-hidden='true'></div>
   <div class='entrance-scene__content'>
@@ -99,9 +90,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
       maxDeltaPerEvent: Number(scene.dataset.scrollEnterMaxDelta),
       desktopMinWidth: Number(scene.dataset.scrollEnterDesktopMinWidth)
     }
-    const desktopViewport = window.matchMedia(
-      `(min-width: ${scrollToEnter.desktopMinWidth}px)`
-    )
+    const desktopViewport = window.matchMedia(`(min-width: ${scrollToEnter.desktopMinWidth}px)`)
     let wheelDistance = 0
     let wheelResetTimer = 0
     let lastWheelAt = 0
@@ -128,10 +117,16 @@ import EntranceTypedText from './EntranceTypedText.astro'
         pauseVideo()
         return
       }
+      if (!video.dataset.sourcesMounted) {
+        for (const source of video.querySelectorAll<HTMLSourceElement>('source[data-src]')) {
+          if (!source.dataset.src) throw new Error('Entrance video source is missing')
+          source.src = source.dataset.src
+        }
+        video.dataset.sourcesMounted = 'true'
+        video.load()
+      }
 
-      // A cached local video can already be playing before this script has
-      // registered its `playing` listener. The resolved promise is therefore
-      // also an authoritative readiness signal.
+      // play() 成功后同步就绪状态，覆盖缓存命中和已经播放时不再产生 playing 事件的情形。
       video.play().then(showVideo).catch(showPoster)
     }
 
@@ -140,6 +135,11 @@ import EntranceTypedText from './EntranceTypedText.astro'
       if (reducedMotion.matches) {
         pauseVideo()
         showPoster()
+        if (video.dataset.sourcesMounted) {
+          video.querySelectorAll('source').forEach((source) => source.removeAttribute('src'))
+          delete video.dataset.sourcesMounted
+          video.load()
+        }
       } else {
         resumeVideo()
       }
@@ -259,8 +259,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
         if (document.visibilityState === 'hidden') {
           resetWheelIntent()
           pauseVideo()
-        }
-        else resumeVideo()
+        } else resumeVideo()
       },
       { signal }
     )
@@ -477,12 +476,7 @@ import EntranceTypedText from './EntranceTypedText.astro'
     border-radius: 999px;
     background-color: rgb(74 54 36 / 0.34);
     background-image:
-      linear-gradient(
-        120deg,
-        rgb(74 54 36 / 0.34),
-        rgb(128 99 63 / 0.24),
-        rgb(74 54 36 / 0.34)
-      ),
+      linear-gradient(120deg, rgb(74 54 36 / 0.34), rgb(128 99 63 / 0.24), rgb(74 54 36 / 0.34)),
       linear-gradient(
         115deg,
         transparent 42%,
@@ -492,8 +486,12 @@ import EntranceTypedText from './EntranceTypedText.astro'
         transparent 58%
       );
     background-repeat: no-repeat, no-repeat;
-    background-size: 100% 100%, 250% 100%;
-    background-position: 0 0, 100% 0;
+    background-size:
+      100% 100%,
+      250% 100%;
+    background-position:
+      0 0,
+      100% 0;
     box-shadow:
       0 0.2rem 0.8rem rgb(8 5 3 / 0.14),
       0 0 1rem rgb(242 201 140 / 0.14),
@@ -591,12 +589,16 @@ import EntranceTypedText from './EntranceTypedText.astro'
 
   @keyframes entrance-ai-shimmer {
     0% {
-      background-position: 0 0, 100% 0;
+      background-position:
+        0 0,
+        100% 0;
     }
 
     42%,
     100% {
-      background-position: 0 0, 0 0;
+      background-position:
+        0 0,
+        0 0;
     }
   }
 
