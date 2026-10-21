@@ -55,6 +55,7 @@ class ElementStub extends EventTarget {
 }
 
 function environment(imports: Record<string, unknown> = {}) {
+  const intersections: (() => void)[] = []
   const registry = new Map<string, new () => ElementStub>()
   const head = new ElementStub()
   const document = Object.assign(new EventTarget(), {
@@ -90,6 +91,9 @@ function environment(imports: Record<string, unknown> = {}) {
     clearTimeout,
     navigator: {},
     IntersectionObserver: class {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+        intersections.push(() => callback([{ isIntersecting: true }]))
+      }
       observe() {}
       disconnect() {}
     },
@@ -107,6 +111,9 @@ function environment(imports: Record<string, unknown> = {}) {
     head,
     document,
     context,
+    intersect() {
+      intersections.forEach((callback) => callback())
+    },
     load(file: string, append = '') {
       const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
       const script = file.endsWith('.astro')
@@ -115,6 +122,7 @@ function environment(imports: Record<string, unknown> = {}) {
       const compiled = ts.transpileModule(
         script
           .replaceAll('import.meta.env.DEV', 'true')
+          .replaceAll('import.meta.env.PROD', 'true')
           .replaceAll('import.meta.env.BASE_URL', "'/'") + append,
         {
           compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }
@@ -211,10 +219,84 @@ describe('component lifecycle regression scenarios', () => {
     comments.lookup['#waline'] = new ElementStub()
     comments.dataset.walinePath = '/blog/article'
     comments.connectedCallback()
+    expect(created).toBe(0)
+    env.intersect()
+    env.intersect()
     comments.disconnectedCallback()
+    env.intersect()
+    expect({ created, destroyed }).toEqual({ created: 1, destroyed: 1 })
     comments.connectedCallback()
+    env.intersect()
     comments.disconnectedCallback()
     expect({ created, destroyed }).toEqual({ created: 2, destroyed: 2 })
+  })
+
+  test('Waline statistics are independent, scoped, cancelled and read-only in previews', () => {
+    const calls: { update?: boolean; path: string; selector: string }[] = []
+    let aborted = 0
+    const count = (options: (typeof calls)[number]) => {
+      calls.push(options)
+      return () => {
+        aborted += 1
+      }
+    }
+    const env = environment({
+      '@waline/client/pageview': { pageviewCount: count },
+      '@waline/client/comment': { commentCount: count }
+    })
+    env.load('src/components/waline/PageInfo.astro')
+    const Constructor = env.registry.get('waline-page-info')!
+    const info = new Constructor() as ElementStub & {
+      connectedCallback(): void
+      disconnectedCallback(): void
+    }
+    info.dataset = {
+      server: 'https://comments.test',
+      path: '/blog/中文',
+      productionOrigin: 'https://production.test',
+      comment: 'true'
+    }
+    const browserWindow = env.context.window as { location: { origin: string } }
+    browserWindow.location.origin = 'http://127.0.0.1:4323'
+    info.connectedCallback()
+    info.connectedCallback()
+    expect(calls).toHaveLength(2)
+    expect(calls[0].update).toBe(false)
+    expect(calls.every((call) => call.path === '/blog/中文')).toBe(true)
+    expect(calls[0].selector).toMatch(/^#waline-info-\d+ \.waline-pageview-count$/)
+    info.disconnectedCallback()
+    expect(aborted).toBe(2)
+    browserWindow.location.origin = 'https://production.test'
+    info.connectedCallback()
+    expect(calls[2].update).toBe(true)
+    info.disconnectedCallback()
+    expect(aborted).toBe(4)
+  })
+
+  test('long code toggles accessibly and releases listeners when disconnected', () => {
+    const env = environment()
+    env.load('src/components/reading/CodeBlockRuntime.astro')
+    const Constructor = env.registry.get('code-block')!
+    const block = new Constructor() as ElementStub & {
+      connectedCallback(): void
+      disconnectedCallback(): void
+    }
+    const button = new ElementStub()
+    block.lookup['[data-code-collapse]'] = button
+    block.lookup.pre = new ElementStub()
+    block.connectedCallback()
+    expect(block.classes.has('collapsed')).toBe(true)
+    expect(button.attributes.get('aria-expanded')).toBe('false')
+    expect(button.attributes.get('aria-controls')).toMatch(/^code-block-\d+$/)
+    button.dispatchEvent(new Event('click'))
+    expect(block.classes.has('collapsed')).toBe(false)
+    block.disconnectedCallback()
+    button.dispatchEvent(new Event('click'))
+    expect(block.classes.has('collapsed')).toBe(false)
+    expect(button.hidden).toBe(true)
+    block.connectedCallback()
+    button.dispatchEvent(new Event('click'))
+    expect(block.classes.has('collapsed')).toBe(false)
   })
 
   test('Waline reaction teardown absorbs its cancelled request while preserving other failures', async () => {

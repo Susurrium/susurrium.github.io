@@ -1,7 +1,7 @@
 ---
-import { cn } from 'astro-pure/utils'
-import Pageview from '@/components/waline/Pageview.astro'
 import { normalizeWalinePath } from '@/lib/waline-path'
+
+import { cn } from 'astro-pure/utils'
 import config from '@/site-config'
 
 interface Props {
@@ -9,16 +9,18 @@ interface Props {
   comment?: boolean
   class?: string
 }
-
-const { view, comment, class: className, ...props } = Astro.props
-
+const { comment, view, class: className, ...props } = Astro.props
 const path = normalizeWalinePath(Astro.url.pathname)
-const enabled = config.integ.waline.enable
 ---
 
 {
-  enabled && (
-    <>
+  config.integ.waline.enable && (view || comment) && (
+    <waline-page-info
+      data-server={config.integ.waline.server}
+      data-path={path}
+      data-production-origin={Astro.site?.origin}
+      data-comment={String(Boolean(comment))}
+    >
       <div class={cn('text-base text-sm text-muted-foreground', className)} {...props}>
         <span class='waline-pageview-count' data-path={path} /> views
         {comment && (
@@ -30,8 +32,50 @@ const enabled = config.integ.waline.enable
           </>
         )}
       </div>
-
-      {view && !comment && <Pageview />}
-    </>
+    </waline-page-info>
   )
 }
+
+<script>
+  import { commentCount } from '@waline/client/comment'
+  import { pageviewCount } from '@waline/client/pageview'
+
+  let sequence = 0
+
+  class WalinePageInfo extends HTMLElement {
+    private aborts: (() => void)[] = []
+    private mounted = false
+
+    connectedCallback() {
+      if (this.mounted) return
+      this.mounted = true
+      const { server: serverURL, path, productionOrigin } = this.dataset
+      if (!serverURL || !path || !productionOrigin)
+        throw new Error('Waline 统计缺少服务、路径或站点配置')
+      const update = import.meta.env.PROD && window.location.origin === productionOrigin
+      this.id ||= `waline-info-${++sequence}`
+      this.aborts.push(
+        pageviewCount({ serverURL, path, update, selector: `#${this.id} .waline-pageview-count` })
+      )
+      if (this.dataset.comment === 'true') {
+        this.aborts.push(
+          commentCount({ serverURL, path, selector: `#${this.id} .waline-comment-count` })
+        )
+      }
+    }
+
+    disconnectedCallback() {
+      this.aborts.forEach((abort) => abort())
+      this.aborts = []
+      this.mounted = false
+    }
+  }
+  if (!customElements.get('waline-page-info'))
+    customElements.define('waline-page-info', WalinePageInfo)
+</script>
+
+<style>
+  waline-page-info {
+    display: contents;
+  }
+</style>
