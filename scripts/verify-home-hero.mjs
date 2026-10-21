@@ -135,7 +135,7 @@ try {
       mobile: variant.mobile,
       width: variant.width
     })
-    await cdp.call('Page.navigate', { url: `${siteUrl}/home` })
+    await cdp.call('Page.navigate', { url: `${siteUrl}/home/` })
     await delay(900)
 
     const geometry = await evaluate(

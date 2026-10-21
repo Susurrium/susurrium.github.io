@@ -10,7 +10,7 @@ const endpoint = process.env.CHROME_CDP_URL ?? 'http://127.0.0.1:9224'
 const manifest = JSON.parse(
   await readFile(new URL('../src/data/card-images.json', import.meta.url), 'utf8')
 )
-const response = await fetch(`${site}/home`)
+const response = await fetch(`${site}/home/`)
 assert(response.ok, `Home returned ${response.status}`)
 const source = await response.text()
 const document = parse(source)
@@ -210,7 +210,7 @@ try {
         await route.continue()
       })
       try {
-        await test.page.goto(`${site}/home`, { waitUntil: 'commit' })
+        await test.page.goto(`${site}/home/`, { waitUntil: 'commit' })
         await test.page.waitForSelector(
           `saying-random-card[data-saying-id="${selected.id}"] [data-card-preview]`
         )
@@ -264,7 +264,7 @@ try {
     ]) {
       const test = await setup(width, dpr)
       try {
-        await test.page.goto(`${site}/home`, { waitUntil: 'domcontentloaded' })
+        await test.page.goto(`${site}/home/`, { waitUntil: 'domcontentloaded' })
         await verify(test.page, selected, `${width}px DPR${dpr} cold visit`)
         verifyRequests(test.requests, selected, 'Cold visit')
         assert.equal(
@@ -300,7 +300,7 @@ try {
       })
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
       try {
-        await test.page.goto(`${site}/home`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+        await test.page.goto(`${site}/home/`, { waitUntil: 'domcontentloaded', timeout: 60000 })
         await verify(test.page, selected, 'Slow network and 4x CPU slowdown')
         verifyRequests(test.requests, selected, 'Slow network')
         assert.deepEqual(test.exceptions, [])
@@ -312,7 +312,7 @@ try {
     {
       const test = await setup()
       try {
-        await test.page.goto(`${site}/blog`, { waitUntil: 'domcontentloaded' })
+        await test.page.goto(`${site}/blog/`, { waitUntil: 'domcontentloaded' })
         await test.page.evaluate(() => {
           window.__sayingDocumentMarker = true
         })
@@ -322,7 +322,7 @@ try {
             key,
             value: ((visit % catalog.length) + 0.5) / catalog.length
           })
-          await test.page.locator('[role="banner"] a[href="/home"]').first().click()
+          await test.page.locator('[role="banner"] a[href="/home/"]').first().click()
           await test.page.waitForURL(/\/home\/?$/)
           await test.page.waitForFunction(
             () => document.querySelector('saying-random-card [data-card-image]')?.complete
@@ -336,7 +336,7 @@ try {
             await test.page.evaluate(() => window.__sayingDocumentMarker),
             'ClientRouter preserves document identity'
           )
-          await test.page.locator('[role="banner"] a[href="/blog"]').first().click()
+          await test.page.locator('[role="banner"] a[href="/blog/"]').first().click()
           await test.page.waitForURL(/\/blog\/?$/)
         }
         await test.page.evaluate(() => history.back())
@@ -376,10 +376,10 @@ try {
     ]) {
       const test = await setup()
       try {
-        await test.context.route(`${site}/home`, (route) =>
+        await test.context.route(`${site}/home/`, (route) =>
           route.fulfill({ contentType: 'text/html', body: fixture(entries, responsive) })
         )
-        await test.page.goto(`${site}/home`, { waitUntil: 'domcontentloaded' })
+        await test.page.goto(`${site}/home/`, { waitUntil: 'domcontentloaded' })
         if (entries.length) await verify(test.page, entries[0], label, responsive)
         else assert.equal(await test.page.locator('[data-home-random-saying]').count(), 0)
         assert.deepEqual(test.exceptions, [])
@@ -400,7 +400,7 @@ try {
         } else await route.continue()
       })
       try {
-        await test.page.goto(`${site}/home`, { waitUntil: 'domcontentloaded' })
+        await test.page.goto(`${site}/home/`, { waitUntil: 'domcontentloaded' })
         const retry = test.page.locator('[data-saying-image-retry]')
         await retry.waitFor({ state: 'visible' })
         assert(await test.page.locator('saying-random-card [data-card-preview]').isVisible())
@@ -415,7 +415,7 @@ try {
     {
       const test = await setup(390, 1, 0, false)
       try {
-        await test.page.goto(`${site}/home`)
+        await test.page.goto(`${site}/home/`)
         assert.equal(
           await test.page.locator('[data-home-random-saying] [data-media-card]').count(),
           1

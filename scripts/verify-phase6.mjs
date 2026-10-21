@@ -149,6 +149,9 @@ function renderedAttributeText(html) {
 }
 
 const allowedFriendAvatarUrls = new Set()
+const avatarManifest = JSON.parse(
+  readFileSync(resolve(root, 'src/data/friend-avatars.generated.json'), 'utf8')
+)
 let linksManifest = null
 try {
   linksManifest = JSON.parse(readFileSync(resolve(root, 'public/links.json'), 'utf8'))
@@ -200,7 +203,7 @@ expect(
   'replayable entrance remains noindex with /home as its canonical destination'
 )
 expect(
-  home.includes('rel="canonical" href="https://susurrium.github.io/home"') &&
+  home.includes('rel="canonical" href="https://susurrium.github.io/home/"') &&
     home.includes('name="description"') &&
     home.includes('property="og:image"') &&
     home.includes('application/rss+xml'),
@@ -301,6 +304,7 @@ expect(missingLanguage.length === 0, 'every static HTML document declares a docu
 const missingImageAlt = []
 const insecureBlankLinks = []
 const missingLocalResources = []
+const noncanonicalPageLinks = []
 // Keep a bounded, actionable inventory for resources that still need an
 // individual release decision.  Grouping by tag/host keeps the gate readable;
 // retaining exact URLs and pages makes the warning useful for reviewing
@@ -347,6 +351,16 @@ for (const entry of htmlEntries) {
     if (!element.hasAttribute('alt')) missingImageAlt.push(entry.path)
   }
   for (const element of document.querySelectorAll('a')) {
+    const href = element.getAttribute('href')
+    if (href && !href.startsWith('#')) {
+      const url = new URL(href, new URL(`/${entry.path.replace(/index\.html$/, '')}`, site))
+      if (
+        url.origin === site &&
+        !url.pathname.endsWith('/') &&
+        existsSync(resolve(dist, `.${decodeURIComponent(url.pathname)}`, 'index.html'))
+      )
+        noncanonicalPageLinks.push(`${entry.path}: ${href}`)
+    }
     if (
       element.getAttribute('target') === '_blank' &&
       !/(?:^|\s)(?:noopener|noreferrer)(?:\s|$)/i.test(element.getAttribute('rel') ?? '')
@@ -372,6 +386,12 @@ for (const file of generatedCss) {
 }
 
 expect(missingLocalResources.length === 0, 'static HTML resource references resolve inside dist')
+expect(
+  noncanonicalPageLinks.length === 0,
+  noncanonicalPageLinks.length
+    ? `page links require directory URLs: ${firstPaths(noncanonicalPageLinks)}`
+    : 'all generated links to published directory pages use canonical trailing slashes'
+)
 releaseBlocker(
   missingImageAlt.length === 0,
   missingImageAlt.length === 0
@@ -507,7 +527,8 @@ for (const { label, pattern } of markerChecks) {
                 visibleText: visibleText(text),
                 renderedAttributeText: renderedAttributeText(text)
               }),
-              linksManifest
+              linksManifest,
+              avatarManifest
             })
           : `${visibleText(text)} ${renderedAttributeText(text)}`
       )

@@ -12,7 +12,7 @@ const evidence = process.env.MERMAID_EVIDENCE_DIR
 if (evidence) await mkdir(evidence, { recursive: true })
 const paths = []
 for (const entry of await discoverPublishedContent(site)) {
-  const response = await fetch(site + entry.path)
+  const response = await fetch(site + entry.path + '/')
   assert(response.ok, `${entry.path} returned ${response.status}`)
   const document = parse(await response.text())
   assert(
@@ -38,7 +38,7 @@ else {
     })
     for (const path of paths) {
       await page.setViewportSize({ width: 1440, height: 1000 })
-      await page.goto(site + path)
+      await page.goto(site + path + '/')
       const diagrams = page.locator('.mermaid-diagram')
       await page.locator('.mermaid-interactive').first().waitFor()
       await page.evaluate(() => document.fonts.ready)

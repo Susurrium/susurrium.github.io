@@ -43,7 +43,7 @@ function delay(milliseconds) {
 
 async function discoverArchiveCardCount(archivePath, contentType) {
   try {
-    const response = await fetch(`${siteUrl}${archivePath}`)
+    const response = await fetch(`${siteUrl}${archivePath.replace(/\/$/, '')}/`)
     if (!response.ok) return null
     const html = await response.text()
     return [...html.matchAll(new RegExp(`data-content-type=["']${contentType}["']`, 'gi'))].length
@@ -188,6 +188,9 @@ async function evaluate(cdp, expression) {
 }
 
 async function navigate(cdp, url) {
+  const target = new URL(url)
+  if (!target.pathname.endsWith('/')) target.pathname += '/'
+  url = target.href
   const loaded = cdp.waitFor('Page.lifecycleEvent', ({ name }) => name === 'load')
   const result = await cdp.call('Page.navigate', { url })
   if (result.errorText) throw new Error(`Could not navigate to ${url}: ${result.errorText}`)
@@ -1029,7 +1032,7 @@ try {
     cdp,
     `(() => ({
       scene: Boolean(document.querySelector('[data-entrance-scene]')),
-      video: Boolean(document.querySelector('[data-entrance-video][autoplay][muted][loop]')),
+      video: Boolean(document.querySelector('[data-entrance-video][muted][loop][data-sources-mounted="true"]')),
       header: Boolean(document.querySelector('header-component')),
       music: Boolean(document.querySelector('music-player')),
       effects: Boolean(document.querySelector('visual-effects-host')),

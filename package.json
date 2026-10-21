@@ -36,6 +36,8 @@
     "verify:home-hero": "node scripts/verify-home-hero.mjs",
     "verify:home-saying": "node scripts/verify-home-saying-browser.mjs",
     "verify:browser:lifecycle": "node scripts/verify-browser-lifecycle.mjs",
+    "verify:performance": "node scripts/verify-performance-browser.mjs",
+    "measure:performance": "node scripts/measure-performance.mjs",
     "capture:visual-baseline": "node scripts/capture-visual-baseline.mjs",
     "branch:audit": "node scripts/branch-state-audit.mjs",
     "generate:social-card": "node scripts/generate-social-card.mjs",
@@ -62,7 +64,8 @@
     "yijiansilian": "bun lint && bun sync && bun check && bun format",
     "clean": "bun scripts/clean.mjs",
     "date": "tsx scripts/updateBlogDates.ts",
-    "cache:avatars": "tsx scripts/cacheAvatars.ts",
+    "cache:avatars": "node scripts/cache-friend-avatars.mjs",
+    "verify:avatars": "node scripts/cache-friend-avatars.mjs --check",
     "links:check": "node scripts/check-links.mjs",
     "links:check:dry": "node scripts/check-links.mjs --dry-run"
   },

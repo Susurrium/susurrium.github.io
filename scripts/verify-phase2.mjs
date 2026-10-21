@@ -215,7 +215,7 @@ function verifyArchiveTaxonomy(html, { kind, path, label }) {
     `${label} archive previews at most six tags and keeps the preview count in sync`
   )
   expect(
-    navigation.includes(`href="${path}"`) && navigation.includes('data-taxonomy-action="index"'),
+    navigation.includes(`href="${path}/"`) && navigation.includes('data-taxonomy-action="index"'),
     `${label} archive keeps a direct View all tags entry at ${path}`
   )
   expect(
@@ -225,7 +225,8 @@ function verifyArchiveTaxonomy(html, { kind, path, label }) {
     `${label} archive reports the empty taxonomy state only when its count is zero`
   )
   expect(
-    links.filter((href) => href.startsWith(`${path}/`)).length === tagActions,
+    links.filter((href) => href.startsWith(`${path}/`) && href !== `${path}/`).length ===
+      tagActions,
     `${label} archive tag chips stay inside the ${kind} taxonomy route`
   )
   expect(
@@ -520,7 +521,7 @@ if (existsSync(distFile('home/index.html'))) {
       'Home random Saying catalog contains every and only published Saying in archive order'
     )
     expect(
-      catalog.every((entry) => entry.href === `/sayings/${entry.id}`),
+      catalog.every((entry) => entry.href === `/sayings/${entry.id}/`),
       'Random Saying catalog points to stable detail routes'
     )
     expect(
@@ -544,11 +545,11 @@ if (existsSync(distFile('home/index.html'))) {
       : `Blog timeline selects the newest available natural year (${selectedYear})`
   )
   expect(
-    selectedBlogIds.every((id) => timeline.includes(`href="/blog/${id}"`)),
+    selectedBlogIds.every((id) => timeline.includes(`href="/blog/${id}/"`)),
     'Blog timeline links to every Blog entry in its selected year'
   )
   expect(
-    olderBlogIds.every((id) => !timeline.includes(`href="/blog/${id}"`)),
+    olderBlogIds.every((id) => !timeline.includes(`href="/blog/${id}/"`)),
     'Blog timeline omits Blog entries from older years'
   )
   expect(!timeline.includes('/traces/'), 'Blog timeline excludes Trace routes')
@@ -604,7 +605,7 @@ for (const path of ['src/pages/traces/[...page].astro', 'src/pages/sayings/[...p
 if (existsSync(blogArchive)) {
   const html = readDist('blog/index.html')
   expect(
-    html.includes('data-taxonomy-action="ahead"') && html.includes('href="/blog/tags"'),
+    html.includes('data-taxonomy-action="ahead"') && html.includes('href="/blog/tags/"'),
     'Blog tag archive entry uses the ahead CTA style'
   )
 }
@@ -782,7 +783,7 @@ expect(
 
 const aboutSource = readFileSync(resolve(root, 'src/pages/about/index.astro'), 'utf8')
 expect(
-  aboutSource.includes("href='/sayings'"),
+  aboutSource.includes("href='/sayings/'"),
   'About provides its single complete Sayings archive entry'
 )
 expect(

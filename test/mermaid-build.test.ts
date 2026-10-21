@@ -219,7 +219,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       '--port',
       String(port)
     ])
-    await waitFor(base + '/home')
+    await waitFor(base + '/home/')
     process.env.PLAYWRIGHT_BROWSERS_PATH = browserPath
     const { chromium } = await import('playwright')
     const browser = await chromium.launch()
@@ -232,7 +232,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       page.on('request', (request) => {
         if (request.resourceType() === 'script') requests.push(request.url())
       })
-      await page.goto(base + '/blog/mermaid-build-markdown')
+      await page.goto(base + '/blog/mermaid-build-markdown/')
       await page.locator('.mermaid-interactive > svg').waitFor({ state: 'visible' })
       await page.evaluate(() => document.fonts.ready)
       for (const url of fontUrls(firstHtml)) expect((await fetch(base + url)).status).toBe(200)
@@ -295,7 +295,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
         await page.locator('#toggleDarkMode').first().click()
       const retiredViewport = await page.locator('.mermaid-viewport').elementHandle()
       await page.getByText('查看随记', { exact: true }).click()
-      await page.waitForURL('**/traces/mermaid-build-trace')
+      await page.waitForURL('**/traces/mermaid-build-trace/')
       expect(
         await retiredViewport!.evaluate(
           (element) => !element.isConnected && !element.querySelector('.pele-zoom')
@@ -374,7 +374,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
         .locator('.mermaid-diagram')
         .screenshot({ path: resolve(evidence, 'mobile-wide-dark.png') })
       await page.goBack()
-      await page.waitForURL('**/blog/mermaid-build-markdown')
+      await page.waitForURL('**/blog/mermaid-build-markdown/')
       await page.locator('.mermaid-interactive > svg').waitFor()
       await page.locator('.mermaid-diagram').waitFor()
       await page.emulateMedia({ media: 'print' })
@@ -384,14 +384,14 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       expect(requests.some((url) => /(?:mermaid|playwright).*\.m?js/.test(url))).toBe(false)
       const noScript = await browser.newContext({ javaScriptEnabled: false })
       const noScriptPage = await noScript.newPage()
-      await noScriptPage.goto(base + '/blog/mermaid-build-mdx')
+      await noScriptPage.goto(base + '/blog/mermaid-build-mdx/')
       expect(await noScriptPage.locator('.mermaid-viewport > svg').isVisible()).toBe(true)
       expect(await noScriptPage.locator('.pele-zoom').count()).toBe(0)
       await noScript.close()
       const printEntry = await browser.newContext()
       const printPage = await printEntry.newPage()
       await printPage.emulateMedia({ media: 'print' })
-      await printPage.goto(base + '/blog/mermaid-build-mdx')
+      await printPage.goto(base + '/blog/mermaid-build-mdx/')
       await printPage.locator('.mermaid-print > svg').waitFor({ state: 'visible' })
       expect(await printPage.locator('.mermaid-interactive').count()).toBe(0)
       await printPage.emulateMedia({ media: 'screen' })
@@ -405,7 +405,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
         isMobile: true
       })
       const touchPage = await touch.newPage()
-      await touchPage.goto(base + '/traces/mermaid-build-trace')
+      await touchPage.goto(base + '/traces/mermaid-build-trace/')
       await touchPage.getByRole('button', { name: '放大图表' }).waitFor()
       await touchPage.getByRole('button', { name: '放大图表' }).click()
       const touchSvg = touchPage.locator('.mermaid-viewport > svg')
@@ -441,7 +441,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
       '--port',
       String(port)
     ])
-    const before = await (await waitFor(base + '/blog/mermaid-build-markdown')).text()
+    const before = await (await waitFor(base + '/blog/mermaid-build-markdown/')).text()
     const beforeImage = fontUrls(before)[0]
     expect((await fetch(base + beforeImage)).status).toBe(200)
     const changed = {
@@ -452,7 +452,7 @@ test('完整站点 Mermaid：MD/MDX、草稿、缓存、浏览器主题、导航
     await writeFile(resolve(root, 'src/content/blog/mermaid-build-markdown.md'), sourceFor(changed))
     let updated = ''
     for (let attempt = 0; attempt < 60; attempt++) {
-      updated = await (await fetch(base + '/blog/mermaid-build-markdown')).text()
+      updated = await (await fetch(base + '/blog/mermaid-build-markdown/')).text()
       if (updated.includes('更新后的流程图') && !updated.includes(beforeImage)) break
       await new Promise((accept) => setTimeout(accept, 250))
     }
