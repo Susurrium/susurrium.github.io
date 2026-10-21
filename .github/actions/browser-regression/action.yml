@@ -16,7 +16,7 @@ runs:
         echo "CHROME_PID=$!" >> "$GITHUB_ENV"
         bun run preview -- --background --host 127.0.0.1 --port 4321 >"${RUNNER_TEMP}/susurrium-preview.log" 2>&1
         for attempt in $(seq 1 30); do
-          if curl --fail --silent http://127.0.0.1:4321/home >/dev/null && \
+          if curl --fail --silent http://127.0.0.1:4321/home/ >/dev/null && \
             curl --fail --silent http://127.0.0.1:9224/json/version >/dev/null; then
             exit 0
           fi
