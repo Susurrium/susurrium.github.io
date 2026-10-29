@@ -68,6 +68,16 @@ bun test ./test/mermaid-build.test.ts
 
 Projects 的项目顺序、完整描述、入口 URL 与可访问标签维护在 `src/pages/projects/index.astro`；首个入口也是标题目的地。调整时检查标题最多一行、描述最多两行、桌面 3rem 描述区域、纯图标入口的原有尺寸与间距，并核对桌面跨行卡片高度和入口相对底边的位置。手机保持单列，极窄空间允许图标入口换行；完整描述仍须保留，键盘焦点与可访问名称须明确。使用长标题、单行短描述和多行长描述验证布局约束。Support 布局需核对两张正方形展示框、完整图片与遮罩中心，覆盖悬停、键盘、点击、减少动画及站内切换。当前公开展示范围见 [2026-10-17 发布记录](./archive/PROJECTS_RELEASE_20261017.zh-CN.md)，实现契约见 [Projects 项目与 Support](./ARCHITECTURE.md#projects-项目与-support)。
 
+### WakaTime 统计维护
+
+Home 与 About 的编程时间组件为 [WakaTimeStats](../src/components/WakaTimeStats.astro)。公开图片由 [统计仓库](https://github.com/Susurrium/wakatime-stats) 的 `Update WakaTime badges` 工作流生成；该独立仓库的每小时定时更新不触发本网站部署。
+
+读取 Token 保存为统计仓库的 Actions Secret `WAKATIME_READ_TOKEN`，采用 OAuth Bearer 认证；本机 VS Code 扩展和 Codex 官方插件继续使用采集 API Key。Token 更新在 GitHub Secret 页面完成，不写入博客文件或公开徽章地址。来源名称在统计仓库的 `config.json` 中精确配置：`VS Code` 对应编辑器活动，`Codex Vscode` 对应当前桌面会话来源。WakaTime 同来源的 Codex IDE 活动可能合并进入该项；新增使用入口时重新核实分类。
+
+手动更新可在统计仓库 Actions 页面运行工作流。成功后核对三张 SVG 与 `stats.json` 的秒数、累计范围及源更新时间；数据刷新中会有界重试，认证错误和来源缺失明确失败。图片保留上次成功产物，更新时间用于判断数据新鲜度，GitHub 调度和图片缓存可能延迟更新。网站发布保持原有手动流程。
+
+组件或图片路径变更时，同步核对 [发布检查](../scripts/verify-phase6.mjs) 的精确资源清单、来源台账和第三方说明，并验证 Home、About、窄屏及站内切换。图片加载失败时仍有替代文本和统计仓库链接。
+
 ## 公共素材维护
 
 文章封面和正文图片由 [内容指南](./CONTENT.md#封面与正文图片) 维护。公共头像、签名和二维码位于 `src/assets/`，正式图标位于 `public/favicon/`；构建需使用的文件纳入 Git，原始下载素材备份可另存仓库外。

@@ -2,7 +2,7 @@
 title: Susurrium's blog 的开发记录
 description: 记录我的个人博客开发到最终上线的过程。
 publishDate: 2026-09-04
-updatedDate: 2026-09-29
+updatedDate: 2026-10-29T17:10:58.420Z
 tags:
   - Blog
   - Astro
@@ -119,7 +119,7 @@ RSS 用于订阅更新，目前默认收录 Blog。sitemap 和 robots.txt 则负
 
 ### 1.5 附加组件与维护工具
 
-个人页面还包含 GitHub 贡献热力图、CodeTime 卡片、Residence 地图、点击粒子、花瓣和 About 页面的小人等组件。
+个人页面还包含 GitHub 贡献热力图、WakaTime 编程时间徽章、Residence 地图、点击粒子、花瓣和 About 页面的小人等组件。时间徽章分别展示 VS Code 和 Codex 桌面 AI 活动的累计时长，由独立统计仓库定时更新。
 
 不同页面使用不同的效果配置，阅读页关闭装饰效果。设备条件、页面可见性和用户的减少动画偏好，也会影响效果是否运行。
 
@@ -458,7 +458,7 @@ bun run setup:mermaid
 
 网站名称、作者、简介、导航、页脚和集成配置主要位于 `src/site.config.ts`。个人简介、联系方式、经历、入口、音乐、居住地和效果配置分别保存在 `src/data/` 中。
 
-还需要检查头像、签名、视频、Hero 图片、友链、项目入口、二维码，以及 Waline、Umami、CodeTime 和音乐服务等配置。来源与使用条件分别记录在仓库的 `docs/SOURCE_LEDGER.md` 和 `docs/THIRD_PARTY_NOTICES.md` 中。
+还需要检查头像、签名、视频、Hero 图片、友链、项目入口、二维码，以及 Waline、Umami、WakaTime 徽章和音乐服务等配置。WakaTime 的采集与读取凭据分别保存在本机配置和统计仓库的 GitHub Actions Secret 中，网站只加载公开徽章。来源与使用条件分别记录在仓库的 `docs/SOURCE_LEDGER.md` 和 `docs/THIRD_PARTY_NOTICES.md` 中。
 
 部署地址由 `astro.config.ts` 的 `site` 配置决定。当前仓库还包含站点专属检查，更换域名时，需要同步核对预检、严格发布脚本、浏览器回归的 canonical 目标，以及页面中的固定链接。
 

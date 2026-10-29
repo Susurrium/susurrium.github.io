@@ -76,6 +76,10 @@ the project's Apache-2.0 license does not grant rights to the depicted artwork.
 
 The candidate keeps explicit runtime exceptions documented in
 [source ledger](./SOURCE_LEDGER.md) (CARTO/OSM maps, Waline, public music, Umami,
-CodeTime). Friend avatar maintenance uses only the reviewed source URLs. External links are content,
+WakaTime badges). The three reviewed SVGs are generated in
+[Susurrium/wakatime-stats](https://github.com/Susurrium/wakatime-stats) using
+`badge-maker@6.0.0` (MIT OR Apache-2.0). Only generated images and a minimal
+public statistics snapshot are delivered; collection software and credentials
+are not distributed by this website. Friend avatar maintenance uses only the reviewed source URLs. External links are content,
 not a license grant. `public/links.json` is a manually reviewed snapshot and
 must not be mutated automatically during deployment.
