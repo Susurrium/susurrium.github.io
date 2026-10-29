@@ -11,7 +11,6 @@ import { buildHomeSayingCatalog, homeSayingItems } from '@/lib/home/saying-catal
 import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/BaseLayout.astro'
 import ContentCard from '@/components/cards/ContentCard.astro'
-import CodeTimeCard from '@/components/CodeTimeCard.astro'
 import EducationCard from '@/components/EducationCard.astro'
 import BlogTimeline from '@/components/home/BlogTimeline.astro'
 import GitHubContributionHeatmap from '@/components/home/GitHubContributionHeatmap.astro'
@@ -20,6 +19,7 @@ import HomeSayingHead from '@/components/home/HomeSayingHead.astro'
 import ProfileIntro from '@/components/home/ProfileIntro.astro'
 import RandomSayingCard from '@/components/home/RandomSayingCard.astro'
 import ResidenceCard from '@/components/home/ResidenceCard.astro'
+import WakaTimeStats from '@/components/WakaTimeStats.astro'
 
 const contentCatalog = await loadContentCatalog()
 const pageData = buildHomePageData(contentCatalog)
@@ -161,7 +161,7 @@ const meta = {
             >GitHub ↗</a
           >
         </div>
-        <CodeTimeCard />
+        <WakaTimeStats />
         <GitHubContributionHeatmap />
       </section>
     </div>

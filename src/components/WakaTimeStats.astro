@@ -1,0 +1,93 @@
+---
+interface Props {
+  class?: string
+}
+
+const { class: className } = Astro.props
+const repository = 'https://github.com/Susurrium/wakatime-stats'
+const source = 'https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges'
+const metrics = [
+  { file: 'vscode.svg', alt: 'VS Code 累计编程时间（WakaTime）' },
+  { file: 'codex-ai.svg', alt: 'Codex 桌面 App 累计 AI 编程时间（WakaTime）' }
+]
+---
+
+<div class:list={['wakatime-stats', className]} data-wakatime-stats>
+  <div class='wakatime-stats__metrics'>
+    {
+      metrics.map(({ file, alt }) => (
+        <a
+          href={repository}
+          target='_blank'
+          rel='noopener noreferrer'
+          class='wakatime-stats__metric'
+        >
+          <img
+            src={`${source}/${file}`}
+            {alt}
+            width='210'
+            height='20'
+            loading='lazy'
+            decoding='async'
+            referrerpolicy='no-referrer'
+          />
+        </a>
+      ))
+    }
+  </div>
+  <a
+    href={`${repository}/blob/main/stats.json`}
+    target='_blank'
+    rel='noopener noreferrer'
+    class='wakatime-stats__updated'
+  >
+    <img
+      src={`${source}/updated.svg`}
+      alt='WakaTime 统计截至时间（北京时间），点击查看统计快照'
+      width='300'
+      height='20'
+      loading='lazy'
+      decoding='async'
+      referrerpolicy='no-referrer'
+    />
+  </a>
+</div>
+
+<style>
+  .wakatime-stats {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .wakatime-stats__metrics {
+    display: flex;
+    max-width: 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .wakatime-stats__metric {
+    display: inline-flex;
+    width: 210px;
+    max-width: 100%;
+    min-height: 20px;
+  }
+
+  .wakatime-stats__updated {
+    display: inline-flex;
+    width: 300px;
+    max-width: 100%;
+    min-height: 20px;
+  }
+
+  .wakatime-stats img {
+    display: block;
+    width: 100%;
+    height: 20px;
+    object-fit: contain;
+    object-position: left center;
+  }
+</style>

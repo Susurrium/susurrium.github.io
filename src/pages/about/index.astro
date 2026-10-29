@@ -8,8 +8,8 @@ import { Button } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
 import AboutTimeline from '@/components/about/AboutTimeline.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
-import CodeTimeCard from '@/components/CodeTimeCard.astro'
 import ConnectCards from '@/components/ConnectCards.astro'
+import WakaTimeStats from '@/components/WakaTimeStats.astro'
 import zotero from '@/assets/tools/zotero.png'
 
 const educationTimelineEntries = educationEntries.map(toProfileTimelineEntry)
@@ -55,7 +55,7 @@ const headings = [
   comment
   effectProfile='about'
 >
-  <CodeTimeCard />
+  <WakaTimeStats />
 
   <h2 id='general-talk' class='invisible m-0 h-0'>General Talk</h2>
   <p class='text-muted-foreground' set:html={profileIntro.role} />
