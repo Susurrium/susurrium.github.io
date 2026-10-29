@@ -71,7 +71,11 @@ const allowedMusicRuntimePaths = new Set([
 ])
 
 const allowedUmamiRuntimePaths = new Set(['/script.js'])
-const allowedCodeTimeRuntimePaths = new Set(['/endpoint'])
+const allowedWakaTimeRuntimePaths = new Set([
+  '/Susurrium/wakatime-stats/main/badges/vscode.svg',
+  '/Susurrium/wakatime-stats/main/badges/codex-ai.svg',
+  '/Susurrium/wakatime-stats/main/badges/updated.svg'
+])
 
 function isAllowedMusicRuntime(url) {
   try {
@@ -91,11 +95,15 @@ function isAllowedUmamiRuntime(url) {
   }
 }
 
-function isAllowedCodeTimeRuntime(url) {
+function isAllowedWakaTimeRuntime(url) {
   try {
     const parsed = new URL(url)
     return (
-      parsed.hostname === 'shields.jannchie.com' && allowedCodeTimeRuntimePaths.has(parsed.pathname)
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'raw.githubusercontent.com' &&
+      allowedWakaTimeRuntimePaths.has(parsed.pathname) &&
+      !parsed.search &&
+      !parsed.hash
     )
   } catch {
     return false
@@ -103,7 +111,7 @@ function isAllowedCodeTimeRuntime(url) {
 }
 
 function isAllowedExternalRuntime(url) {
-  return isAllowedMusicRuntime(url) || isAllowedUmamiRuntime(url) || isAllowedCodeTimeRuntime(url)
+  return isAllowedMusicRuntime(url) || isAllowedUmamiRuntime(url) || isAllowedWakaTimeRuntime(url)
 }
 
 function firstPaths(paths) {

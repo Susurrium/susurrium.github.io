@@ -54,8 +54,10 @@ function collectionEntries(directory) {
         if (document.errors.length > 0)
           throw new Error(`Invalid frontmatter in ${absolute}: ${document.errors[0].message}`)
         const rawDate = document.get('publishDate')
+        const rawUpdatedDate = document.get('updatedDate')
         entries.push({
           date: rawDate ? new Date(rawDate) : undefined,
+          updatedDate: rawUpdatedDate ? new Date(rawUpdatedDate) : undefined,
           draft: document.get('draft') === true,
           id: relative(base, absolute)
             .replace(/\\/g, '/')
@@ -76,12 +78,12 @@ function collectionEntries(directory) {
   return entries
 }
 
-function publishedRecent(directory, { byDate = true } = {}) {
+function publishedRecent(directory, { byDate = true, useUpdatedDate = false } = {}) {
   return collectionEntries(directory)
     .filter((entry) => !entry.draft)
     .sort((left, right) => {
-      const leftTime = left.date?.getTime()
-      const rightTime = right.date?.getTime()
+      const leftTime = (useUpdatedDate ? (left.updatedDate ?? left.date) : left.date)?.getTime()
+      const rightTime = (useUpdatedDate ? (right.updatedDate ?? right.date) : right.date)?.getTime()
       if (byDate && Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
         const dateDifference = rightTime - leftTime
         if (dateDifference !== 0) return dateDifference
@@ -294,7 +296,9 @@ expect(existsSync(distFile('home/index.html')), 'Home output exists')
 if (existsSync(distFile('home/index.html'))) {
   const home = readDist('home/index.html')
   const allBlogs = publishedRecent('src/content/blog')
-  const expectedBlogs = allBlogs.slice(0, 3).map((entry) => entry.id)
+  const expectedBlogs = publishedRecent('src/content/blog', { useUpdatedDate: true })
+    .slice(0, 3)
+    .map((entry) => entry.id)
   const allTraces = publishedRecent('src/content/traces')
   const expectedTraces = allTraces.slice(0, 3).map((entry) => entry.id)
   const allSayings = publishedRecent('src/content/sayings', { byDate: false })
