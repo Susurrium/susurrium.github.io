@@ -1,93 +1,104 @@
 ---
+import { formatWakaTimeDuration, loadWakaTimeBuildSnapshot } from '@/lib/wakatime'
+
 interface Props {
   class?: string
 }
 
 const { class: className } = Astro.props
 const repository = 'https://github.com/Susurrium/wakatime-stats'
-const source = 'https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges'
+const snapshot = await loadWakaTimeBuildSnapshot()
 const metrics = [
-  { file: 'vscode.svg', alt: 'VS Code 累计编程时间（WakaTime）' },
-  { file: 'codex-ai.svg', alt: 'Codex 桌面 App 累计 AI 编程时间（WakaTime）' }
+  { key: 'vscode', label: 'Code Time', value: snapshot.metrics.vscode.seconds },
+  { key: 'codexAi', label: 'AI Code Time', value: snapshot.metrics.codexAi.seconds }
 ]
 ---
 
-<div class:list={['wakatime-stats', className]} data-wakatime-stats>
-  <div class='wakatime-stats__metrics'>
-    {
-      metrics.map(({ file, alt }) => (
-        <a
-          href={repository}
-          target='_blank'
-          rel='noopener noreferrer'
-          class='wakatime-stats__metric'
-        >
-          <img
-            src={`${source}/${file}`}
-            {alt}
-            width='210'
-            height='20'
-            loading='lazy'
-            decoding='async'
-            referrerpolicy='no-referrer'
-          />
-        </a>
-      ))
-    }
-  </div>
+<wakatime-stats
+  class:list={['wakatime-stats not-prose', className]}
+  data-wakatime-stats
+  data-source-updated-at={snapshot.sourceUpdatedAt}
+>
   <a
-    href={`${repository}/blob/main/stats.json`}
+    href={repository}
     target='_blank'
     rel='noopener noreferrer'
-    class='wakatime-stats__updated'
+    class='wakatime-stats__surface'
+    title='查看 WakaTime 累计编程统计'
   >
-    <img
-      src={`${source}/updated.svg`}
-      alt='WakaTime 统计截至时间（北京时间），点击查看统计快照'
-      width='300'
-      height='20'
-      loading='lazy'
-      decoding='async'
-      referrerpolicy='no-referrer'
-    />
+    <dl class='wakatime-stats__metrics'>
+      {
+        metrics.map(({ key, label, value }) => (
+          <div class='wakatime-stats__metric'>
+            <dt>{label}</dt>
+            <dd data-wakatime-value={key}>{formatWakaTimeDuration(value)}</dd>
+          </div>
+        ))
+      }
+    </dl>
   </a>
-</div>
+</wakatime-stats>
+
+<script>
+  import '@/scripts/wakatime-stats'
+</script>
 
 <style>
   .wakatime-stats {
-    display: flex;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
     min-width: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+  }
+
+  .wakatime-stats__surface {
+    display: block;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid hsl(var(--border) / 0.8);
+    border-radius: 0.75rem;
+    background: hsl(var(--background) / 0.92);
+    color: hsl(var(--foreground));
+    text-decoration: none;
+  }
+
+  .wakatime-stats__surface:hover {
+    border-color: hsl(var(--foreground) / 0.25);
+  }
+
+  .wakatime-stats__surface:focus-visible {
+    outline: 2px solid hsl(var(--foreground) / 0.65);
+    outline-offset: 3px;
   }
 
   .wakatime-stats__metrics {
     display: flex;
-    max-width: 100%;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    margin: 0;
   }
 
   .wakatime-stats__metric {
     display: inline-flex;
-    width: 210px;
-    max-width: 100%;
-    min-height: 20px;
+    align-items: baseline;
+    gap: 0.5rem;
+    white-space: nowrap;
+    line-height: 1.25rem;
   }
 
-  .wakatime-stats__updated {
-    display: inline-flex;
-    width: 300px;
-    max-width: 100%;
-    min-height: 20px;
+  .wakatime-stats dt {
+    margin: 0;
+    padding: 0;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    font-weight: 500;
   }
 
-  .wakatime-stats img {
-    display: block;
-    width: 100%;
-    height: 20px;
-    object-fit: contain;
-    object-position: left center;
+  .wakatime-stats dd {
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 </style>
