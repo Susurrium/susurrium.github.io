@@ -509,13 +509,17 @@ About 装饰人物的图片地址保存于 `data-*`，仅在宽度、动画偏�
 
 PKU 层在宽度小于 768px、粗指针或减少动画时关闭。页面隐藏、路由切换和设备条件变化释放实例，条件恢复时重建。About 小人限定至少 1440px；滚动、bfcache 与减少动画变化遵守清理契约。原始算法参数与来源身份保留于 [来源台账](./SOURCE_LEDGER.md)，具体实现见 [effects](../src/components/effects/)。
 
-外部服务限定已登记的 CARTO/OSM、公共音乐、Umami、WakaTime 公开徽章、Waline、构建期 GitHub 数据与友链头像。Geolocation 由浏览器在用户打开 Globe 后授权；普通正文超链接与可加载媒体分别处理。资源判定以 [resource-audit](../scripts/lib/resource-audit.mjs) 和 [发布检查](../scripts/verify-phase6.mjs) 为实现依据。
+外部服务限定已登记的 CARTO/OSM、公共音乐、Umami、WakaTime 公开统计快照、Waline、构建期 GitHub 数据与友链头像。Geolocation 由浏览器在用户打开 Globe 后授权；普通正文超链接与可加载媒体分别处理。资源判定以 [resource-audit](../scripts/lib/resource-audit.mjs) 和 [发布检查](../scripts/verify-phase6.mjs) 为实现依据。
 
 ### 编程时间统计
 
-Home 与 About 共用 `WakaTimeStats.astro`，通过原生图片显示 VS Code、Codex 桌面 AI 的累计时长和北京时间的统计截至时间。图片来自 `Susurrium/wakatime-stats` 仓库的 `badges/vscode.svg`、`codex-ai.svg`、`updated.svg`；发布检查只允许这三个精确资源地址。容器预留图片区域，窄屏换行，不注册客户端监听器或定时器。图片替代文本和链接提供可访问名称，统计来源与快照可以直接打开。
+Home 与 About 共用 `WakaTimeStats.astro`，在同一个中性色容器中用原生 `dl` 展示 `Code Time` 与 `AI Code Time`。标签使用次要文字颜色，时长使用前景色和等宽数字；两项按内容宽度自然排列，水平间隔 1rem，窄屏按完整统计项换行。颜色读取站点主题变量，整个容器提供统计来源链接和键盘焦点。
 
-统计仓库每小时第 17 分钟通过 GitHub Actions 请求 WakaTime 累计统计，精确匹配 `VS Code` 和 `Codex Vscode`，不合并 `Codex CLI`。来源缺失、分类异常、认证失败或缓存未完成时不发布新产物；已发布图片保留上次成功值，并显示 WakaTime 源更新时间。网页只加载公开 SVG，不持有 OAuth Token 或采集 Key。采集与统计更新独立于网站的手动部署，维护入口见 [开发指南](./DEVELOPMENT.md#wakatime-统计维护)。
+数据入口固定为 `https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/stats.json`。[统计模块](../src/lib/wakatime.ts) 校验版本、累计范围、来源名称、时间戳和非负秒数；构建时共用一份真实快照，读取失败使构建明确失败。服务器 HTML 已包含两项时长，无 JavaScript 时可阅读。
+
+[客户端组件](../src/scripts/wakatime-stats.ts) 在距视口 200px 时读取公开快照，每次连接只刷新一次。离开页面时释放 IntersectionObserver 并取消请求，过期挂载和早于当前记录的响应不更新 DOM。刷新失败保留服务器输出的有效时长，并记录诊断状态。页面不显示更新时间，时间戳保留在快照和内部状态中。
+
+统计仓库每小时第 17 分钟通过 GitHub Actions 请求 WakaTime 累计统计，精确匹配 `VS Code` 和 `Codex Vscode`。来源缺失、分类异常、认证失败或缓存未完成时不发布新产物。网站读取公开数据，不持有 OAuth Token 或采集 Key。采集与统计更新独立于网站的手动部署，维护入口见 [开发指南](./DEVELOPMENT.md#wakatime-统计维护)。
 
 ## 视觉与交互约定
 
