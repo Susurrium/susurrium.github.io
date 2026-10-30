@@ -8,15 +8,14 @@
 
 2026-09-02 的 [站长确认记录](./archive/OWNER_CONFIRMATION_RECORD.zh-CN.md) 保存当时媒体、字体、链接和位置的确认范围。第三方许可、署名和外部授权证据见 [素材说明](./THIRD_PARTY_NOTICES.md)。
 
-生产站默认不热链参考站资源。已确认的运行时例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、WakaTime 公开徽章和 Waline；构建期 GitHub 贡献数据与友链头像维护下载使用已登记来源。相关服务/路径在门禁和清单中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
+生产站默认不热链参考站资源。已确认的运行时例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、WakaTime 公开统计快照和 Waline；构建期 GitHub 贡献数据与友链头像维护下载使用已登记来源。相关服务/路径在门禁和清单中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
 
 ## WakaTime 编程时间（2026-10-30）
 
-用户要求使用 WakaTime 官方钩子采集 Codex 桌面 AI 活动及官方 VS Code 扩展采集编辑器活动，并授权配置 GitHub Actions 和后续网站迁移。读取 Token 仅用于私密 API 请求和统计仓库的 Actions Secret。
+用户要求使用 WakaTime 官方钩子采集 Codex 桌面 AI 活动及官方 VS Code 扩展采集编辑器活动，并授权配置 GitHub Actions 和后续网站迁移。同日确认以 Code Time、AI Code Time 标签、同一中性色容器和自然间距展示两项时长，页面不显示更新时间。读取 Token 仅用于私密 API 请求和统计仓库的 Actions Secret。
 
 - 数据服务：[WakaTime](https://wakatime.com/)、[统计及认证接口](https://wakatime.com/developers)。本机采集使用其官方插件，不向网页交付采集程序。
-- 公开产物：[Susurrium/wakatime-stats](https://github.com/Susurrium/wakatime-stats)。原生图片精确限定为 `https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges/` 下的 `vscode.svg`、`codex-ai.svg`、`updated.svg`。
-- 徽章生成：独立统计仓库固定使用 `badge-maker@6.0.0`，MIT OR Apache-2.0；只发布生成的 SVG。公开快照仅包含两项来源的秒数、累计范围和时间戳。
+- 公开产物：[Susurrium/wakatime-stats](https://github.com/Susurrium/wakatime-stats)。网站数据入口精确限定为 `https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/stats.json`，构建时和组件进入视口后读取。公开快照仅包含两项来源的秒数、累计范围和时间戳。
 - 网站实现：[WakaTimeStats](../src/components/WakaTimeStats.astro)，Home 和 About 共用；维护流程见 [开发指南](./DEVELOPMENT.md#wakatime-统计维护)。
 
 ## 2026-10-22 发布授权

@@ -70,13 +70,13 @@ Projects 的项目顺序、完整描述、入口 URL 与可访问标签维护在
 
 ### WakaTime 统计维护
 
-Home 与 About 的编程时间组件为 [WakaTimeStats](../src/components/WakaTimeStats.astro)。公开图片由 [统计仓库](https://github.com/Susurrium/wakatime-stats) 的 `Update WakaTime badges` 工作流生成；该独立仓库的每小时定时更新不触发本网站部署。
+Home 与 About 的编程时间组件为 [WakaTimeStats](../src/components/WakaTimeStats.astro)，用原生文字显示 `Code Time` 和 `AI Code Time`。公开数据由 [统计仓库](https://github.com/Susurrium/wakatime-stats) 的 `Update WakaTime badges` 工作流维护；该独立仓库的每小时定时更新不触发本网站部署。
 
-读取 Token 保存为统计仓库的 Actions Secret `WAKATIME_READ_TOKEN`，采用 OAuth Bearer 认证；本机 VS Code 扩展和 Codex 官方插件继续使用采集 API Key。Token 更新在 GitHub Secret 页面完成，不写入博客文件或公开徽章地址。来源名称在统计仓库的 `config.json` 中精确配置：`VS Code` 对应编辑器活动，`Codex Vscode` 对应当前桌面会话来源。WakaTime 同来源的 Codex IDE 活动可能合并进入该项；新增使用入口时重新核实分类。
+读取 Token 保存为统计仓库的 Actions Secret `WAKATIME_READ_TOKEN`，采用 OAuth Bearer 认证；本机 VS Code 扩展和 Codex 官方插件继续使用采集 API Key。Token 更新在 GitHub Secret 页面完成，不写入博客文件或公开地址。来源名称在统计仓库的 `config.json` 中精确配置：`VS Code` 对应 Code Time，`Codex Vscode` 对应 AI Code Time。WakaTime 同来源的 Codex IDE 活动可能合并进入该项；新增使用入口时重新核实分类。
 
-手动更新可在统计仓库 Actions 页面运行工作流。成功后核对三张 SVG 与 `stats.json` 的秒数、累计范围及源更新时间；数据刷新中会有界重试，认证错误和来源缺失明确失败。图片保留上次成功产物，更新时间用于判断数据新鲜度，GitHub 调度和图片缓存可能延迟更新。网站发布保持原有手动流程。
+手动更新可在统计仓库 Actions 页面运行工作流。成功后核对 `stats.json` 的秒数、累计范围及源更新时间；数据刷新中会有界重试，认证错误和来源缺失明确失败。构建和浏览器均通过 [统计模块](../src/lib/wakatime.ts) 读取该公开快照；构建时网络和数据错误明确终止，浏览器刷新失败时保留服务器输出的记录。源更新时间可在统计仓库核对，GitHub 调度和缓存可能延迟更新。网站发布保持原有手动流程。
 
-组件或图片路径变更时，同步核对 [发布检查](../scripts/verify-phase6.mjs) 的精确资源清单、来源台账和第三方说明，并验证 Home、About、窄屏及站内切换。图片加载失败时仍有替代文本和统计仓库链接。
+组件或数据入口变更时，同步维护来源台账和第三方说明，验证 Home、About 的明暗主题、窄屏换行、键盘访问、无 JavaScript、读取失败和站内切换后的取消行为。页面共用一个紧凑容器，按内容宽度排列两项时长。
 
 ## 公共素材维护
 
