@@ -8,7 +8,15 @@
 
 2026-09-02 的 [站长确认记录](./archive/OWNER_CONFIRMATION_RECORD.zh-CN.md) 保存当时媒体、字体、链接和位置的确认范围。第三方许可、署名和外部授权证据见 [素材说明](./THIRD_PARTY_NOTICES.md)。
 
-生产站默认不热链参考站资源。已确认的运行时例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、WakaTime 公开统计快照和 Waline；构建期 GitHub 贡献数据与友链头像维护下载使用已登记来源。相关服务/路径在门禁和清单中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
+生产站默认不热链参考站资源。已确认的运行时例外仅限当前功能所需的 CARTO 地图、公共网易云 Meting 播放器运行时、生产 Umami、WakaTime 分类徽章和 Waline；构建期 GitHub 贡献数据与友链头像维护下载使用已登记来源。相关服务/路径在门禁和清单中精确登记。文章正文的其他外部图片、视频、音频、iframe、脚本和样式仍应在最终发布前逐项审查，通常复制到本仓库并再次校验哈希。
+
+## WakaTime 图表库与分类徽章（2026-11-15）
+
+用户要求按本次分析方案完善独立图表展示与分发仓库，并恢复博客紧凑徽章样式。博客使用统计仓库生成的 `flat` SVG，`Code Time` 读取 `Coding` 分类，`AI Code Time` 读取 `AI Coding` 分类。外部图片地址精确限定为 `https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges/coding/all-time.svg` 与 `https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges/ai-coding/all-time.svg`，由发布门禁按完整地址登记。
+
+独立仓库的图表生成、数据口径、公开范围和凭据维护见其 README。项目和目标采用明确公开别名配置，网站复用生成的成品图片。2026-10-30 的记录保留当时的决定语境。
+
+同次任务中，用户进一步要求“真实提交推送”，授权将图表仓库和博客的本次改动提交、推送到各自工作分支，并使用统计仓库已有 Actions Secret 执行真实账号数据验证。
 
 ## WakaTime 编程时间（2026-10-30）
 

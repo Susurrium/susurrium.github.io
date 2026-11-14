@@ -76,9 +76,10 @@ the project's Apache-2.0 license does not grant rights to the depicted artwork.
 
 The candidate keeps explicit runtime exceptions documented in
 [source ledger](./SOURCE_LEDGER.md) (CARTO/OSM maps, Waline, public music, Umami,
-the public WakaTime snapshot). The website reads the minimal public `stats.json`
-from [Susurrium/wakatime-stats](https://github.com/Susurrium/wakatime-stats) and
-renders the time values with native HTML and the site's existing theme styles.
+the WakaTime category badges). The website embeds the generated `flat` SVG badges
+from [Susurrium/wakatime-stats](https://github.com/Susurrium/wakatime-stats), using
+the reviewed `badges/coding/all-time.svg` and `badges/ai-coding/all-time.svg` paths.
+The badge graphics are generated with the repository's badge-maker dependency.
 Collection software and credentials are not distributed by this website.
 Friend avatar maintenance uses only the reviewed source URLs. External links are content,
 not a license grant. `public/links.json` is a manually reviewed snapshot and
