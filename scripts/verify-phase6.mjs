@@ -71,6 +71,10 @@ const allowedMusicRuntimePaths = new Set([
 ])
 
 const allowedUmamiRuntimePaths = new Set(['/script.js'])
+const allowedWakaTimeBadges = new Set([
+  'https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges/coding/all-time.svg',
+  'https://raw.githubusercontent.com/Susurrium/wakatime-stats/main/badges/ai-coding/all-time.svg'
+])
 
 function isAllowedMusicRuntime(url) {
   try {
@@ -91,7 +95,7 @@ function isAllowedUmamiRuntime(url) {
 }
 
 function isAllowedExternalRuntime(url) {
-  return isAllowedMusicRuntime(url) || isAllowedUmamiRuntime(url)
+  return isAllowedMusicRuntime(url) || isAllowedUmamiRuntime(url) || allowedWakaTimeBadges.has(url)
 }
 
 function firstPaths(paths) {
