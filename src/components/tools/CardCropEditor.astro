@@ -22,6 +22,7 @@ import {
   type ResolvedCardImage
 } from '@/data/home-media'
 import { frameForCutSide } from '@/lib/card-crop/types'
+import { loadContentCatalog } from '@/lib/content-layer/catalog'
 
 import CardMediaFrame from '@/components/cards/CardMediaFrame.astro'
 import MediaCard from '@/components/cards/MediaCard.astro'
@@ -34,6 +35,7 @@ interface EditorAsset {
   readonly filename: string
   readonly key: string
   readonly src: string
+  readonly sourcePath?: string
   readonly usages: readonly EditorUsage[]
 }
 
@@ -52,8 +54,6 @@ const addAssets = (items: readonly HomeMediaAsset[], usage: EditorUsage) => {
   })
 }
 
-// The card workbench intentionally contains only the two card pools. Hero has
-// its own full-bleed positioning workbench and data contract.
 addAssets(sayingDecorativeImages, 'saying')
 addAssets(traceFallbackImages, 'trace')
 
@@ -65,6 +65,20 @@ const editorAssets: EditorAsset[] = [...assets.entries()].map(([filename, value]
   src: value.asset.src,
   usages: [...value.usages]
 }))
+const catalog = await loadContentCatalog()
+for (const record of catalog.all) {
+  if (!('image' in record) || !record.image || record.kind === 'blog') continue
+  const filename = `${encodeURIComponent(record.image.key!)}.webp`
+  editorAssets.push({
+    defaultFrame: 'diagonal-right',
+    description: `${record.title}：${record.image.alt ?? ''}`,
+    filename,
+    key: record.image.key!,
+    src: record.image.src,
+    sourcePath: cardCropSelections[filename]?.sourcePath,
+    usages: [record.kind]
+  })
+}
 
 /*
  * Step 2 deliberately uses the production card component rather than a

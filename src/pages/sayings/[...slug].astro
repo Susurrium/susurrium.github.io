@@ -2,7 +2,7 @@
 import { render } from 'astro:content'
 import {
   adjacentContentRecords,
-  buildCollectionPageData,
+  buildContentMediaMap,
   buildDetailPageData,
   getPageItems,
   hydratePageItem,
@@ -21,16 +21,7 @@ export async function getStaticPaths() {
   if (!isContentSurfaceEnabled('saying', 'reading')) return []
   const contentCatalog = await loadContentCatalog()
   const records = sortContentRecords(contentCatalog.byKind.saying, 'id-asc')
-  const archivePage = buildCollectionPageData('saying-archive', '/sayings', records)
-  const archivePlacementByContentKey = new Map(
-    getPageItems(archivePage, 'content', 'items').map(({ contentKey, placement }) => [
-      contentKey,
-      {
-        index: placement.index,
-        ...(placement.imageAssignment ? { imageAssignment: placement.imageAssignment } : {})
-      }
-    ])
-  )
+  const mediaMap = buildContentMediaMap(contentCatalog.all)
 
   return records.map((record, index) => ({
     params: { slug: record.id },
@@ -45,7 +36,7 @@ export async function getStaticPaths() {
           relatedGroupKey: 'sayings',
           relatedMeaning: '按稳定 ID 排列的 Saying 条目',
           relatedSectionMeaning: 'Saying 详情页相邻导航内容',
-          primaryCardPlacement: archivePlacementByContentKey.get(record.key)
+          mediaMap
         }
       )
     }

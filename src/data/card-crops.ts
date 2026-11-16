@@ -112,15 +112,25 @@ export function getCardCropRecord(sourceOrFilename?: string | null): CardCropRec
  * intentionally not emitted: an unresolved asset must use the safe legacy
  * fallback rather than silently disappearing from the page.
  */
-export function getCardCropRuntime(sourceOrFilename?: string | null): CardCropRuntime | undefined {
+export function getCardCropRuntime(
+  sourceOrFilename?: string | null,
+  targetFrame?: CardCropFrame
+): CardCropRuntime | undefined {
   const record = getCardCropRecord(sourceOrFilename)
   if (!record) return undefined
 
-  const selectedFrame = isFrame(record.selection)
-    ? record.selection
-    : record.selection === 'both'
-      ? (record.preferredFrame ?? 'diagonal-right')
-      : undefined
+  if (targetFrame && record.selection !== 'both' && record.selection !== targetFrame) {
+    throw new Error(
+      `Card crop ${sourceOrFilename}: requested ${targetFrame}, allowed ${record.selection}`
+    )
+  }
+  const selectedFrame =
+    targetFrame ??
+    (isFrame(record.selection)
+      ? record.selection
+      : record.selection === 'both'
+        ? (record.preferredFrame ?? 'diagonal-right')
+        : undefined)
   if (!selectedFrame) return undefined
 
   return {

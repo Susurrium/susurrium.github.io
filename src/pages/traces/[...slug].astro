@@ -2,7 +2,7 @@
 import { render } from 'astro:content'
 import {
   adjacentContentRecords,
-  buildCollectionPageData,
+  buildContentMediaMap,
   buildDetailPageData,
   getPageItems,
   hydratePageItem,
@@ -21,16 +21,7 @@ export async function getStaticPaths() {
   if (!isContentSurfaceEnabled('trace', 'reading')) return []
   const contentCatalog = await loadContentCatalog()
   const records = sortContentRecords(contentCatalog.byKind.trace, 'publish-date-desc')
-  const archivePage = buildCollectionPageData('trace-archive', '/traces', records)
-  const archivePlacementByContentKey = new Map(
-    getPageItems(archivePage, 'content', 'items').map(({ contentKey, placement }) => [
-      contentKey,
-      {
-        index: placement.index,
-        ...(placement.imageAssignment ? { imageAssignment: placement.imageAssignment } : {})
-      }
-    ])
-  )
+  const mediaMap = buildContentMediaMap(contentCatalog.all)
 
   return records.map((record, index) => ({
     params: { slug: record.id },
@@ -45,7 +36,7 @@ export async function getStaticPaths() {
           relatedGroupKey: 'traces',
           relatedMeaning: '按发布时间排列的 Trace 条目',
           relatedSectionMeaning: 'Trace 详情页相邻导航内容',
-          primaryCardPlacement: archivePlacementByContentKey.get(record.key)
+          mediaMap
         }
       )
     }

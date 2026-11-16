@@ -103,7 +103,8 @@ const {
   title
 } = Astro.props as Props
 
-const runtimeCrop = crop ?? image?.crop
+const planned = image?.imageSide !== undefined && image.layoutVariant !== undefined
+const runtimeCrop = planned ? image.crop : (crop ?? image?.crop)
 const runtimeCropPosition = runtimeCrop
   ? `${runtimeCrop.transform.x}% ${runtimeCrop.transform.y}%`
   : cropPosition
@@ -115,14 +116,25 @@ const runtimeCropZoom = runtimeCrop?.transform.zoom ?? 1
  * input for the crop editor's legacy preview call; it cannot override an
  * assigned image/frame pair.
  */
-const frame: CardCropFrame =
-  runtimeCrop?.frame ??
-  (image?.imageSide ? frameForImageSide(image.imageSide) : undefined) ??
-  (diagonalSide ? (diagonalSide === 'left' ? 'diagonal-left' : 'diagonal-right') : undefined) ??
-  (getCardCutSide(image) === 'left' ? 'diagonal-left' : 'diagonal-right')
+if (
+  planned &&
+  (!image.crop ||
+    image.crop.frame !== frameForImageSide(image.imageSide!) ||
+    image.layoutVariant !== layoutVariantForFrame(image.crop.frame))
+) {
+  throw new Error(`Invalid planned card media for ${contentType}:${contentId}`)
+}
+const frame: CardCropFrame = planned
+  ? image.crop!.frame
+  : (runtimeCrop?.frame ??
+    (image?.imageSide ? frameForImageSide(image.imageSide) : undefined) ??
+    (diagonalSide ? (diagonalSide === 'left' ? 'diagonal-left' : 'diagonal-right') : undefined) ??
+    (getCardCutSide(image) === 'left' ? 'diagonal-left' : 'diagonal-right'))
 const cutSide = frame === 'diagonal-left' ? 'left' : 'right'
-const imageSide: CardImageSide = imageSideForFrame(frame)
-const layoutVariant: CardLayoutVariant = layoutVariantForFrame(frame)
+const imageSide: CardImageSide = planned ? image.imageSide! : imageSideForFrame(frame)
+const layoutVariant: CardLayoutVariant = planned
+  ? image.layoutVariant!
+  : layoutVariantForFrame(frame)
 const cutsLeft = cutSide === 'left'
 const imageIsDecorative = image?.decorative ?? true
 // `index` remains part of the card API for stable fallback IDs; it never

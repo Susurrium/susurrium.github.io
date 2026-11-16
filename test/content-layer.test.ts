@@ -6,11 +6,11 @@ import {
   adaptTraceEntry
 } from '../src/lib/content-layer/adapters'
 import { toContentCardViewData, toTextCardViewData } from '../src/lib/content-layer/card-data'
+import { buildContentMediaMap } from '../src/lib/content-layer/media'
 import {
   buildCollectionPageData,
   buildDetailPageData,
   buildHomePageData,
-  buildSayingImageAssignmentMap,
   createPageItem,
   getPageItems,
   toMediaCardData,
@@ -147,7 +147,10 @@ function resolvedItem(
     | ReturnType<typeof adaptSayingEntry>,
   options = {}
 ) {
-  const item = createPageItem(record, options)
+  const item = createPageItem(record, {
+    imageAssignment: buildContentMediaMap([record]).get(record.key),
+    ...options
+  })
   return { ...item, card: toStandardCardData(record), record }
 }
 
@@ -346,7 +349,7 @@ describe('page data hierarchy', () => {
       all: [...baseCatalog.all.filter((record) => record.kind !== 'saying'), ...sayings],
       byKind: { ...baseCatalog.byKind, saying: sayings }
     }
-    const canonical = buildSayingImageAssignmentMap(sayings)
+    const canonical = buildContentMediaMap(sayings)
     const homeItems = getPageItems(buildHomePageData(catalog), 'featured-saying', 'candidates')
     const archiveItems = getPageItems(
       // Deliberately pass a different render order: identity, not this local

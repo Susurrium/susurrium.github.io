@@ -24,6 +24,7 @@ type FilterUsage = 'all' | EditorUsage
 type FilterStatus = 'all' | 'pending' | 'confirmed' | 'neither'
 
 interface CatalogItem {
+  sourcePath?: string
   defaultFrame: CardCropFrame
   description: string
   filename: string
@@ -1021,7 +1022,17 @@ export function bootCardCropEditor(): void {
         ratio: CARD_CROP_FRAME_RATIO,
         width: CARD_CROP_FRAME_WIDTH
       },
-      items: draft,
+      items: Object.fromEntries(
+        Object.entries(draft).map(([filename, state]) => [
+          filename,
+          {
+            ...state,
+            ...(byFilename.get(filename)?.sourcePath
+              ? { sourcePath: byFilename.get(filename)!.sourcePath }
+              : {})
+          }
+        ])
+      ),
       schemaVersion: CARD_CROP_SCHEMA_VERSION
     })
     setSaveMessage('已导出当前配置')

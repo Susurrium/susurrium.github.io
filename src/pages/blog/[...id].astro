@@ -2,6 +2,7 @@
 import { render } from 'astro:content'
 import {
   adjacentContentRecords,
+  buildContentMediaMap,
   buildDetailPageData,
   getPageItems,
   hydratePageItem,
@@ -20,6 +21,7 @@ export async function getStaticPaths() {
   if (!isContentSurfaceEnabled('blog', 'reading')) return []
   const contentCatalog = await loadContentCatalog()
   const records = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
+  const mediaMap = buildContentMediaMap(contentCatalog.all)
 
   return records.map((record, index) => ({
     params: { id: record.id },
@@ -30,6 +32,7 @@ export async function getStaticPaths() {
         record,
         adjacentContentRecords(records, index),
         {
+          mediaMap,
           primaryMeaning: '当前 Blog 文章',
           relatedGroupKey: 'posts',
           relatedMeaning: '按 Blog 编辑日期排列的推荐条目',

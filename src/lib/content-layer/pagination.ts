@@ -1,5 +1,6 @@
 import type { Page, PaginateFunction } from 'astro'
 
+import { buildContentMediaMap } from './media'
 import { buildCollectionPageData, getPageItems, type PageItemOptions } from './page-data'
 import { isContentSurfaceEnabled } from './policy'
 import { sortContentRecords } from './queries'
@@ -99,7 +100,8 @@ export function buildCollectionStaticPaths(
     archivePageKinds[kind],
     definition.basePath,
     records,
-    options.itemOptions
+    options.itemOptions,
+    buildContentMediaMap(catalog.all)
   )
   const items: PageItem[] = getPageItems(pageData, 'content', 'items')
 

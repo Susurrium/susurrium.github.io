@@ -15,12 +15,13 @@ export interface CardImageAssignment {
   readonly alt: string
   readonly assetDescription: string
   readonly crop: CardCropRuntime
+  readonly decorative: boolean
   readonly frame: CardCropFrame
   readonly imageSide: CardImageSide
   readonly key: string
   readonly layoutVariant: CardLayoutVariant
   readonly occurrence: number
   readonly repeated: boolean
-  readonly source: 'decorative' | 'fallback'
+  readonly source: 'content' | 'decorative' | 'fallback'
   readonly src: string
 }

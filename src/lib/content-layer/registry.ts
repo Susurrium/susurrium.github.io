@@ -1,3 +1,4 @@
+import type { MediaPlanningPolicy } from '@/lib/card-layout/planner'
 import { directoryPath } from '@/lib/site-path'
 
 import type {
@@ -10,6 +11,7 @@ import type {
 } from './types'
 
 export interface ContentTypeDefinition {
+  readonly media: MediaPlanningPolicy
   readonly kind: ContentKind
   readonly label: string
   readonly pluralLabel: string
@@ -36,6 +38,7 @@ export interface ContentTypeDefinition {
  */
 export const contentTypeRegistry = {
   blog: {
+    media: { enabled: false },
     basePath: '/blog',
     capabilities: {
       comments: true,
@@ -57,6 +60,15 @@ export const contentTypeRegistry = {
     tagPath: '/blog/tags'
   },
   trace: {
+    media: {
+      enabled: true,
+      source: 'cover-or-pool',
+      pool: 'trace',
+      poolSource: 'fallback',
+      sort: 'publish-date-desc',
+      layout: 'alternating',
+      scope: 'public-kind'
+    },
     basePath: '/traces',
     capabilities: {
       comments: true,
@@ -78,6 +90,15 @@ export const contentTypeRegistry = {
     tagPath: '/traces/tags'
   },
   saying: {
+    media: {
+      enabled: true,
+      source: 'pool',
+      pool: 'saying',
+      poolSource: 'decorative',
+      sort: 'id-asc',
+      layout: 'alternating',
+      scope: 'public-kind'
+    },
     basePath: '/sayings',
     capabilities: {
       comments: true,
