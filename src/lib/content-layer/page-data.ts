@@ -1,13 +1,7 @@
-import {
-  getSayingDecorativeImage,
-  getTraceCardImage,
-  sayingDecorativeImages,
-  traceFallbackImages
-} from '@/data/home-media'
-import { buildAlternatingCardImageAssignments } from '@/lib/card-layout/alternating'
 import type { CardImageAssignment } from '@/lib/card-layout/types'
 import { normalizeContentPresentation } from '@/lib/compatibility/content-presentation'
 
+import { buildContentMediaMap } from './media'
 import { contentTagHref, isContentSurfaceEnabled, resolveContentPolicy } from './policy'
 import { getContentYear, sortContentRecords } from './queries'
 import { getContentTypeDefinition } from './registry'
@@ -25,8 +19,8 @@ import type {
   PageKind,
   PageSection,
   PageSectionRole,
+  ResolvedCardImage,
   ResolvedPageItem,
-  SayingRecord,
   StandardCardData
 } from './types'
 
@@ -41,62 +35,6 @@ export interface PageItemOptions {
   /** A page-level visual decision. Omit it to use the registry/policy default. */
   /** Canonical value, or a historical persisted value accepted at this boundary. */
   readonly presentation?: ContentPresentation | string
-}
-
-/**
- * Build the one canonical image assignment for every Saying identity.
- *
- * The archive planner is intentionally positional: it alternates the two
- * confirmed visual-side queues.  That is correct for an archive sequence, but
- * using the filtered/page-local index on Home or a tag page makes the same
- * Saying acquire a different image.  Resolve the queue once against the
- * complete stable ID order, then address it by the record's stable content
- * key everywhere else.
- *
- * The helper accepts a mixed record list so callers at a broad content-layer
- * boundary do not need to narrow their catalog first.  Non-Saying records are
- * ignored and the returned map is safe to use for any page projection.
- */
-export function buildSayingImageAssignmentMap(
-  records: readonly ContentRecord[]
-): ReadonlyMap<string, CardImageAssignment> {
-  const sayings = sortContentRecords(
-    records.filter((record): record is SayingRecord => record.kind === 'saying'),
-    'id-asc'
-  )
-  const assignments = buildAlternatingCardImageAssignments(sayingDecorativeImages, sayings.length, {
-    source: 'decorative'
-  })
-
-  return new Map(
-    sayings.map((record, index) => {
-      const assignment = assignments[index]
-      if (!assignment) throw new Error(`Unable to assign a Saying image at slot ${index}.`)
-      return [record.key, assignment] as const
-    })
-  )
-}
-
-/** One canonical fallback assignment per Trace, shared by every page surface. */
-export function buildTraceImageAssignmentMap(
-  records: readonly ContentRecord[]
-): ReadonlyMap<string, CardImageAssignment> {
-  const traces = sortContentRecords(
-    records.filter((record) => record.kind === 'trace'),
-    'publish-date-desc'
-  )
-  const assignments = buildAlternatingCardImageAssignments(traceFallbackImages, traces.length, {
-    source: 'fallback'
-  })
-  return new Map(
-    traces.flatMap((record, index) => {
-      // A real editorial cover always wins; it is resolved from the record itself.
-      const assignment = assignments[index]
-      return record.kind === 'trace' && !record.image && assignment
-        ? [[record.key, assignment] as const]
-        : []
-    })
-  )
 }
 
 /** Detail footers display adjacent entries; keep path props bounded as the archive grows. */
@@ -201,6 +139,7 @@ export function createPageData<K extends PageKind>(
 }
 
 export interface DetailPageDataOptions {
+  readonly mediaMap?: ReadonlyMap<string, CardImageAssignment>
   readonly primaryMeaning: string
   readonly relatedGroupKey: string
   readonly relatedMeaning: string
@@ -222,6 +161,7 @@ export function buildDetailPageData<K extends PageKind>(
   options: DetailPageDataOptions
 ): PageData<K> {
   const primaryItemOptions: PageItemOptions = {
+    imageAssignment: options.mediaMap?.get(primary.key),
     ...(options.primaryCardPlacement?.imageAssignment
       ? { imageAssignment: options.primaryCardPlacement.imageAssignment }
       : {}),
@@ -252,7 +192,9 @@ export function buildDetailPageData<K extends PageKind>(
         createPageGroup(
           options.relatedGroupKey,
           options.relatedMeaning,
-          related.map((record, index) => createPageItem(record, { index })),
+          related.map((record, index) =>
+            createPageItem(record, { index, imageAssignment: options.mediaMap?.get(record.key) })
+          ),
           'related'
         )
       ],
@@ -270,28 +212,16 @@ export function getPageItems(page: PageData, sectionKey: string, groupKey?: stri
 }
 
 /** Resolve the Media image policy after the item has crossed the page boundary. */
-export function resolveMediaImage(item: ResolvedPageItem) {
+export function resolveMediaImage(item: ResolvedPageItem): ResolvedCardImage {
   const { record } = item
-  if (record.kind === 'trace' && record.image) return getTraceCardImage(record.id, record.image)
   const assignment = item.placement.imageAssignment
   if (assignment) {
-    return {
-      alt: assignment.alt,
-      decorative: true,
-      imageSide: assignment.imageSide,
-      key: assignment.key,
-      layoutVariant: assignment.layoutVariant,
-      occurrence: assignment.occurrence,
-      repeated: assignment.repeated,
-      source: assignment.source,
-      src: assignment.src,
-      crop: assignment.crop
-    }
+    return assignment
   }
-  if (item.placement.presentation === 'media-decorative') {
-    return getSayingDecorativeImage(item.placement.index)
+  if (getContentTypeDefinition(record.kind).media.enabled) {
+    throw new Error(`Missing canonical media assignment for ${record.key}`)
   }
-  return getTraceCardImage(record.id, record.kind === 'saying' ? undefined : record.image)
+  return { alt: '', decorative: true, source: 'none' as const }
 }
 
 export function toMediaCardData(item: ResolvedPageItem): MediaCardData {
@@ -308,15 +238,11 @@ export function buildCollectionPageData(
   kind: PageKind,
   route: string,
   records: readonly ContentRecord[],
-  options: PageItemOptions = {}
+  options: PageItemOptions = {},
+  mediaMap = buildContentMediaMap(records)
 ): PageData {
-  const sayingImageAssignments =
-    kind === 'saying-archive' ? buildSayingImageAssignmentMap(records) : undefined
-  const traceImageAssignments =
-    kind === 'trace-archive' ? buildTraceImageAssignmentMap(records) : undefined
   const items = records.map((record, index) => {
-    const imageAssignment =
-      sayingImageAssignments?.get(record.key) ?? traceImageAssignments?.get(record.key)
+    const imageAssignment = mediaMap.get(record.key)
     return createPageItem(record, {
       ...options,
       ...(kind === 'blog-archive' ? { showPinned: true } : {}),
@@ -353,8 +279,7 @@ export function buildHomePageData(
   const sayingsById = sortContentRecords(sayings, 'id-asc')
   const recentBlogs = blogsByEditorialDate.slice(0, recentLimit)
   const recentTraces = tracesByPublishDate.slice(0, recentLimit)
-  const sayingImageAssignments = buildSayingImageAssignmentMap(sayingsById)
-  const traceImageAssignments = buildTraceImageAssignmentMap(catalog.byKind.trace)
+  const mediaMap = buildContentMediaMap(catalog.all)
 
   const yearInChina = (date: Date) => getContentYear(date)
   const currentYear = yearInChina(options.now ?? new Date())
@@ -377,7 +302,7 @@ export function buildHomePageData(
         )
 
   const sayingItems = sayingsById.map((record, index) => {
-    const imageAssignment = sayingImageAssignments.get(record.key)
+    const imageAssignment = mediaMap.get(record.key)
     return createPageItem(record, {
       actionLabel: 'Read',
       ...(imageAssignment ? { imageAssignment } : {}),
@@ -385,17 +310,24 @@ export function buildHomePageData(
     })
   })
   const recentBlogItems = recentBlogs.map((record, index) =>
-    createPageItem(record, { detailed: true, headingLevel: 4, index })
+    createPageItem(record, {
+      detailed: true,
+      headingLevel: 4,
+      index,
+      imageAssignment: mediaMap.get(record.key)
+    })
   )
   const recentTraceItems = recentTraces.map((record, index) =>
     createPageItem(record, {
       actionLabel: 'Read',
       index,
       headingLevel: 4,
-      imageAssignment: traceImageAssignments.get(record.key)
+      imageAssignment: mediaMap.get(record.key)
     })
   )
-  const timelineItems = timelineBlogs.map((record, index) => createPageItem(record, { index }))
+  const timelineItems = timelineBlogs.map((record, index) =>
+    createPageItem(record, { index, imageAssignment: mediaMap.get(record.key) })
+  )
 
   return createPageData('home', '/home', [
     createPageSection(

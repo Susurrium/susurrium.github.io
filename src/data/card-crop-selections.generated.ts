@@ -1837,5 +1837,39 @@ export const cardCropSelectionsGenerated: Readonly<Record<string, CardCropRecord
       }
     },
     "updatedAt": "2026-08-31T17:25:20.345Z"
+  },
+  "content-national-day-2026.webp": {
+    "filename": "content-national-day-2026.webp",
+    "sourcePath": "src/content/traces/national-day-2026/east-lake.webp",
+    "fit": "cover",
+    "preferredFrame": "diagonal-left",
+    "schemaVersion": 2,
+    "selection": "both",
+    "transforms": {
+      "diagonal-left": {
+        "x": 50,
+        "y": 50,
+        "zoom": 1
+      },
+      "diagonal-right": {
+        "x": 50,
+        "y": 50,
+        "zoom": 1
+      }
+    },
+    "cropRects": {
+      "diagonal-left": {
+        "height": 1,
+        "width": 0.7839285714285715,
+        "x": 0.10803571428571426,
+        "y": 0
+      },
+      "diagonal-right": {
+        "height": 1,
+        "width": 0.7839285714285715,
+        "x": 0.10803571428571426,
+        "y": 0
+      }
+    }
   }
 }

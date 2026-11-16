@@ -1,5 +1,6 @@
 ---
 import {
+  buildContentMediaMap,
   createPageData,
   createPageGroup,
   createPageItem,
@@ -22,6 +23,7 @@ if (!isContentSurfaceEnabled('blog', 'archive')) return Astro.redirect('/home/')
 
 const contentCatalog = await loadContentCatalog()
 const allPosts = sortContentRecords(contentCatalog.byKind.blog, 'editorial-date-desc')
+const mediaMap = buildContentMediaMap(contentCatalog.all)
 const postsByYear = new Map<number, typeof allPosts>()
 for (const post of allPosts) {
   const year =
@@ -47,7 +49,9 @@ const pageData = createPageData(
           createPageGroup(
             'posts',
             '该年份的 Blog 条目',
-            posts.map((post, index) => createPageItem(post, { index }))
+            posts.map((post, index) =>
+              createPageItem(post, { index, imageAssignment: mediaMap.get(post.key) })
+            )
           )
         ],
         String(year)

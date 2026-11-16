@@ -12,14 +12,8 @@
  * contract when that is part of the editorial plan.
  */
 
-import { getCardCropRuntime } from '@/data/card-crops'
 import { normalizeContentPresentation } from '@/lib/compatibility/content-presentation'
-import type {
-  ContentImageInput,
-  ContentKind,
-  ContentPresentation,
-  ResolvedCardImage
-} from '@/lib/content-layer/types'
+import type { ContentKind, ContentPresentation } from '@/lib/content-layer/types'
 
 export type {
   ContentImageInput,
@@ -193,8 +187,7 @@ export const sayingDecorativeImages: readonly HomeMediaAsset[] = [
   localAsset('saying-34', 'thumb-1920-986446.webp', 'Three-character sky composition')
 ]
 
-// No-image Trace fallback pool. This deliberately has a separate identity and
-// order from the Saying pool so stable ID hashing remains independently tunable.
+// Trace 备用图独立维护身份与顺序，完整集合按允许方向分配。
 export const traceFallbackImages: readonly HomeMediaAsset[] = [
   localAsset('trace-01', '13534647_p0_master1200.webp', 'Atmospheric illustrated environment'),
   localAsset('trace-02', '85970602_p0_master1200.webp', 'Scenic fantasy artwork'),
@@ -233,16 +226,6 @@ export function resolvePresentation(
   return normalizeContentPresentation(pageOverride, fallback)
 }
 
-/** A stable FNV-1a hash. Do not use list indexes for Trace fallbacks. */
-export function stableContentHash(value: string): number {
-  let hash = 0x811c9dc5
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return hash >>> 0
-}
-
 /**
  * Resolve the fixed slant for either a catalogue asset or a projected card
  * image. Non-catalogue content covers intentionally use the conservative
@@ -260,56 +243,6 @@ export function getCardCutSide(
 
   const filename = image?.src?.split(/[/?#]/).pop()
   return filename && cardCutSideByFilename[filename] ? cardCutSideByFilename[filename] : 'right'
-}
-
-export function getSayingDecorativeImage(archiveIndex: number): ResolvedCardImage {
-  if (sayingDecorativeImages.length === 0) {
-    return { alt: '', decorative: true, source: 'none' }
-  }
-
-  const normalizedIndex = Math.max(0, Math.trunc(archiveIndex))
-  const asset = sayingDecorativeImages[normalizedIndex % sayingDecorativeImages.length]
-  const crop = getCardCropRuntime(asset.src)
-  return {
-    alt: '',
-    decorative: true,
-    key: asset.key,
-    source: 'decorative',
-    src: asset.src,
-    ...(crop ? { crop } : {})
-  }
-}
-
-export function getTraceCardImage(
-  contentId: string,
-  cover?: ContentImageInput | null
-): ResolvedCardImage {
-  if (cover?.src) {
-    const crop = getCardCropRuntime(cover.src)
-    return {
-      alt: cover.alt ?? '',
-      decorative: false,
-      key: cover.key ?? `content-${contentId}`,
-      source: 'content',
-      src: cover.src,
-      ...(crop ? { crop } : {})
-    }
-  }
-
-  if (traceFallbackImages.length === 0) {
-    return { alt: '', decorative: true, source: 'none' }
-  }
-
-  const asset = traceFallbackImages[stableContentHash(contentId) % traceFallbackImages.length]
-  const crop = getCardCropRuntime(asset.src)
-  return {
-    alt: '',
-    decorative: true,
-    key: asset.key,
-    source: 'fallback',
-    src: asset.src,
-    ...(crop ? { crop } : {})
-  }
 }
 
 /**

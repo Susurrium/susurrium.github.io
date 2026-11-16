@@ -1,8 +1,9 @@
-import { getCardCropRuntime } from '@/data/card-crops'
+import { getCardCropRecord, getCardCropRuntime } from '@/data/card-crops'
 import type { HomeMediaAsset } from '@/data/home-media'
 import {
   DEFAULT_CARD_CROP_TRANSFORM,
   frameForCutSide,
+  frameForImageSide,
   imageSideForFrame,
   layoutVariantForFrame,
   type CardCropRuntime,
@@ -16,7 +17,7 @@ export type CardImageQueueSide = CardImageSide
 export interface AlternatingQueueOptions {
   /** The side used by the first card. The archive baseline starts on the left. */
   readonly startSide?: CardImageQueueSide
-  readonly source: CardImageAssignment['source']
+  readonly source: 'decorative' | 'fallback'
 }
 
 export interface ResolvedQueueAsset {
@@ -38,8 +39,8 @@ const oppositeSide = (side: CardImageQueueSide): CardImageQueueSide =>
  * same frame mapping, so even the fallback path cannot create an invalid
  * image/diagonal combination.
  */
-export function resolveQueueAsset(asset: HomeMediaAsset): ResolvedQueueAsset {
-  const configuredCrop = getCardCropRuntime(asset.src)
+export function resolveQueueAsset(asset: HomeMediaAsset, side?: CardImageSide): ResolvedQueueAsset {
+  const configuredCrop = getCardCropRuntime(asset.src, side ? frameForImageSide(side) : undefined)
   const frame = configuredCrop?.frame ?? frameForCutSide(asset.cutSide)
   const crop: CardCropRuntime = configuredCrop ?? {
     fit: 'cover',
@@ -56,12 +57,16 @@ export function resolveQueueAsset(asset: HomeMediaAsset): ResolvedQueueAsset {
   }
 }
 
-/** Split the catalogue into the two fixed visual-side queues. */
+/** 单侧确认进入对应队列；双侧确认分别使用两个方向的裁剪。 */
 export function splitAlternatingQueues(assets: readonly HomeMediaAsset[]): {
   readonly left: readonly ResolvedQueueAsset[]
   readonly right: readonly ResolvedQueueAsset[]
 } {
-  const resolved = assets.map(resolveQueueAsset)
+  const resolved = assets.flatMap((asset) =>
+    getCardCropRecord(asset.src)?.selection === 'both'
+      ? [resolveQueueAsset(asset, 'left'), resolveQueueAsset(asset, 'right')]
+      : [resolveQueueAsset(asset)]
+  )
   return {
     left: resolved.filter(({ imageSide }) => imageSide === 'left'),
     right: resolved.filter(({ imageSide }) => imageSide === 'right')
@@ -146,6 +151,7 @@ export function buildAlternatingCardImageAssignments(
       alt: '',
       assetDescription: resolved.asset.description,
       crop: resolved.crop,
+      decorative: true,
       frame: resolved.frame,
       imageSide: resolved.imageSide,
       key,
