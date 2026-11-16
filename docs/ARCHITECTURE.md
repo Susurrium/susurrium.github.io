@@ -519,7 +519,7 @@ Home 与 About 共用 `WakaTimeStats.astro`，引用统计仓库生成的 `flat`
 
 组件使用原生图片与链接，站内导航由现有 ClientRouter 管理。统计仓库的清单记录源更新时间、生成批次、图表范围和可用状态。页面的徽章按各自分类读取，工具来源指标在图表仓库中另有定义。
 
-统计仓库每小时第 17 分钟通过 GitHub Actions 读取并校验统计，统一生成徽章、SVG／PNG 图表与公开清单。网站消费公开成品，维护入口见 [开发指南](./DEVELOPMENT.md#wakatime-统计维护)。
+统计仓库按每小时整点通过 GitHub Actions 读取并校验统计，统一生成徽章、SVG／PNG 图表与公开清单。网站消费公开成品，维护入口见 [开发指南](./DEVELOPMENT.md#wakatime-统计维护)。
 
 ## 视觉与交互约定
 
