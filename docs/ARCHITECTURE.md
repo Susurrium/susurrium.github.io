@@ -50,7 +50,7 @@
 - `TextCardCompat.astro` 保留为旧调用的兼容门面；视觉相同的无图文案统一通过 `StandardCardData` 输入。
 - Trace 卡片：`TraceCard.astro` → `MediaCard.astro`。
 - Saying 卡片：`SayingCard.astro` → `MediaCard.astro`，继续使用装饰图策略。
-- Media 的 CSS、移动端纵向布局和镜像视觉；图片选择统一按第 7.2 节执行，真实封面优先。
+- Media 的 CSS 和移动端纵向布局；图片选择统一按第 7.2 节执行，真实封面优先，图片内容保持原始方向。
 - Blog 详情：`BlogPost.astro` 及其正文、目录、版权卡片、图片缩放和阅读背景行为。
 - Trace 详情：`TracePost.astro` 的阅读界面和导航行为；文章底部版权卡片按策略关闭。
 - Saying 详情：`SayingPost.astro` 的原文/译文、署名和阅读界面；文章底部版权卡片按策略关闭。
@@ -237,13 +237,13 @@ flowchart TD
 
 ### 7.2 Trace 和 Saying 的跨页面图片映射
 
-`buildTraceImageAssignmentMap()` 在完整 Trace 集合上按发布时间及稳定 key 排序，再生成归档交替备用图映射。Home、主归档、标签页和详情首图复用该映射；不能再使用各页局部下标或另一个哈希规则单独选图。
+静态内容注册表的 `media` 字段集中声明来源规则、图库、排序、布局和映射范围。Trace 使用 `cover-or-pool`、Trace 图库、发布时间倒序及稳定 key、左右交替和 `public-kind` 范围；Saying 使用 `pool`、Saying 图库、稳定 ID 顺序和相同布局与范围。Blog 默认 `enabled: false`，保持文本卡片；后续可以通过相同策略接入。新类型适配为公共字段后配置策略及图库，无需增加类型专属分配函数或运行时插件。
 
-真实 Trace `cover` 始终优先。映射不为有封面的记录覆盖内容图片，`resolveMediaImage()` 也先检查真实封面，因此作者提供的 `coverAlt` 和非装饰性图片语义得以保留。缺少封面的记录才使用装饰性的备用图。
+[`buildContentMediaMap()`](../src/lib/content-layer/media.ts) 将完整公开集合交给 [`planCardMedia()`](../src/lib/card-layout/planner.ts)。规划器先过滤草稿、排序，再为每个槽位确定左右位置。指定封面固定图片身份并参与布局规划，保留 `coverAlt`、`source: content` 和非装饰性语义；缺少封面时使用装饰性备用图。图库按允许方向拆分队列，每侧按原始图库顺序循环；指定封面占用的槽位仍计入完整序列，后续备用图沿用原有槽位分配顺序。重复次数只统计实际输出的图片。
 
-此映射保证同一次构建内跨页面一致，同时保留归档交替视觉；它不是持久化的条目—图片绑定。新增较新的 Trace 会改变队列位置，可能改变旧条目的备用图。若需要永久固定配图，应提供真实 `cover`，或另行设计明确的持久化配图配置。
+规划结果以内容 key 保存图片身份、地址、来源、装饰性语义、替代文本、图片位置、斜边和对应裁剪。Home、主归档、标签页、年份归档和详情页统一查表。主归档在分页前规划，奇数页大小也延续交替；筛选后的标签列表及 Home 不重新交替。新增文章可能改变旧条目的备用图及目标位置，指定封面的图片身份保持固定。
 
-Saying 使用 `buildSayingImageAssignmentMap()`，在完整的稳定 ID 顺序上生成装饰图片映射，并在 Home、归档、标签和详情之间复用。正文图片与这些卡片裁剪决策相互独立。
+双侧确认素材进入两侧队列，各自使用该方向的裁剪；单侧确认保留方向限制。指定封面与目标方向冲突时，规划器报告文章 key、标题、图片及目标／允许方向并终止。无确认记录的指定封面沿用居中 cover，并按目标方向生成布局。`MediaCard` 直接消费已规划的布局并校验其一致性；工作台保留显式预览方向。详情首图复用同一图片身份，继续采用阅读页自己的显示规则；正文图片独立于卡片媒体规划。
 
 Home 在每次刷新或重新进入时随机选择 Saying，允许连续选中同一条。`HomeSayingHead` 将候选索引输出到 head；无外部依赖的 `home-saying.js` 以内联脚本执行，在解析 head 时选定记录，并按 `cardImageOptions()` 的 `srcset`、`sizes` 提前请求该配图。正文把公共卡片组件输出放在惰性的 `template` 中，解析到展示区域时只装入选中的完整卡片，图文、裁剪和方向一起确定。禁用 JavaScript 时由 `noscript` 提供固定卡片。
 
@@ -457,7 +457,7 @@ surface 是构建期功能策略，与卡片视觉选择分开：
 
 ## 卡片与媒体
 
-归档桌面卡片只有“图片在左、斜边在右”和“图片在右、斜边在左”两种布局。已确认素材按可用方向拆成队列，从图片在左开始交替；短队列均匀重复，素材不会随位置翻转。图片身份、裁剪和方向一同保存于 assignment，Home 的随机选择只选择 Saying 身份。
+归档桌面卡片只有“图片在左、斜边在右”和“图片在右、斜边在左”两种布局。从图片在左开始交替，已确认素材按允许方向进入队列，每侧完成一轮后重复；双侧素材在两侧分别使用相应裁剪，图片内容不会随位置翻转。指定封面同样参与交替规划。图片身份、裁剪和方向一同保存于 assignment，Home 的随机选择只选择 Saying 身份。
 
 CardCropEditor 的正式预览复用 MediaCard／CardMediaFrame，编辑框读取实际媒体框比例，统一 object-fit、object-position、缩放和 transform-origin。Saying／Trace 的完整集合映射负责跨页面一致性；裁剪操作及 Home、手机场景边界见 [工作台](./MEDIA_WORKBENCH.md#场景边界)。
 

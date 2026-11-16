@@ -8,12 +8,12 @@
 
 ## 调整卡片
 
-1. 在左侧选择素材，可按文件、用途和状态筛选。Saying、Trace 复用同一文件时共享卡片记录，Hero 使用独立模式。
+1. 在左侧选择素材，可按文件、用途和状态筛选。Saying、Trace 复用同一图库文件时共享卡片记录；公开 Trace 的指定封面也列入队列，Hero 使用独立模式。
 2. 切换“斜边在左／斜边在右”，两个框各自保存焦点与缩放。画布比例跟随下方正式卡片预览的真实媒体框。
 3. 拖动图片，使用滚轮、滑杆或 `+/-` 缩放。画布聚焦时方向键移动 2%，Shift 加方向键移动 5%；`R` 重置，`Enter` 确认并前进。
 4. “完整显示”使用 contain，适合需要保留完整构图的图片；默认 cover 会填满媒体框。源图片不被修改。
 5. 使用“确认当前框”“两个框都可以”或“两个框都不合适”记录决定。“确认并处理下一张”跳至下一张待处理素材。
-6. 检查桌面和手机的正式预览，再导出配置。“两个框都可以”可保存 preferred frame。
+6. 检查桌面和手机的正式预览，再导出配置。“两个框都可以”可保存 preferred frame；正式页面按完整集合的目标方向选择该侧裁剪，preferred frame 供单独预览使用。单侧确认限制允许方向，指定封面与目标方向冲突会阻止构建，并报告文章、图片和方向。
 
 ### 场景边界
 
@@ -70,7 +70,9 @@ node scripts/apply-card-crops.mjs artifacts/media-workbench/exports/card-crop-ed
 
 等价入口为 `bun run card-crops:apply -- <JSON>`。默认合并局部导出，保留未包含的生产记录；`--replace` 才替换整表，有意清空还需 `--allow-empty`。dry-run 列出新增、修改和删除。
 
-脚本检查文件名及 `public/images/home-media/` 的源图尺寸，为两个框计算标准化矩形，写入 `src/data/card-crop-selections.generated.ts`。未确认或标为不合适的条目会跳过并说明原因；已确认素材缺失、不合法输入或损坏生产表使整批操作失败，不写入正式配置。
+脚本检查文件名及 `public/images/home-media/` 的源图尺寸，为两个框计算标准化矩形，写入 `src/data/card-crop-selections.generated.ts`。指定封面使用 `encodeURIComponent(image.key) + '.webp'` 作为稳定裁剪标识；该标识不代表源文件格式。首次应用指定封面记录时提供 `sourcePath`，指向 `src/content/` 内的实际图片，例如 `src/content/traces/national-day-2026/east-lake.webp`。脚本检查真实路径边界并保留来源，后续局部导出可沿用该路径；工作台将已登记路径随配置导出。未确认或标为不合适的条目会跳过并说明原因；已确认素材缺失、不合法输入或损坏生产表使整批操作失败，不写入正式配置。
+
+指定封面保持图片身份和替代文本，双侧裁剪分别确认。更改文章顺序后目标位置可能变化，因此当前东湖封面保存双侧居中 cover。只调整卡片裁剪配置不修改文章正文、元数据或日期。
 
 当前卡片生产 schema 为 2，导出 profile 为 `archive-card`；旧版无 profile 仍按兼容规则验证。导出中的 `cardCropPolicy` 记录主场景与覆盖范围，`confirmationHistoryVersion: 1` 保存历史版本。定义见 [卡片裁剪类型](../src/lib/card-crop/types.ts)。
 

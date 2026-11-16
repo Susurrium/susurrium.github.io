@@ -139,6 +139,37 @@ describe('crop import transactions', () => {
       await readFile(resolve(root, 'src/data/hero-crop-selections.generated.ts'), 'utf8')
     ).toBe('malformed')
   })
+
+  test('Card imports content covers by stable identity, retains their source, and rejects outside paths atomically', async () => {
+    const root = await sandbox()
+    const sourcePath = 'src/content/traces/photo/cover.jpg'
+    await mkdir(dirname(resolve(root, sourcePath)), { recursive: true })
+    await sharp({ create: { width: 32, height: 20, channels: 3, background: '#abcdef' } })
+      .jpeg()
+      .toFile(resolve(root, sourcePath))
+    const filename = 'content-photo.webp'
+    const input = { items: { [filename]: { ...card(), sourcePath } } }
+    const result = await applyCardCrops(input, { projectRoot: root })
+    expect(result.records[filename].sourcePath).toBe(sourcePath)
+    expect(result.records[filename].cropRects['diagonal-left'].width).toBeGreaterThan(0)
+    const updated = await applyCardCrops({ items: { [filename]: card(60) } }, { projectRoot: root })
+    expect(updated.records[filename].sourcePath).toBe(sourcePath)
+    const before = await readFile(result.outputPath, 'utf8')
+    await put(root, 'outside.jpg', 'invalid')
+    await expect(
+      applyCardCrops(
+        { items: { [filename]: { ...card(), sourcePath: 'outside.jpg' } } },
+        { projectRoot: root }
+      )
+    ).rejects.toThrow('src/content/')
+    await expect(
+      applyCardCrops(
+        { items: { [filename]: { ...card(), sourcePath: resolve(root, sourcePath) } } },
+        { projectRoot: root }
+      )
+    ).rejects.toThrow('相对路径')
+    expect(await readFile(result.outputPath, 'utf8')).toBe(before)
+  })
 })
 
 describe('content authoring and dates', () => {
