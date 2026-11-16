@@ -10,7 +10,9 @@
  */
 import type { CollectionEntry } from 'astro:content'
 import {
+  buildContentMediaMap,
   createResolvedPageItem,
+  loadContentCatalog,
   toContentCardViewData,
   type ContentCardViewData
 } from '@/lib/content-layer'
@@ -58,6 +60,7 @@ type Props = LegacyProps | ModelProps
 const props = Astro.props as Props
 const className = props.class
 const isLegacy = !('item' in props)
+const legacyMediaMap = isLegacy ? buildContentMediaMap((await loadContentCatalog()).all) : undefined
 
 const item: RenderablePageItem = isLegacy
   ? (() => {
@@ -70,6 +73,7 @@ const item: RenderablePageItem = isLegacy
       }
       return {
         ...createResolvedPageItem(record, {
+          imageAssignment: legacyMediaMap?.get(record.key),
           actionLabel: legacy.actionLabel,
           detailed: legacy.detailed,
           headingLevel: legacy.headingLevel,

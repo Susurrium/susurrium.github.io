@@ -1,18 +1,19 @@
 import { describe, expect, test } from 'bun:test'
+
 import {
-  getSayingDecorativeImage,
-  getCardCutSide,
-  getTraceCardImage,
   cardCutSideByFilename,
+  getCardCutSide,
   resolvePresentation,
-  selectRandom,
-  stableContentHash,
-  takeRecent,
   sayingDecorativeImages,
+  selectRandom,
+  takeRecent,
   traceFallbackImages
 } from '../src/data/home-media'
-import { sortByDate, sortById } from '../src/lib/content'
+import { splitAlternatingQueues } from '../src/lib/card-layout/alternating'
+import { planCardMedia } from '../src/lib/card-layout/planner'
 import { normalizeContentPresentation } from '../src/lib/compatibility/content-presentation'
+import { sortByDate, sortById } from '../src/lib/content'
+import { contentTypeRegistry } from '../src/lib/content-layer/registry'
 
 describe('Phase 2 presentation policy', () => {
   test('uses page override, then content default, then a safe fallback', () => {
@@ -38,7 +39,11 @@ describe('Phase 2 presentation policy', () => {
   })
 
   test('keeps recently sorted collections independently capped at three', () => {
-    expect(takeRecent(['newest', 'second', 'third', 'older'])).toEqual(['newest', 'second', 'third'])
+    expect(takeRecent(['newest', 'second', 'third', 'older'])).toEqual([
+      'newest',
+      'second',
+      'third'
+    ])
     expect(takeRecent(['only'])).toEqual(['only'])
     expect(takeRecent([], 3)).toEqual([])
   })
@@ -73,15 +78,28 @@ describe('Phase 2 Saying selection', () => {
 
   test('assigns decoration by stable archive index and wraps its own pool', () => {
     expect(sayingDecorativeImages.length).toBeGreaterThan(1)
-    const first = getSayingDecorativeImage(0)
-    const last = getSayingDecorativeImage(sayingDecorativeImages.length - 1)
-    const wrapped = getSayingDecorativeImage(sayingDecorativeImages.length)
+    const slots = splitAlternatingQueues(sayingDecorativeImages).left.length * 2
+    const records = Array.from({ length: slots + 1 }, (_, index) => ({
+      kind: 'saying',
+      key: `saying:${String(index).padStart(3, '0')}`,
+      title: 'Quote',
+      draft: false
+    }))
+    const assignments = [
+      ...planCardMedia(
+        records,
+        { saying: contentTypeRegistry.saying.media },
+        { saying: sayingDecorativeImages }
+      ).values()
+    ]
+    const first = assignments[0]!
+    const wrapped = assignments[slots]!
 
     expect(first.source).toBe('decorative')
     expect(first.decorative).toBe(true)
     expect(first.alt).toBe('')
-    expect(last.key).toBe(sayingDecorativeImages.at(-1)?.key)
     expect(wrapped.key).toBe(first.key)
+    expect(wrapped.repeated).toBe(true)
   })
 
   test('keeps one editorial cut side per supplied local file', () => {
@@ -99,13 +117,18 @@ describe('Phase 2 Saying selection', () => {
 
 describe('Phase 2 Trace image policy', () => {
   test('prefers a supplied content cover with its meaningful alt text', () => {
-    const image = getTraceCardImage('with-cover', {
+    const cover = {
       alt: 'A real cover image',
       key: 'test-cover',
       src: '/images/test-cover.webp'
-    })
+    }
+    const image = planCardMedia(
+      [{ kind: 'trace', key: 'trace:with-cover', title: 'Cover', draft: false, image: cover }],
+      { trace: contentTypeRegistry.trace.media },
+      {}
+    ).get('trace:with-cover')
 
-    expect(image).toEqual({
+    expect(image).toMatchObject({
       alt: 'A real cover image',
       decorative: false,
       key: 'test-cover',
@@ -114,22 +137,32 @@ describe('Phase 2 Trace image policy', () => {
     })
   })
 
-  test('uses a stable ID hash rather than mutable list order for fallbacks', () => {
+  test('uses the complete sorted collection for repeatable fallback assignments', () => {
     expect(traceFallbackImages.length).toBeGreaterThan(1)
-    const firstBuild = getTraceCardImage('same-trace')
-    const secondBuild = getTraceCardImage('same-trace')
-    const anotherTrace = getTraceCardImage('another-trace')
+    const records = ['same-trace', 'another-trace'].map((id) => ({
+      kind: 'trace',
+      key: `trace:${id}`,
+      title: id,
+      draft: false
+    }))
+    const firstBuild = planCardMedia(
+      records,
+      { trace: contentTypeRegistry.trace.media },
+      { trace: traceFallbackImages }
+    )
+    const secondBuild = planCardMedia(
+      [...records].reverse(),
+      { trace: contentTypeRegistry.trace.media },
+      { trace: traceFallbackImages }
+    )
 
-    expect(stableContentHash('same-trace')).toBe(stableContentHash('same-trace'))
-    expect(firstBuild).toEqual(secondBuild)
-    expect(firstBuild.source).toBe('fallback')
-    expect(firstBuild.decorative).toBe(true)
-    expect(firstBuild.alt).toBe('')
-    expect(firstBuild.key).toBe(
-      traceFallbackImages[stableContentHash('same-trace') % traceFallbackImages.length]?.key
-    )
-    expect(anotherTrace.key).toBe(
-      traceFallbackImages[stableContentHash('another-trace') % traceFallbackImages.length]?.key
-    )
+    expect([...firstBuild]).toEqual([...secondBuild])
+    expect(firstBuild.get('trace:same-trace')).toMatchObject({
+      source: 'fallback',
+      decorative: true,
+      alt: '',
+      imageSide: 'right'
+    })
+    expect(firstBuild.get('trace:another-trace')?.imageSide).toBe('left')
   })
 })

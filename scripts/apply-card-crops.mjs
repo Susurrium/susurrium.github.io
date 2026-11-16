@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { readFile, realpath } from 'node:fs/promises'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 
@@ -72,13 +72,22 @@ export async function applyCardCrops(
       skipped.push(`${filename}: 未确认，未应用`)
       continue
     }
+    const sourcePath = candidate.sourcePath ?? previous[filename]?.sourcePath
+    let sourceFile = resolve(projectRoot, 'public/images/home-media', filename)
+    if (sourcePath !== undefined) {
+      if (typeof sourcePath !== 'string' || isAbsolute(sourcePath))
+        throw new Error(`${filename}: sourcePath 必须是项目内的相对路径。`)
+      const contentRoot = await realpath(resolve(projectRoot, 'src/content'))
+      sourceFile = await realpath(resolve(projectRoot, sourcePath))
+      const withinContent = relative(contentRoot, sourceFile)
+      if (!withinContent || withinContent.startsWith('..') || isAbsolute(withinContent))
+        throw new Error(`${filename}: sourcePath 必须位于 src/content/ 内。`)
+    }
     let metadata
     try {
-      metadata = await sharp(
-        await readFile(resolve(projectRoot, 'public/images/home-media', filename))
-      ).metadata()
+      metadata = await sharp(await readFile(sourceFile)).metadata()
     } catch (error) {
-      throw new Error(`${filename}: 无法读取 WebP 素材：${error.message}`)
+      throw new Error(`${filename}: 无法读取图片素材：${error.message}`)
     }
     if (!metadata.width || !metadata.height) throw new Error(`${filename}: 无法读取图片尺寸。`)
     const preferredFrame = ['diagonal-left', 'diagonal-right'].includes(candidate.preferredFrame)
@@ -88,6 +97,7 @@ export async function applyCardCrops(
         : 'diagonal-right'
     records[filename] = {
       filename,
+      ...(sourcePath ? { sourcePath } : {}),
       fit: candidate.fit ?? 'cover',
       preferredFrame,
       schemaVersion,

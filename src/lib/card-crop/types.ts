@@ -69,6 +69,8 @@ export interface CardCropRuntime {
 /** One confirmed (or intentionally unresolved) source asset decision. */
 export interface CardCropRecord {
   readonly filename: string
+  /** 本地指定封面的源文件路径，相对于项目根目录。 */
+  readonly sourcePath?: string
   readonly selection: CardCropSelection
   readonly preferredFrame?: CardCropFrame
   readonly fit: CardCropFit

@@ -65,7 +65,7 @@ export interface ResolvedCardImage {
   readonly source: ImageSource
   /** Explicit editor-approved crop; absent means use the legacy safe fallback. */
   readonly crop?: CardCropRuntime
-  /** Development/QA metadata emitted by the archive queue planner. */
+  /** 公共规划器确定的布局，正式媒体卡片直接使用。 */
   readonly imageSide?: CardImageSide
   readonly layoutVariant?: CardLayoutVariant
   readonly occurrence?: number
